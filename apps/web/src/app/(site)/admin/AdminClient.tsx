@@ -32,7 +32,12 @@ export function AdminClient({
     setBusy(deskId);
     setMessage(null);
     try {
-      setSeats(await apiFetch<AdminSeatsDto>('/api/v1/admin/seats', { method: 'POST', body: { desk_id: deskId, user_id: userId } }));
+      setSeats(
+        await apiFetch<AdminSeatsDto>('/api/v1/admin/seats', {
+          method: 'POST',
+          body: { desk_id: deskId, user_id: userId },
+        }),
+      );
       setMessage({ tone: 'success', text: a.saved });
       router.refresh();
     } catch (e) {
@@ -47,7 +52,10 @@ export function AdminClient({
     setBusy(u.userId);
     setMessage(null);
     try {
-      await apiFetch<{ ok: true }>(`/api/v1/admin/users/${u.userId}/deactivate`, { method: 'POST', body: {} });
+      await apiFetch<{ ok: true }>(`/api/v1/admin/users/${u.userId}/deactivate`, {
+        method: 'POST',
+        body: {},
+      });
       setSeats(await apiFetch<AdminSeatsDto>('/api/v1/admin/seats'));
       setMessage({ tone: 'success', text: a.saved });
       router.refresh();
@@ -96,7 +104,11 @@ export function AdminClient({
                 <tr key={d.deskId}>
                   <td>
                     <span className={s.deskCell}>{d.deskId}</span>
-                    {!d.userId && d.displayName && <span className={s.labelHint}>{a.label}: {d.displayName}</span>}
+                    {!d.userId && d.displayName && (
+                      <span className={s.labelHint}>
+                        {a.label}: {d.displayName}
+                      </span>
+                    )}
                   </td>
                   <td>
                     <select
@@ -117,7 +129,12 @@ export function AdminClient({
                   </td>
                   <td>
                     {d.userId && (
-                      <Button variant="ghost" size="sm" disabled={busy !== null} onClick={() => assign(d.deskId, null)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={busy !== null}
+                        onClick={() => assign(d.deskId, null)}
+                      >
                         {a.unassign}
                       </Button>
                     )}
@@ -154,7 +171,9 @@ export function AdminClient({
                   </td>
                   <td className={s.mono}>{u.email}</td>
                   <td>
-                    <Badge tone={u.status === 'active' ? 'mint' : 'gray'}>{u.status === 'active' ? a.active : a.deactivated}</Badge>
+                    <Badge tone={u.status === 'active' ? 'mint' : 'gray'}>
+                      {u.status === 'active' ? a.active : a.deactivated}
+                    </Badge>
                   </td>
                   <td>
                     <Badge tone={linkTone(u.linkState)} dot>
@@ -165,7 +184,12 @@ export function AdminClient({
                   <td>{u.deskId ?? '-'}</td>
                   <td>
                     {u.status === 'active' && !u.isSelf && (
-                      <Button variant="danger" size="sm" disabled={busy !== null} onClick={() => deactivate(u)}>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        disabled={busy !== null}
+                        onClick={() => deactivate(u)}
+                      >
                         {a.deactivate}
                       </Button>
                     )}

@@ -29,12 +29,18 @@ describe('json / apiError', () => {
   it('builds the ApiError shape', async () => {
     const r = apiError(400, 'invalid_body', '확인', [{ field: 'x', reason: 'too_big' }]);
     expect(r.status).toBe(400);
-    expect(await r.json()).toEqual({ error: 'invalid_body', message: '확인', fields: [{ field: 'x', reason: 'too_big' }] });
+    expect(await r.json()).toEqual({
+      error: 'invalid_body',
+      message: '확인',
+      fields: [{ field: 'x', reason: 'too_big' }],
+    });
     expect(await apiError(404, 'not_found').json()).toEqual({ error: 'not_found' });
   });
 
   it('maps HttpError and hides unexpected errors', async () => {
-    const known = errorResponse(new HttpError(405, 'method_not_allowed', 'nope', undefined, { allow: 'GET' }));
+    const known = errorResponse(
+      new HttpError(405, 'method_not_allowed', 'nope', undefined, { allow: 'GET' }),
+    );
     expect(known.status).toBe(405);
     expect(known.headers.get('allow')).toBe('GET');
     const original = console.error;
@@ -55,11 +61,16 @@ describe('parseBody', () => {
   });
 
   it('rejects invalid JSON with 400 invalid_json', async () => {
-    await expect(parseBody(req('{nope'), schema)).rejects.toMatchObject({ status: 400, code: 'invalid_json' });
+    await expect(parseBody(req('{nope'), schema)).rejects.toMatchObject({
+      status: 400,
+      code: 'invalid_json',
+    });
   });
 
   it('reports field-level reasons', async () => {
-    const err = (await parseBody(req('{"name":"abcd","n":1.5}'), schema).catch((e: unknown) => e)) as HttpError;
+    const err = (await parseBody(req('{"name":"abcd","n":1.5}'), schema).catch(
+      (e: unknown) => e,
+    )) as HttpError;
     expect(err).toBeInstanceOf(HttpError);
     expect(err.status).toBe(400);
     expect(err.fields).toEqual(
@@ -71,12 +82,15 @@ describe('parseBody', () => {
   });
 
   it('rejects oversized bodies with 413', async () => {
-    await expect(parseBody(req(JSON.stringify({ name: 'x'.repeat(70_000) })), schema)).rejects.toMatchObject({ status: 413 });
+    await expect(parseBody(req(JSON.stringify({ name: 'x'.repeat(70_000) })), schema)).rejects.toMatchObject({
+      status: 413,
+    });
   });
 });
 
 describe('assertSameOrigin', () => {
-  const r = (method: string, headers: Record<string, string>) => new Request(`${ORIGIN}/api/v1/me/profile`, { method, headers });
+  const r = (method: string, headers: Record<string, string>) =>
+    new Request(`${ORIGIN}/api/v1/me/profile`, { method, headers });
 
   it('ignores safe methods', () => {
     expect(() => assertSameOrigin(r('GET', { origin: 'https://evil.example' }), ORIGIN)).not.toThrow();
@@ -84,15 +98,24 @@ describe('assertSameOrigin', () => {
 
   it('accepts the exact origin and same-origin fetch metadata', () => {
     expect(() => assertSameOrigin(r('PATCH', { origin: ORIGIN }), ORIGIN)).not.toThrow();
-    expect(() => assertSameOrigin(r('POST', { 'sec-fetch-site': 'same-origin' }), `${ORIGIN}/`)).not.toThrow();
+    expect(() =>
+      assertSameOrigin(r('POST', { 'sec-fetch-site': 'same-origin' }), `${ORIGIN}/`),
+    ).not.toThrow();
   });
 
   it('rejects other origins, null origins and missing metadata', () => {
-    const cases: Record<string, string>[] = [{ origin: 'https://evil.example' }, { origin: 'null' }, { 'sec-fetch-site': 'cross-site' }, {}];
+    const cases: Record<string, string>[] = [
+      { origin: 'https://evil.example' },
+      { origin: 'null' },
+      { 'sec-fetch-site': 'cross-site' },
+      {},
+    ];
     for (const headers of cases) {
       expect(() => assertSameOrigin(r('POST', headers), ORIGIN)).toThrow(HttpError);
     }
-    expect(() => assertSameOrigin(r('DELETE', { origin: 'http://localhost:3001' }), ORIGIN)).toThrow(/허용되지/);
+    expect(() => assertSameOrigin(r('DELETE', { origin: 'http://localhost:3001' }), ORIGIN)).toThrow(
+      /허용되지/,
+    );
   });
 });
 

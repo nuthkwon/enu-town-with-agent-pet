@@ -66,9 +66,13 @@ describe('toWorkLogDto', () => {
 
   it('hides the chat summary unless both visibilities are company', () => {
     expect(toWorkLogDto(log(), author, { userId: 'other' })!.claudeChatSummary).toBeNull();
-    expect(toWorkLogDto(log({ chatSummaryVisibility: 'company' }), author, { userId: 'other' })!.claudeChatSummary).toBe('대화 요약');
+    expect(
+      toWorkLogDto(log({ chatSummaryVisibility: 'company' }), author, { userId: 'other' })!.claudeChatSummary,
+    ).toBe('대화 요약');
     expect(toClaudeSummaryDto(log(), author, { userId: 'other' })).toBeNull();
-    expect(toClaudeSummaryDto(log({ chatSummaryVisibility: 'company' }), author, { userId: 'other' })?.summary).toBe('대화 요약');
+    expect(
+      toClaudeSummaryDto(log({ chatSummaryVisibility: 'company' }), author, { userId: 'other' })?.summary,
+    ).toBe('대화 요약');
   });
 
   it('labels owner edits', () => {
@@ -116,7 +120,10 @@ describe('people and desks', () => {
   });
 
   it('falls back for unknown teams and malformed avatars', () => {
-    const p = toPersonDto({ ...profile, team: 'nope', avatar: { body: 'x' } as never, linkState: 'weird' }, null);
+    const p = toPersonDto(
+      { ...profile, team: 'nope', avatar: { body: 'x' } as never, linkState: 'weird' },
+      null,
+    );
     expect(p.team).toBeNull();
     expect(p.teamLabel).toBe('');
     expect(p.avatar).toEqual(DEFAULT_AVATAR);
@@ -125,7 +132,12 @@ describe('people and desks', () => {
   });
 
   it('shows the occupant, else the roster label of a free desk', () => {
-    expect(toDeskDto({ deskId: 'L1a', userId: 'u1', labelName: '라벨', team: 'dev' }, { displayName: '실제', team: 'qa' })).toEqual({
+    expect(
+      toDeskDto(
+        { deskId: 'L1a', userId: 'u1', labelName: '라벨', team: 'dev' },
+        { displayName: '실제', team: 'qa' },
+      ),
+    ).toEqual({
       deskId: 'L1a',
       userId: 'u1',
       displayName: '실제',

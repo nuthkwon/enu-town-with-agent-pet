@@ -1,4 +1,16 @@
-import { chatMessageRecipients, chatMessages, claudeLinks, desks, newId, privacyConsents, profiles, workLogs, type DbHandle } from '@enu/db';
+import {
+  chatMessageRecipients,
+  chatMessages,
+  claudeLinks,
+  desks,
+  newId,
+  petNudges,
+  privacyConsents,
+  profiles,
+  todos,
+  workLogs,
+  type DbHandle,
+} from '@enu/db';
 import { createTestUser } from '@enu/testing';
 import {
   PRIVACY_NOTICE_VERSION,
@@ -26,6 +38,9 @@ import * as profileRoute from '@/app/api/v1/me/profile/route';
 import * as meRoute from '@/app/api/v1/me/route';
 import * as myLogRoute from '@/app/api/v1/me/work-logs/[id]/route';
 import * as myLogsRoute from '@/app/api/v1/me/work-logs/route';
+import * as nudgeActionRoute from '@/app/api/v1/me/nudges/[id]/actions/route';
+import * as todoRoute from '@/app/api/v1/me/todos/[id]/route';
+import * as todosRoute from '@/app/api/v1/me/todos/route';
 import * as peopleRoute from '@/app/api/v1/people/route';
 import * as cardRoute from '@/app/api/v1/users/[id]/card/route';
 import * as historyRoute from '@/app/api/v1/users/[id]/chat-history/route';
@@ -103,7 +118,10 @@ describe('authentication and authorization', () => {
     }
     const card = await call(cardRoute.GET, `/api/v1/users/${id}/card`, { params: { id } });
     expect(card.status).toBe(401);
-    const patch = await call(profileRoute.PATCH, '/api/v1/me/profile', { method: 'PATCH', body: { status_text: 'x' } });
+    const patch = await call(profileRoute.PATCH, '/api/v1/me/profile', {
+      method: 'PATCH',
+      body: { status_text: 'x' },
+    });
     expect(patch.status).toBe(401);
   });
 
@@ -151,9 +169,13 @@ describe('authentication and authorization', () => {
     expect(deact.status).toBe(403);
 
     const byRole = await userWithSession({ role: 'admin' });
-    expect((await call(adminSeatsRoute.GET, '/api/v1/admin/seats', { cookie: byRole.cookie })).status).toBe(200);
+    expect((await call(adminSeatsRoute.GET, '/api/v1/admin/seats', { cookie: byRole.cookie })).status).toBe(
+      200,
+    );
     const byEmail = await userWithSession({ email: 'boss@enu-tech.co.kr' });
-    expect((await call(adminSeatsRoute.GET, '/api/v1/admin/seats', { cookie: byEmail.cookie })).status).toBe(200);
+    expect((await call(adminSeatsRoute.GET, '/api/v1/admin/seats', { cookie: byEmail.cookie })).status).toBe(
+      200,
+    );
   });
 
   it('mints a 60 s realtime ticket for the session user', async () => {
@@ -163,15 +185,23 @@ describe('authentication and authorization', () => {
     expect(res.headers.get('cache-control')).toContain('no-store');
     const body = await jsonOf<{ token: string; expiresAt: string; wsUrl: string }>(res);
     expect(body.wsUrl).toBe('ws://localhost:2567');
-    const { payload, protectedHeader } = await jwtVerify(body.token, new TextEncoder().encode(process.env.REALTIME_TICKET_SECRET), {
-      audience: REALTIME_TICKET_AUDIENCE,
-      algorithms: ['HS256'],
-    });
+    const { payload, protectedHeader } = await jwtVerify(
+      body.token,
+      new TextEncoder().encode(process.env.REALTIME_TICKET_SECRET),
+      {
+        audience: REALTIME_TICKET_AUDIENCE,
+        algorithms: ['HS256'],
+      },
+    );
     expect(protectedHeader.alg).toBe('HS256');
     expect(payload.sub).toBe(me.id);
     expect(payload.exp! - payload.iat!).toBeLessThanOrEqual(60);
     expect(payload.exp! * 1000).toBe(new Date(body.expiresAt).getTime());
-    await expect(jwtVerify(body.token, new TextEncoder().encode(process.env.REALTIME_TICKET_SECRET), { audience: 'http://localhost:3000/api/mcp' })).rejects.toThrow();
+    await expect(
+      jwtVerify(body.token, new TextEncoder().encode(process.env.REALTIME_TICKET_SECRET), {
+        audience: 'http://localhost:3000/api/mcp',
+      }),
+    ).rejects.toThrow();
   });
 
   it('reports health', async () => {
@@ -189,12 +219,18 @@ describe('work logs and visibility', () => {
     const publicId = await insertLog(owner.id, { periodKey: '2026-10-28' });
 
     const feed = await jsonOf<Paginated<WorkLogDto>>(
-      await call(userLogsRoute.GET, `/api/v1/users/${owner.id}/work-logs`, { cookie: viewer.cookie, params: { id: owner.id } }),
+      await call(userLogsRoute.GET, `/api/v1/users/${owner.id}/work-logs`, {
+        cookie: viewer.cookie,
+        params: { id: owner.id },
+      }),
     );
     expect(feed.items.map((l) => l.id)).toEqual([publicId]);
 
     const card = await jsonOf<ProfileCardDto>(
-      await call(cardRoute.GET, `/api/v1/users/${owner.id}/card`, { cookie: viewer.cookie, params: { id: owner.id } }),
+      await call(cardRoute.GET, `/api/v1/users/${owner.id}/card`, {
+        cookie: viewer.cookie,
+        params: { id: owner.id },
+      }),
     );
     expect(card.latestLog?.id).toBe(publicId);
     expect(card.person.displayName).toBe('소유자');
@@ -212,20 +248,39 @@ describe('work logs and visibility', () => {
     const [still] = await h.db.select().from(workLogs).where(eq(workLogs.id, privateId));
     expect(still?.visibility).toBe('private');
 
-    const own = await jsonOf<Paginated<WorkLogDto>>(await call(myLogsRoute.GET, '/api/v1/me/work-logs', { cookie: owner.cookie }));
+    const own = await jsonOf<Paginated<WorkLogDto>>(
+      await call(myLogsRoute.GET, '/api/v1/me/work-logs', { cookie: owner.cookie }),
+    );
     expect(own.items.map((l) => l.id)).toEqual([privateId, publicId]);
 
     const unknown = newId();
-    expect((await call(cardRoute.GET, `/api/v1/users/${unknown}/card`, { cookie: viewer.cookie, params: { id: unknown } })).status).toBe(404);
+    expect(
+      (
+        await call(cardRoute.GET, `/api/v1/users/${unknown}/card`, {
+          cookie: viewer.cookie,
+          params: { id: unknown },
+        })
+      ).status,
+    ).toBe(404);
   });
 
   it('hides logs of deactivated authors from others', async () => {
     const owner = await createTestUser(h.db, { status: 'deactivated' });
     const viewer = await userWithSession();
     await insertLog(owner.id);
-    const res = await call(userLogsRoute.GET, `/api/v1/users/${owner.id}/work-logs`, { cookie: viewer.cookie, params: { id: owner.id } });
+    const res = await call(userLogsRoute.GET, `/api/v1/users/${owner.id}/work-logs`, {
+      cookie: viewer.cookie,
+      params: { id: owner.id },
+    });
     expect(res.status).toBe(404);
-    expect((await call(cardRoute.GET, `/api/v1/users/${owner.id}/card`, { cookie: viewer.cookie, params: { id: owner.id } })).status).toBe(404);
+    expect(
+      (
+        await call(cardRoute.GET, `/api/v1/users/${owner.id}/card`, {
+          cookie: viewer.cookie,
+          params: { id: owner.id },
+        })
+      ).status,
+    ).toBe(404);
   });
 
   it('shows the Claude chat summary only when log and summary are both company', async () => {
@@ -233,10 +288,17 @@ describe('work logs and visibility', () => {
     const viewer = await userWithSession();
     const hidden = await insertLog(owner.id, { periodKey: '2026-10-27', chatSummaryVisibility: 'private' });
     const shown = await insertLog(owner.id, { periodKey: '2026-10-28', chatSummaryVisibility: 'company' });
-    await insertLog(owner.id, { periodKey: '2026-10-29', visibility: 'private', chatSummaryVisibility: 'company' });
+    await insertLog(owner.id, {
+      periodKey: '2026-10-29',
+      visibility: 'private',
+      chatSummaryVisibility: 'company',
+    });
 
     const feed = await jsonOf<Paginated<WorkLogDto>>(
-      await call(userLogsRoute.GET, `/api/v1/users/${owner.id}/work-logs`, { cookie: viewer.cookie, params: { id: owner.id } }),
+      await call(userLogsRoute.GET, `/api/v1/users/${owner.id}/work-logs`, {
+        cookie: viewer.cookie,
+        params: { id: owner.id },
+      }),
     );
     const byId = new Map(feed.items.map((l) => [l.id, l]));
     expect(feed.items).toHaveLength(2);
@@ -245,28 +307,41 @@ describe('work logs and visibility', () => {
     expect(byId.get(shown)?.provenanceLabel).toBe('요약러님의 Claude가 작성');
 
     const summaries = await jsonOf<Paginated<{ logId: string }>>(
-      await call(summariesRoute.GET, `/api/v1/users/${owner.id}/claude-summaries`, { cookie: viewer.cookie, params: { id: owner.id } }),
+      await call(summariesRoute.GET, `/api/v1/users/${owner.id}/claude-summaries`, {
+        cookie: viewer.cookie,
+        params: { id: owner.id },
+      }),
     );
     expect(summaries.items.map((s) => s.logId)).toEqual([shown]);
 
     const mine = await jsonOf<Paginated<{ logId: string }>>(
-      await call(summariesRoute.GET, `/api/v1/users/${owner.id}/claude-summaries`, { cookie: owner.cookie, params: { id: owner.id } }),
+      await call(summariesRoute.GET, `/api/v1/users/${owner.id}/claude-summaries`, {
+        cookie: owner.cookie,
+        params: { id: owner.id },
+      }),
     );
     expect(mine.items).toHaveLength(3);
   });
 
   it('paginates with an opaque cursor', async () => {
     const owner = await userWithSession();
-    for (const day of ['2026-10-20', '2026-10-21', '2026-10-22']) await insertLog(owner.id, { periodKey: day });
-    const p1 = await jsonOf<Paginated<WorkLogDto>>(await call(myLogsRoute.GET, '/api/v1/me/work-logs?limit=2', { cookie: owner.cookie }));
+    for (const day of ['2026-10-20', '2026-10-21', '2026-10-22'])
+      await insertLog(owner.id, { periodKey: day });
+    const p1 = await jsonOf<Paginated<WorkLogDto>>(
+      await call(myLogsRoute.GET, '/api/v1/me/work-logs?limit=2', { cookie: owner.cookie }),
+    );
     expect(p1.items.map((l) => l.periodKey)).toEqual(['2026-10-22', '2026-10-21']);
     expect(p1.nextCursor).toBeTruthy();
     const p2 = await jsonOf<Paginated<WorkLogDto>>(
-      await call(myLogsRoute.GET, `/api/v1/me/work-logs?limit=2&cursor=${p1.nextCursor}`, { cookie: owner.cookie }),
+      await call(myLogsRoute.GET, `/api/v1/me/work-logs?limit=2&cursor=${p1.nextCursor}`, {
+        cookie: owner.cookie,
+      }),
     );
     expect(p2.items.map((l) => l.periodKey)).toEqual(['2026-10-20']);
     expect(p2.nextCursor).toBeNull();
-    expect((await call(myLogsRoute.GET, '/api/v1/me/work-logs?cursor=garbage!', { cookie: owner.cookie })).status).toBe(400);
+    expect(
+      (await call(myLogsRoute.GET, '/api/v1/me/work-logs?cursor=garbage!', { cookie: owner.cookie })).status,
+    ).toBe(400);
   });
 
   it('refuses to create logs from the web (405)', async () => {
@@ -295,13 +370,25 @@ describe('work logs and visibility', () => {
     expect(dto.visibility).toBe('private');
     expect(dto.editedByUser).toBe(false);
     const [row] = await h.db.select().from(workLogs).where(eq(workLogs.id, id));
-    expect(row).toMatchObject({ visibility: 'private', visibilitySetBy: 'user', chatSummaryVisibilitySetBy: 'user', editedByUser: false });
+    expect(row).toMatchObject({
+      visibility: 'private',
+      visibilitySetBy: 'user',
+      chatSummaryVisibilitySetBy: 'user',
+      editedByUser: false,
+    });
     expect(row?.userEditedAt).toBeNull();
 
     await new Promise((r) => setTimeout(r, 200));
     await listener.query('unlisten *');
     listener.release();
-    expect(events).toContainEqual({ v: 1, type: 'work_log_changed', user_id: owner.id, log_id: id, visibility: 'private', created: false });
+    expect(events).toContainEqual({
+      v: 1,
+      type: 'work_log_changed',
+      user_id: owner.id,
+      log_id: id,
+      visibility: 'private',
+      created: false,
+    });
   });
 
   it('PATCH content marks edited_by_user and rejects unpublishable text', async () => {
@@ -330,9 +417,17 @@ describe('work logs and visibility', () => {
       body: { summary: '연락처 010-1234-5678 로 주세요' },
     });
     expect(bad.status).toBe(400);
-    expect(await bad.json()).toMatchObject({ error: 'content_rejected', fields: [{ field: 'summary', reason: 'pii' }] });
+    expect(await bad.json()).toMatchObject({
+      error: 'content_rejected',
+      fields: [{ field: 'summary', reason: 'pii' }],
+    });
 
-    const empty = await call(myLogRoute.PATCH, `/api/v1/me/work-logs/${id}`, { method: 'PATCH', cookie: owner.cookie, params: { id }, body: {} });
+    const empty = await call(myLogRoute.PATCH, `/api/v1/me/work-logs/${id}`, {
+      method: 'PATCH',
+      cookie: owner.cookie,
+      params: { id },
+      body: {},
+    });
     expect(empty.status).toBe(400);
   });
 
@@ -340,24 +435,44 @@ describe('work logs and visibility', () => {
     const owner = await userWithSession();
     const viewer = await userWithSession();
     const id = await insertLog(owner.id);
-    const res = await call(myLogRoute.DELETE, `/api/v1/me/work-logs/${id}`, { method: 'DELETE', cookie: owner.cookie, params: { id } });
+    const res = await call(myLogRoute.DELETE, `/api/v1/me/work-logs/${id}`, {
+      method: 'DELETE',
+      cookie: owner.cookie,
+      params: { id },
+    });
     expect(res.status).toBe(204);
     const [row] = await h.db.select().from(workLogs).where(eq(workLogs.id, id));
     expect(row?.deletedAt).toBeTruthy();
     expect(row).toMatchObject({ summary: null, tasks: [], blockers: [], claudeChatSummary: null });
-    const own = await jsonOf<Paginated<WorkLogDto>>(await call(myLogsRoute.GET, '/api/v1/me/work-logs', { cookie: owner.cookie }));
+    const own = await jsonOf<Paginated<WorkLogDto>>(
+      await call(myLogsRoute.GET, '/api/v1/me/work-logs', { cookie: owner.cookie }),
+    );
     expect(own.items).toHaveLength(0);
     const feed = await jsonOf<Paginated<WorkLogDto>>(
-      await call(userLogsRoute.GET, `/api/v1/users/${owner.id}/work-logs`, { cookie: viewer.cookie, params: { id: owner.id } }),
+      await call(userLogsRoute.GET, `/api/v1/users/${owner.id}/work-logs`, {
+        cookie: viewer.cookie,
+        params: { id: owner.id },
+      }),
     );
     expect(feed.items).toHaveLength(0);
-    const again = await call(myLogRoute.DELETE, `/api/v1/me/work-logs/${id}`, { method: 'DELETE', cookie: owner.cookie, params: { id } });
+    const again = await call(myLogRoute.DELETE, `/api/v1/me/work-logs/${id}`, {
+      method: 'DELETE',
+      cookie: owner.cookie,
+      params: { id },
+    });
     expect(again.status).toBe(404);
   });
 });
 
 describe('chat history', () => {
-  async function msg(input: { kind: 'dm' | 'room' | 'nearby'; sender: string; body: string; dm?: [string, string]; recipients?: string[]; at: number }) {
+  async function msg(input: {
+    kind: 'dm' | 'room' | 'nearby';
+    sender: string;
+    body: string;
+    dm?: [string, string];
+    recipients?: string[];
+    at: number;
+  }) {
     const id = newId();
     const pair = input.dm ? ([...input.dm].sort() as [string, string]) : null;
     await h.db.insert(chatMessages).values({
@@ -371,7 +486,9 @@ describe('chat history', () => {
       createdAt: new Date(Date.UTC(2026, 9, 29, 1, 0, input.at)),
     });
     if (input.recipients?.length) {
-      await h.db.insert(chatMessageRecipients).values(input.recipients.map((u) => ({ messageId: id, userId: u })));
+      await h.db
+        .insert(chatMessageRecipients)
+        .values(input.recipients.map((u) => ({ messageId: id, userId: u })));
     }
     return id;
   }
@@ -387,17 +504,38 @@ describe('chat history', () => {
     const deleted = await msg({ kind: 'dm', sender: b.id, body: 'deleted', dm: [b.id, a.id], at: 4 });
     await h.db.update(chatMessages).set({ deletedAt: new Date() }).where(eq(chatMessages.id, deleted));
 
-    const nearA = await msg({ kind: 'nearby', sender: a.id, body: 'A near, B heard', recipients: [a.id, b.id], at: 5 });
-    const nearB = await msg({ kind: 'nearby', sender: b.id, body: 'B near, A heard', recipients: [b.id, a.id], at: 6 });
+    const nearA = await msg({
+      kind: 'nearby',
+      sender: a.id,
+      body: 'A near, B heard',
+      recipients: [a.id, b.id],
+      at: 5,
+    });
+    const nearB = await msg({
+      kind: 'nearby',
+      sender: b.id,
+      body: 'B near, A heard',
+      recipients: [b.id, a.id],
+      at: 6,
+    });
     await msg({ kind: 'nearby', sender: b.id, body: 'B near, A not there', recipients: [b.id, c.id], at: 7 });
-    await msg({ kind: 'nearby', sender: c.id, body: 'C near, both heard', recipients: [a.id, b.id, c.id], at: 8 });
+    await msg({
+      kind: 'nearby',
+      sender: c.id,
+      body: 'C near, both heard',
+      recipients: [a.id, b.id, c.id],
+      at: 8,
+    });
 
     const roomB = await msg({ kind: 'room', sender: b.id, body: 'B room', at: 9 });
     await msg({ kind: 'room', sender: c.id, body: 'C room', at: 10 });
 
     const get = async (kind: string) =>
       jsonOf<Paginated<ChatItemDto>>(
-        await call(historyRoute.GET, `/api/v1/users/${b.id}/chat-history?kind=${kind}`, { cookie: a.cookie, params: { id: b.id } }),
+        await call(historyRoute.GET, `/api/v1/users/${b.id}/chat-history?kind=${kind}`, {
+          cookie: a.cookie,
+          params: { id: b.id },
+        }),
       );
     const dm = await get('dm');
     expect(dm.items.map((m) => m.id)).toEqual([dm1, dm2]);
@@ -405,10 +543,15 @@ describe('chat history', () => {
     expect((await get('nearby')).items.map((m) => m.id)).toEqual([nearA, nearB]);
     expect((await get('room')).items.map((m) => m.id)).toEqual([roomB]);
 
-    const bad = await call(historyRoute.GET, `/api/v1/users/${b.id}/chat-history?kind=all`, { cookie: a.cookie, params: { id: b.id } });
+    const bad = await call(historyRoute.GET, `/api/v1/users/${b.id}/chat-history?kind=all`, {
+      cookie: a.cookie,
+      params: { id: b.id },
+    });
     expect(bad.status).toBe(400);
 
-    const room = await jsonOf<Paginated<ChatItemDto>>(await call(roomRoute.GET, '/api/v1/chat/room?limit=1', { cookie: a.cookie }));
+    const room = await jsonOf<Paginated<ChatItemDto>>(
+      await call(roomRoute.GET, '/api/v1/chat/room?limit=1', { cookie: a.cookie }),
+    );
     expect(room.items.map((m) => m.text)).toEqual(['C room']);
     const older = await jsonOf<Paginated<ChatItemDto>>(
       await call(roomRoute.GET, `/api/v1/chat/room?limit=1&before=${room.nextCursor}`, { cookie: a.cookie }),
@@ -446,10 +589,17 @@ describe('onboarding', () => {
   });
 
   it('records consents, seat, avatar and pet, and completes onboarding', async () => {
-    await h.db.insert(desks).values([{ deskId: 'L3a' }, { deskId: 'L3b' }]).onConflictDoNothing();
+    await h.db
+      .insert(desks)
+      .values([{ deskId: 'L3a' }, { deskId: 'L3b' }])
+      .onConflictDoNothing();
     const me = await userWithSession();
     await h.db.update(profiles).set({ onboardingCompletedAt: null }).where(eq(profiles.userId, me.id));
-    const res = await call(onboardingRoute.POST, '/api/v1/me/onboarding', { method: 'POST', cookie: me.cookie, body });
+    const res = await call(onboardingRoute.POST, '/api/v1/me/onboarding', {
+      method: 'POST',
+      cookie: me.cookie,
+      body,
+    });
     expect(res.status, await res.clone().text()).toBe(200);
     const dto = await jsonOf<MeDto>(res);
     expect(dto).toMatchObject({
@@ -460,14 +610,24 @@ describe('onboarding', () => {
       pet: { species: 'fox', name: '여울' },
     });
     expect(dto.prefs.defaultChatSummaryVisibility).toBe('company');
-    const scopes = (await h.db.select().from(privacyConsents).where(eq(privacyConsents.userId, me.id))).map((c) => c.scope).sort();
+    const scopes = (await h.db.select().from(privacyConsents).where(eq(privacyConsents.userId, me.id)))
+      .map((c) => c.scope)
+      .sort();
     expect(scopes).toEqual(['claude_chat_summary', 'service']);
 
     // Taken seats are refused; moving to a free seat frees the old one.
     const other = await userWithSession();
-    const taken = await call(onboardingRoute.POST, '/api/v1/me/onboarding', { method: 'POST', cookie: other.cookie, body });
+    const taken = await call(onboardingRoute.POST, '/api/v1/me/onboarding', {
+      method: 'POST',
+      cookie: other.cookie,
+      body,
+    });
     expect(taken.status).toBe(409);
-    const moved = await call(onboardingRoute.POST, '/api/v1/me/onboarding', { method: 'POST', cookie: me.cookie, body: { ...body, desk_id: 'L3b' } });
+    const moved = await call(onboardingRoute.POST, '/api/v1/me/onboarding', {
+      method: 'POST',
+      cookie: me.cookie,
+      body: { ...body, desk_id: 'L3b' },
+    });
     expect((await jsonOf<MeDto>(moved)).deskId).toBe('L3b');
     const [old] = await h.db.select().from(desks).where(eq(desks.deskId, 'L3a'));
     expect(old?.userId).toBeNull();
@@ -480,21 +640,38 @@ describe('profile, pet and links', () => {
     const res = await call(profileRoute.PATCH, '/api/v1/me/profile', {
       method: 'PATCH',
       cookie: me.cookie,
-      body: { status_text: '회의실에 있어요', default_chat_summary_visibility: 'company', share_dms_with_my_claude: true, quiet_start: '20:00' },
+      body: {
+        status_text: '회의실에 있어요',
+        default_chat_summary_visibility: 'company',
+        share_dms_with_my_claude: true,
+        quiet_start: '20:00',
+      },
     });
     expect(res.status).toBe(200);
     const dto = await jsonOf<MeDto>(res);
     expect(dto.statusText).toBe('회의실에 있어요');
-    expect(dto.prefs).toMatchObject({ defaultChatSummaryVisibility: 'company', shareDmsWithMyClaude: true, quietStart: '20:00' });
+    expect(dto.prefs).toMatchObject({
+      defaultChatSummaryVisibility: 'company',
+      shareDmsWithMyClaude: true,
+      quietStart: '20:00',
+    });
     const [consent] = await h.db
       .select()
       .from(privacyConsents)
       .where(and(eq(privacyConsents.userId, me.id), eq(privacyConsents.scope, 'claude_chat_summary')));
     expect(consent?.withdrawnAt).toBeNull();
 
-    const org = await call(profileRoute.PATCH, '/api/v1/me/profile', { method: 'PATCH', cookie: me.cookie, body: { team: 'mgmt' } });
+    const org = await call(profileRoute.PATCH, '/api/v1/me/profile', {
+      method: 'PATCH',
+      cookie: me.cookie,
+      body: { team: 'mgmt' },
+    });
     expect(org.status).toBe(403);
-    const invalid = await call(profileRoute.PATCH, '/api/v1/me/profile', { method: 'PATCH', cookie: me.cookie, body: { quiet_start: '25:00' } });
+    const invalid = await call(profileRoute.PATCH, '/api/v1/me/profile', {
+      method: 'PATCH',
+      cookie: me.cookie,
+      body: { quiet_start: '25:00' },
+    });
     expect(invalid.status).toBe(400);
   });
 
@@ -504,18 +681,46 @@ describe('profile, pet and links', () => {
     const l1 = newId();
     const l2 = newId();
     await h.db.insert(claudeLinks).values([
-      { id: l1, userId: me.id, clientId: 'https://claude.ai/oauth/mcp', clientName: 'Claude', clientKind: 'claude_ai', redirectHost: 'claude.ai', consentedAt: now },
-      { id: l2, userId: me.id, clientId: 'cc-local', clientName: 'Claude Code', clientKind: 'claude_code', redirectHost: 'localhost', consentedAt: now },
+      {
+        id: l1,
+        userId: me.id,
+        clientId: 'https://claude.ai/oauth/mcp',
+        clientName: 'Claude',
+        clientKind: 'claude_ai',
+        redirectHost: 'claude.ai',
+        consentedAt: now,
+      },
+      {
+        id: l2,
+        userId: me.id,
+        clientId: 'cc-local',
+        clientName: 'Claude Code',
+        clientKind: 'claude_code',
+        redirectHost: 'localhost',
+        consentedAt: now,
+      },
     ]);
-    const list = await jsonOf<{ id: string; revokedAt: string | null }[]>(await call(linksRoute.GET, '/api/v1/me/claude-links', { cookie: me.cookie }));
+    const list = await jsonOf<{ id: string; revokedAt: string | null }[]>(
+      await call(linksRoute.GET, '/api/v1/me/claude-links', { cookie: me.cookie }),
+    );
     expect(list.map((l) => l.id).sort()).toEqual([l1, l2].sort());
 
-    const one = await call(revokeRoute.POST, '/api/v1/me/claude-links/revoke', { method: 'POST', cookie: me.cookie, body: { link_id: l1 } });
+    const one = await call(revokeRoute.POST, '/api/v1/me/claude-links/revoke', {
+      method: 'POST',
+      cookie: me.cookie,
+      body: { link_id: l1 },
+    });
     expect(await one.json()).toEqual({ revoked: 1 });
-    const pet = await jsonOf<{ links: { id: string }[] }>(await call(petRoute.GET, '/api/v1/me/pet', { cookie: me.cookie }));
+    const pet = await jsonOf<{ links: { id: string }[] }>(
+      await call(petRoute.GET, '/api/v1/me/pet', { cookie: me.cookie }),
+    );
     expect(pet.links.map((l) => l.id)).toEqual([l2]);
 
-    const all = await call(revokeRoute.POST, '/api/v1/me/claude-links/revoke', { method: 'POST', cookie: me.cookie, body: {} });
+    const all = await call(revokeRoute.POST, '/api/v1/me/claude-links/revoke', {
+      method: 'POST',
+      cookie: me.cookie,
+      body: {},
+    });
     expect(await all.json()).toEqual({ revoked: 1 });
     const rows = await h.db.select().from(claudeLinks).where(eq(claudeLinks.userId, me.id));
     expect(rows.every((r) => r.revokedAt !== null)).toBe(true);
@@ -527,11 +732,29 @@ describe('profile, pet and links', () => {
     await insertLog(me.id);
     await insertLog(other.id, { visibility: 'private', summary: '남의 비공개 로그' });
     const [low, high] = [me.id, other.id].sort() as [string, string];
-    await h.db.insert(chatMessages).values({ id: newId(), kind: 'dm', senderId: other.id, dmLow: low, dmHigh: high, body: '남이 보낸 DM', clientMsgId: 'x1' });
-    await h.db.insert(chatMessages).values({ id: newId(), kind: 'dm', senderId: me.id, dmLow: low, dmHigh: high, body: '내가 보낸 DM', clientMsgId: 'x2' });
+    await h.db.insert(chatMessages).values({
+      id: newId(),
+      kind: 'dm',
+      senderId: other.id,
+      dmLow: low,
+      dmHigh: high,
+      body: '남이 보낸 DM',
+      clientMsgId: 'x1',
+    });
+    await h.db.insert(chatMessages).values({
+      id: newId(),
+      kind: 'dm',
+      senderId: me.id,
+      dmLow: low,
+      dmHigh: high,
+      body: '내가 보낸 DM',
+      clientMsgId: 'x2',
+    });
     const res = await call(exportRoute.GET, '/api/v1/me/export', { cookie: me.cookie });
     expect(res.status).toBe(200);
-    expect(res.headers.get('content-disposition')).toMatch(/^attachment; filename="enu-town-export-\d{8}\.json"$/);
+    expect(res.headers.get('content-disposition')).toMatch(
+      /^attachment; filename="enu-town-export-\d{8}\.json"$/,
+    );
     const text = await res.text();
     expect(text).toContain('내가 보낸 DM');
     expect(text).not.toContain('남이 보낸 DM');
@@ -542,16 +765,129 @@ describe('profile, pet and links', () => {
   });
 });
 
+describe('to-dos and pet bubbles', () => {
+  async function seedTodo(userId: string) {
+    const todoId = newId();
+    await h.db
+      .insert(todos)
+      .values({ id: todoId, userId, externalRef: `t:${todoId}`, title: '배포 체크리스트', priority: 1 });
+    const nudgeId = newId();
+    const now = Date.now();
+    await h.db.insert(petNudges).values({
+      id: nudgeId,
+      userId,
+      text: '배포 전에 체크리스트 한 번 볼까요?',
+      todoId,
+      showAfter: new Date(now - 60_000),
+      expiresAt: new Date(now + 3600_000),
+    });
+    return { todoId, nudgeId };
+  }
+
+  it('lets the owner close a to-do (status_source=user) and retires its bubbles', async () => {
+    const me = await userWithSession();
+    const other = await userWithSession();
+    const { todoId, nudgeId } = await seedTodo(me.id);
+    const listener = await h.pool.connect();
+    const events: { type: string }[] = [];
+    listener.on('notification', (m) => events.push(JSON.parse(m.payload ?? 'null')));
+    await listener.query('listen enu_town_events');
+
+    const foreign = await call(todoRoute.PATCH, `/api/v1/me/todos/${todoId}`, {
+      method: 'PATCH',
+      cookie: other.cookie,
+      params: { id: todoId },
+      body: { status: 'done' },
+    });
+    expect(foreign.status).toBe(404);
+    const res = await call(todoRoute.PATCH, `/api/v1/me/todos/${todoId}`, {
+      method: 'PATCH',
+      cookie: me.cookie,
+      params: { id: todoId },
+      body: { status: 'done' },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ id: todoId, status: 'done', statusSource: 'user' });
+    const [n] = await h.db.select().from(petNudges).where(eq(petNudges.id, nudgeId));
+    expect(n?.status).toBe('superseded');
+
+    const past = await call(todoRoute.PATCH, `/api/v1/me/todos/${todoId}`, {
+      method: 'PATCH',
+      cookie: me.cookie,
+      params: { id: todoId },
+      body: { snoozed_until: new Date(Date.now() - 1000).toISOString() },
+    });
+    expect(past.status).toBe(400);
+    const snoozed = await call(todoRoute.PATCH, `/api/v1/me/todos/${todoId}`, {
+      method: 'PATCH',
+      cookie: me.cookie,
+      params: { id: todoId },
+      body: { snoozed_until: new Date(Date.now() + 3600_000).toISOString() },
+    });
+    expect(await snoozed.json()).toMatchObject({ status: 'snoozed', statusSource: 'user' });
+    const list = await jsonOf<{ id: string }[]>(
+      await call(todosRoute.GET, '/api/v1/me/todos', { cookie: me.cookie }),
+    );
+    expect(list.map((t) => t.id)).toEqual([todoId]);
+
+    await new Promise((r) => setTimeout(r, 200));
+    await listener.query('unlisten *');
+    listener.release();
+    expect(events.map((e) => e.type)).toEqual(expect.arrayContaining(['todos_changed', 'nudges_changed']));
+  });
+
+  it('acks, snoozes and dismisses bubbles, refusing already-handled ones', async () => {
+    const me = await userWithSession();
+    const { nudgeId } = await seedTodo(me.id);
+    const act = (body: unknown) =>
+      call(nudgeActionRoute.POST, `/api/v1/me/nudges/${nudgeId}/actions`, {
+        method: 'POST',
+        cookie: me.cookie,
+        params: { id: nudgeId },
+        body,
+      });
+    const before = Date.now();
+    const snooze = await act({ action: 'snooze', snooze_minutes: 15 });
+    expect(snooze.status).toBe(200);
+    expect(await snooze.json()).toMatchObject({ id: nudgeId, status: 'snoozed' });
+    const [row] = await h.db.select().from(petNudges).where(eq(petNudges.id, nudgeId));
+    expect(row!.snoozedUntil!.getTime()).toBeGreaterThanOrEqual(before + 15 * 60_000 - 1000);
+    expect(await (await act({ action: 'ack' })).json()).toMatchObject({ status: 'acked' });
+    expect((await act({ action: 'dismiss' })).status).toBe(409);
+    expect((await act({ action: 'explode' })).status).toBe(400);
+    const missing = newId();
+    expect(
+      (
+        await call(nudgeActionRoute.POST, `/api/v1/me/nudges/${missing}/actions`, {
+          method: 'POST',
+          cookie: me.cookie,
+          params: { id: missing },
+          body: { action: 'ack' },
+        })
+      ).status,
+    ).toBe(404);
+  });
+});
+
 describe('admin', () => {
   it('assigns, moves and unassigns seats (one desk per user)', async () => {
-    await h.db.insert(desks).values([{ deskId: 'L1a' }, { deskId: 'L1b' }]).onConflictDoNothing();
+    await h.db
+      .insert(desks)
+      .values([{ deskId: 'L1a' }, { deskId: 'L1b' }])
+      .onConflictDoNothing();
     const admin = await userWithSession({ role: 'admin' });
     const u = await createTestUser(h.db, { name: '자리주인' });
     const assign = (deskId: string, userId: string | null) =>
-      call(adminSeatsRoute.POST, '/api/v1/admin/seats', { method: 'POST', cookie: admin.cookie, body: { desk_id: deskId, user_id: userId } });
+      call(adminSeatsRoute.POST, '/api/v1/admin/seats', {
+        method: 'POST',
+        cookie: admin.cookie,
+        body: { desk_id: deskId, user_id: userId },
+      });
 
     expect((await assign('L1a', u.id)).status).toBe(200);
-    const moved = await jsonOf<{ desks: { deskId: string; userId: string | null; displayName: string | null }[] }>(await assign('L1b', u.id));
+    const moved = await jsonOf<{
+      desks: { deskId: string; userId: string | null; displayName: string | null }[];
+    }>(await assign('L1b', u.id));
     const byDesk = new Map(moved.desks.map((d) => [d.deskId, d]));
     expect(byDesk.get('L1a')?.userId).toBeNull();
     expect(byDesk.get('L1b')).toMatchObject({ userId: u.id, displayName: '자리주인' });
@@ -562,7 +898,10 @@ describe('admin', () => {
   });
 
   it('deactivates a user (sessions, links and seat revoked)', async () => {
-    await h.db.insert(desks).values([{ deskId: 'L2a' }]).onConflictDoNothing();
+    await h.db
+      .insert(desks)
+      .values([{ deskId: 'L2a' }])
+      .onConflictDoNothing();
     const admin = await userWithSession({ role: 'admin' });
     const target = await userWithSession({ name: '퇴사자' });
     await h.db.update(desks).set({ userId: target.id }).where(eq(desks.deskId, 'L2a'));
@@ -588,7 +927,9 @@ describe('admin', () => {
 
 describe('avatar sprites', () => {
   it('rejects malformed keys with 400 and serves PNG sheets for valid ones', async () => {
-    const bad = await call(spriteRoute.GET, '/api/sprites/avatar/av-m-nope', { params: { key: 'av-m-nope' } });
+    const bad = await call(spriteRoute.GET, '/api/sprites/avatar/av-m-nope', {
+      params: { key: 'av-m-nope' },
+    });
     expect(bad.status).toBe(400);
     const key = 'av-f-bob-pink-rose-light-w';
     const ok = await call(spriteRoute.GET, `/api/sprites/avatar/${key}`, { params: { key } });

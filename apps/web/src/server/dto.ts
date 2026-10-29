@@ -107,7 +107,11 @@ export function viewerCanSeeLog(viewer: { userId: string }, row: WorkLogRow, aut
  * leak a private log by forgetting a check. The chat summary is included only if
  * canViewChatSummary allows it.
  */
-export function toWorkLogDto(row: WorkLogRow, author: LogAuthor, viewer: { userId: string }): WorkLogDto | null {
+export function toWorkLogDto(
+  row: WorkLogRow,
+  author: LogAuthor,
+  viewer: { userId: string },
+): WorkLogDto | null {
   const fields = logFields(row);
   if (!canViewLog(viewer, fields, { active: author.active })) return null;
   const showChat = canViewChatSummary(viewer, fields, { active: author.active });
@@ -119,7 +123,9 @@ export function toWorkLogDto(row: WorkLogRow, author: LogAuthor, viewer: { userI
     periodStart: isoReq(row.periodStart),
     periodEnd: isoReq(row.periodEnd),
     summary: row.summary,
-    tasks: (row.tasks ?? []).map((t) => (t.ref ? { title: t.title, status: t.status, ref: t.ref } : { title: t.title, status: t.status })),
+    tasks: (row.tasks ?? []).map((t) =>
+      t.ref ? { title: t.title, status: t.status, ref: t.ref } : { title: t.title, status: t.status },
+    ),
     blockers: [...(row.blockers ?? [])],
     claudeChatSummary: showChat ? row.claudeChatSummary : null,
     visibility: oneOf(VISIBILITIES, row.visibility, 'private'),
@@ -134,10 +140,19 @@ export function toWorkLogDto(row: WorkLogRow, author: LogAuthor, viewer: { userI
 }
 
 /** Chat summary entry, or null when the viewer may not see it (or there is none). */
-export function toClaudeSummaryDto(row: WorkLogRow, author: LogAuthor, viewer: { userId: string }): ClaudeSummaryDto | null {
+export function toClaudeSummaryDto(
+  row: WorkLogRow,
+  author: LogAuthor,
+  viewer: { userId: string },
+): ClaudeSummaryDto | null {
   if (!row.claudeChatSummary) return null;
   if (!canViewChatSummary(viewer, logFields(row), { active: author.active })) return null;
-  return { logId: row.id, periodKey: row.periodKey, summary: row.claudeChatSummary, updatedAt: isoReq(row.updatedAt) };
+  return {
+    logId: row.id,
+    periodKey: row.periodKey,
+    summary: row.claudeChatSummary,
+    updatedAt: isoReq(row.updatedAt),
+  };
 }
 
 export function toTodoDto(t: TodoRow): TodoDto {
@@ -184,7 +199,10 @@ export function toClaudeLinkDto(l: ClaudeLinkRow): ClaudeLinkDto {
   };
 }
 
-export function toChatItemDto(m: Pick<ChatRow, 'id' | 'kind' | 'senderId' | 'body' | 'createdAt' | 'zoneId'>, senderName: string): ChatItemDto {
+export function toChatItemDto(
+  m: Pick<ChatRow, 'id' | 'kind' | 'senderId' | 'body' | 'createdAt' | 'zoneId'>,
+  senderName: string,
+): ChatItemDto {
   return {
     id: m.id,
     kind: m.kind as ChatKind,

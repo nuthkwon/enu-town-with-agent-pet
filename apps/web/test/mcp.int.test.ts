@@ -87,8 +87,13 @@ async function authorize(cookie: string, clientId: string) {
     code_challenge_method: 'S256',
     resource: RESOURCE,
   });
-  const res = await authGet(new Request(`${ORIGIN}/api/auth/oauth2/authorize?${params}`, { headers: { cookie, accept: 'application/json' } }));
-  const location = res.status === 302 ? res.headers.get('location')! : ((await res.json()) as { url: string }).url;
+  const res = await authGet(
+    new Request(`${ORIGIN}/api/auth/oauth2/authorize?${params}`, {
+      headers: { cookie, accept: 'application/json' },
+    }),
+  );
+  const location =
+    res.status === 302 ? res.headers.get('location')! : ((await res.json()) as { url: string }).url;
   return { consentUrl: new URL(location, ORIGIN), verifier };
 }
 
@@ -100,11 +105,16 @@ describe('OAuth discovery for the connector', () => {
     expect(prm.resource).toBe(RESOURCE);
     expect(prm.authorization_servers).toEqual([`${ORIGIN}/api/auth`]);
     expect(protectedResourceMetadataUrl(prm.resource)).toBe(PRM_URL);
-    expect((await prmRoute.GET(new Request(`${ORIGIN}/.well-known/oauth-protected-resource`))).status).toBe(200);
+    expect((await prmRoute.GET(new Request(`${ORIGIN}/.well-known/oauth-protected-resource`))).status).toBe(
+      200,
+    );
 
-    const asRes = await asRoute.GET(new Request(`${ORIGIN}/.well-known/oauth-authorization-server/api/auth`), {
-      params: Promise.resolve({ path: ['api', 'auth'] }),
-    });
+    const asRes = await asRoute.GET(
+      new Request(`${ORIGIN}/.well-known/oauth-authorization-server/api/auth`),
+      {
+        params: Promise.resolve({ path: ['api', 'auth'] }),
+      },
+    );
     expect(asRes.status).toBe(200);
     const as = (await asRes.json()) as Record<string, unknown>;
     expect(as.issuer).toBe(`${ORIGIN}/api/auth`);
@@ -112,7 +122,9 @@ describe('OAuth discovery for the connector', () => {
     expect(as.token_endpoint_auth_methods_supported).toContain('none');
     expect(as.scopes_supported).toEqual(expect.arrayContaining(['offline_access']));
     expect(as.registration_endpoint).toBeUndefined();
-    const other = await asRoute.GET(new Request(`${ORIGIN}/.well-known/oauth-authorization-server/x`), { params: Promise.resolve({ path: ['x'] }) });
+    const other = await asRoute.GET(new Request(`${ORIGIN}/.well-known/oauth-authorization-server/x`), {
+      params: Promise.resolve({ path: ['x'] }),
+    });
     expect(other.status).toBe(404);
     const oidc = await oidcRoute.GET(new Request(`${ORIGIN}/.well-known/openid-configuration/api/auth`), {
       params: Promise.resolve({ path: ['api', 'auth'] }),
@@ -121,14 +133,22 @@ describe('OAuth discovery for the connector', () => {
     expect(((await oidc.json()) as { issuer: string }).issuer).toBe(`${ORIGIN}/api/auth`);
 
     const unauth = await mcpRoute.POST(
-      new Request(RESOURCE, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' }),
+      new Request(RESOURCE, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{"jsonrpc":"2.0","id":1,"method":"tools/list"}',
+      }),
     );
     expect(unauth.status).toBe(401);
     const challenge = unauth.headers.get('www-authenticate') ?? '';
     expect(challenge).toContain(`resource_metadata="${PRM_URL}"`);
 
     const bogus = await mcpRoute.POST(
-      new Request(RESOURCE, { method: 'POST', headers: { authorization: 'Bearer not-a-jwt', 'content-type': 'application/json' }, body: '{}' }),
+      new Request(RESOURCE, {
+        method: 'POST',
+        headers: { authorization: 'Bearer not-a-jwt', 'content-type': 'application/json' },
+        body: '{}',
+      }),
     );
     expect(bogus.status).toBe(401);
 
@@ -148,10 +168,22 @@ describe('authorize -> consent -> token -> MCP', () => {
 
     const tampered = new URLSearchParams(consentUrl.search);
     tampered.set('redirect_uri', 'https://evil.example/cb');
-    expect(await performConsent({ headers: new Headers({ cookie, origin: ORIGIN }), accept: true, rawQuery: tampered.toString() })).toEqual({
+    expect(
+      await performConsent({
+        headers: new Headers({ cookie, origin: ORIGIN }),
+        accept: true,
+        rawQuery: tampered.toString(),
+      }),
+    ).toEqual({
       kind: 'invalid',
     });
-    expect(await performConsent({ headers: new Headers({ origin: ORIGIN }), accept: true, rawQuery: consentUrl.search })).toMatchObject({
+    expect(
+      await performConsent({
+        headers: new Headers({ origin: ORIGIN }),
+        accept: true,
+        rawQuery: consentUrl.search,
+      }),
+    ).toMatchObject({
       kind: 'sign_in',
     });
 
@@ -168,7 +200,13 @@ describe('authorize -> consent -> token -> MCP', () => {
     expect(code).toBeTruthy();
 
     const [link] = await h.db.select().from(claudeLinks).where(eq(claudeLinks.userId, member.id));
-    expect(link).toMatchObject({ clientId, clientName: 'Claude Code (test)', clientKind: 'claude_code', redirectHost: '127.0.0.1', revokedAt: null });
+    expect(link).toMatchObject({
+      clientId,
+      clientName: 'Claude Code (test)',
+      clientKind: 'claude_code',
+      redirectHost: '127.0.0.1',
+      revokedAt: null,
+    });
     const [profile] = await h.db.select().from(profiles).where(eq(profiles.userId, member.id));
     expect(profile?.linkState).toBe('linked');
 
@@ -209,7 +247,11 @@ describe('authorize -> consent -> token -> MCP', () => {
 
     // Revoking from /me invalidates tokens that were issued before the revocation.
     await new Promise((r) => setTimeout(r, 1100));
-    const revoke = await call(revokeRoute.POST, '/api/v1/me/claude-links/revoke', { method: 'POST', cookie, body: {} });
+    const revoke = await call(revokeRoute.POST, '/api/v1/me/claude-links/revoke', {
+      method: 'POST',
+      cookie,
+      body: {},
+    });
     expect(await revoke.json()).toEqual({ revoked: 1 });
     const after = await mcpRoute.POST(
       new Request(RESOURCE, {
@@ -233,7 +275,11 @@ describe('authorize -> consent -> token -> MCP', () => {
     const member = await createTestUser(h.db);
     const { cookie } = await devLogin(member.email);
     const { consentUrl } = await authorize(cookie, clientId);
-    const outcome = await performConsent({ headers: new Headers({ cookie, origin: ORIGIN }), accept: false, rawQuery: consentUrl.search });
+    const outcome = await performConsent({
+      headers: new Headers({ cookie, origin: ORIGIN }),
+      accept: false,
+      rawQuery: consentUrl.search,
+    });
     expect(outcome.kind).toBe('redirect');
     const back = new URL((outcome as { url: string }).url);
     expect(back.searchParams.get('error')).toBe('access_denied');

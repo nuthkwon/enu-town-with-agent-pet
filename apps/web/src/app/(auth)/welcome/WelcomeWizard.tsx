@@ -1,6 +1,13 @@
 'use client';
 
-import { PET_SPECIES, type AvatarPreset, type DeskDto, type MeDto, type PetSpecies, type Visibility } from '@enu/shared';
+import {
+  PET_SPECIES,
+  type AvatarPreset,
+  type DeskDto,
+  type MeDto,
+  type PetSpecies,
+  type Visibility,
+} from '@enu/shared';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -20,13 +27,24 @@ function asSpecies(v: string): PetSpecies {
   return (PET_SPECIES as readonly string[]).includes(v) ? (v as PetSpecies) : 'cat';
 }
 
-export function WelcomeWizard({ me, desks, swatches }: { me: MeDto; desks: DeskDto[]; swatches: AvatarSwatches }) {
+export function WelcomeWizard({
+  me,
+  desks,
+  swatches,
+}: {
+  me: MeDto;
+  desks: DeskDto[];
+  swatches: AvatarSwatches;
+}) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [accepted, setAccepted] = useState(me.noticeAccepted);
   const [deskId, setDeskId] = useState<string | null>(me.deskId);
   const [avatar, setAvatar] = useState<AvatarPreset>(me.avatar);
-  const [pet, setPet] = useState<{ species: PetSpecies; name: string }>({ species: asSpecies(me.pet.species), name: me.pet.name });
+  const [pet, setPet] = useState<{ species: PetSpecies; name: string }>({
+    species: asSpecies(me.pet.species),
+    name: me.pet.name,
+  });
   const [chatVis, setChatVis] = useState<Visibility>(me.prefs.defaultChatSummaryVisibility ?? 'private');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +90,11 @@ export function WelcomeWizard({ me, desks, swatches }: { me: MeDto; desks: DeskD
         <p className={s.lead}>{w.lead(me.displayName)}</p>
         <ol className={s.stepper} aria-label="진행 단계">
           {STEPS.map((label, i) => (
-            <li key={label} className={cx(s.stepItem, i === step && s.stepActive, i < step && s.stepDone)} aria-current={i === step ? 'step' : undefined}>
+            <li
+              key={label}
+              className={cx(s.stepItem, i === step && s.stepActive, i < step && s.stepDone)}
+              aria-current={i === step ? 'step' : undefined}
+            >
               <span className={s.stepDot}>{i < step ? '✓' : i + 1}</span>
               <span className={s.stepLabel}>{label}</span>
             </li>

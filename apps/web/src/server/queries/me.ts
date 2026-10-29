@@ -1,6 +1,13 @@
 import { provisionProfile } from '@enu/auth';
 import { desks, privacyConsents, profiles, type Db, type DbOrTx } from '@enu/db';
-import { PRIVACY_NOTICE_VERSION, VISIBILITIES, avatarSpriteKey, teamLabel, type MeDto, type Visibility } from '@enu/shared';
+import {
+  PRIVACY_NOTICE_VERSION,
+  VISIBILITIES,
+  avatarSpriteKey,
+  teamLabel,
+  type MeDto,
+  type Visibility,
+} from '@enu/shared';
 import { and, eq, isNull } from 'drizzle-orm';
 import { mcpResource } from '../auth';
 import { asLinkState, asTeamId, normalizeAvatar, type ProfileRow } from '../dto';
@@ -27,7 +34,11 @@ export async function deskOf(db: DbOrTx, userId: string): Promise<string | null>
 }
 
 /** True when the user accepted the current privacy notice (service scope) and did not withdraw. */
-export async function hasAcceptedNotice(db: DbOrTx, userId: string, version: string = PRIVACY_NOTICE_VERSION): Promise<boolean> {
+export async function hasAcceptedNotice(
+  db: DbOrTx,
+  userId: string,
+  version: string = PRIVACY_NOTICE_VERSION,
+): Promise<boolean> {
   const [c] = await db
     .select({ id: privacyConsents.id })
     .from(privacyConsents)
@@ -46,7 +57,12 @@ export async function hasAcceptedNotice(db: DbOrTx, userId: string, version: str
 const asVisibility = (v: string | null): Visibility | null =>
   v && (VISIBILITIES as readonly string[]).includes(v) ? (v as Visibility) : null;
 
-export function toMeDto(p: ProfileRow, viewer: Viewer, deskId: string | null, noticeAccepted: boolean): MeDto {
+export function toMeDto(
+  p: ProfileRow,
+  viewer: Viewer,
+  deskId: string | null,
+  noticeAccepted: boolean,
+): MeDto {
   const avatar = normalizeAvatar(p.avatar);
   const team = asTeamId(p.team);
   return {
@@ -85,6 +101,9 @@ export function toMeDto(p: ProfileRow, viewer: Viewer, deskId: string | null, no
 
 export async function buildMeDto(db: Db, viewer: Viewer): Promise<MeDto> {
   const p = await ensureProfile(db, viewer);
-  const [deskId, accepted] = await Promise.all([deskOf(db, viewer.userId), hasAcceptedNotice(db, viewer.userId)]);
+  const [deskId, accepted] = await Promise.all([
+    deskOf(db, viewer.userId),
+    hasAcceptedNotice(db, viewer.userId),
+  ]);
   return toMeDto(p, viewer, deskId, accepted);
 }

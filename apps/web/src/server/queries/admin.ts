@@ -11,7 +11,14 @@ export async function adminSeats(db: DbOrTx): Promise<AdminSeatsDto> {
   const [deskList, users] = await Promise.all([
     listDesks(db),
     db
-      .select({ userId: user.id, displayName: profiles.displayName, name: user.name, email: user.email, status: user.status, deskId: desks.deskId })
+      .select({
+        userId: user.id,
+        displayName: profiles.displayName,
+        name: user.name,
+        email: user.email,
+        status: user.status,
+        deskId: desks.deskId,
+      })
       .from(user)
       .leftJoin(profiles, eq(profiles.userId, user.id))
       .leftJoin(desks, eq(desks.userId, user.id))
@@ -30,10 +37,20 @@ export async function adminSeats(db: DbOrTx): Promise<AdminSeatsDto> {
 }
 
 /** Assigns (or, with userId null, frees) a desk. A user holds at most one desk. */
-export async function assignSeat(db: Db, admin: Viewer, deskId: string, userId: string | null): Promise<void> {
-  if (!(DESK_IDS as readonly string[]).includes(deskId)) throw new HttpError(400, 'unknown_desk', ko.errors.unknownDesk);
+export async function assignSeat(
+  db: Db,
+  admin: Viewer,
+  deskId: string,
+  userId: string | null,
+): Promise<void> {
+  if (!(DESK_IDS as readonly string[]).includes(deskId))
+    throw new HttpError(400, 'unknown_desk', ko.errors.unknownDesk);
   await db.transaction(async (tx) => {
-    const [desk] = await tx.select({ deskId: desks.deskId, userId: desks.userId }).from(desks).where(eq(desks.deskId, deskId)).for('update');
+    const [desk] = await tx
+      .select({ deskId: desks.deskId, userId: desks.userId })
+      .from(desks)
+      .where(eq(desks.deskId, deskId))
+      .for('update');
     if (!desk) throw new HttpError(404, 'unknown_desk', ko.errors.unknownDesk);
     if (userId) {
       const [u] = await tx.select({ id: user.id, status: user.status }).from(user).where(eq(user.id, userId));
@@ -41,7 +58,10 @@ export async function assignSeat(db: Db, admin: Viewer, deskId: string, userId: 
       if (u.status !== 'active') throw new HttpError(409, 'user_inactive', ko.errors.userInactive);
       if (desk.userId === userId) return;
       // Free the user's previous desk and evict the current occupant of the target desk.
-      await tx.update(desks).set({ userId: null }).where(and(eq(desks.userId, userId), ne(desks.deskId, deskId)));
+      await tx
+        .update(desks)
+        .set({ userId: null })
+        .where(and(eq(desks.userId, userId), ne(desks.deskId, deskId)));
       await tx.update(desks).set({ userId }).where(eq(desks.deskId, deskId));
     } else {
       if (!desk.userId) return;

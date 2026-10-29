@@ -22,7 +22,11 @@ function hostOf(url: string | null): string | null {
   }
 }
 
-export default async function ConsentPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function ConsentPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const sp = toSearchParams(await searchParams);
   const signed = signedOAuthQuery(sp);
   const viewer = await getPageViewer();
@@ -62,7 +66,9 @@ export default async function ConsentPage({ searchParams }: { searchParams: Prom
         <p className={s.lead}>{ko.consent.lead(clientName)}</p>
       </div>
 
-      {failed && <Notice tone="error">{failed === 'invalid' ? ko.consent.invalidBody : ko.consent.failed}</Notice>}
+      {failed && (
+        <Notice tone="error">{failed === 'invalid' ? ko.consent.invalidBody : ko.consent.failed}</Notice>
+      )}
 
       <div className={s.account}>
         <div>
@@ -86,7 +92,11 @@ export default async function ConsentPage({ searchParams }: { searchParams: Prom
         </div>
       </dl>
 
-      {loopback && <Notice tone="warn" title={ko.consent.loopbackTitle}>{ko.consent.loopbackBody}</Notice>}
+      {loopback && (
+        <Notice tone="warn" title={ko.consent.loopbackTitle}>
+          {ko.consent.loopbackBody}
+        </Notice>
+      )}
 
       <div className={s.lists}>
         <div className={s.listCan}>

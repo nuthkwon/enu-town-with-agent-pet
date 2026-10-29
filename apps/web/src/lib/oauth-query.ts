@@ -6,7 +6,10 @@
  * Mirrors the provider's client-side buildSignedOAuthQuery (not exported by the package).
  */
 export function signedOAuthQuery(search: string | URLSearchParams): string | null {
-  const params = typeof search === 'string' ? new URLSearchParams(search.startsWith('?') ? search.slice(1) : search) : search;
+  const params =
+    typeof search === 'string'
+      ? new URLSearchParams(search.startsWith('?') ? search.slice(1) : search)
+      : search;
   if (!params.has('sig')) return null;
   const names = new Set(params.getAll('ba_param'));
   if (names.size === 0) return null;
@@ -30,7 +33,8 @@ export function toSearchParams(sp: Record<string, string | string[] | undefined>
 /** A same-site relative path for ?next= (never an absolute or protocol-relative URL). */
 export function safeNextPath(next: string | string[] | null | undefined, fallback = '/town'): string {
   const v = Array.isArray(next) ? next[0] : next;
-  if (!v || !v.startsWith('/') || v.startsWith('//') || v.startsWith('/\\') || v.includes('\n')) return fallback;
+  if (!v || !v.startsWith('/') || v.startsWith('//') || v.startsWith('/\\') || v.includes('\n'))
+    return fallback;
   if (v.startsWith('/sign-in') || v.startsWith('/api/')) return fallback;
   return v;
 }

@@ -45,7 +45,17 @@ export function AvatarSprite({
   );
 }
 
-export function PetSprite({ species, scale = 3, animate = false, label }: { species: string; scale?: number; animate?: boolean; label?: string }) {
+export function PetSprite({
+  species,
+  scale = 3,
+  animate = false,
+  label,
+}: {
+  species: string;
+  scale?: number;
+  animate?: boolean;
+  label?: string;
+}) {
   const url = `/assets/sprites/pets/${encodeURIComponent(species)}.png`;
   return (
     <span

@@ -1,8 +1,28 @@
 'use client';
 
-import { LIMITS, TASK_STATUSES, type Paginated, type TaskStatus, type Visibility, type WorkLogDto } from '@enu/shared';
+import {
+  LIMITS,
+  TASK_STATUSES,
+  type Paginated,
+  type TaskStatus,
+  type Visibility,
+  type WorkLogDto,
+} from '@enu/shared';
 import { useEffect, useRef, useState } from 'react';
-import { Badge, Button, Card, Empty, Field, Notice, Segmented, cx, inputClass, selectClass, textareaClass, type Tone } from '@/components/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  Empty,
+  Field,
+  Notice,
+  Segmented,
+  cx,
+  inputClass,
+  selectClass,
+  textareaClass,
+  type Tone,
+} from '@/components/ui';
 import { ko } from '@/i18n/ko';
 import { apiFetch, describeError } from '@/lib/api';
 import { formatDate, formatDateTime } from '@/lib/format';
@@ -10,14 +30,27 @@ import s from './me.module.css';
 
 const t = ko.me.logs;
 
-const TASK_TONE: Record<string, Tone> = { done: 'mint', in_progress: 'lavender', planned: 'sky', blocked: 'danger' };
+const TASK_TONE: Record<string, Tone> = {
+  done: 'mint',
+  in_progress: 'lavender',
+  planned: 'sky',
+  blocked: 'danger',
+};
 
 const visibilityOptions = [
   { value: 'company' as const, label: ko.visibility.company },
   { value: 'private' as const, label: ko.visibility.private },
 ];
 
-export function LogsTab({ initial, focusId, timezone }: { initial: Paginated<WorkLogDto>; focusId: string | null; timezone: string }) {
+export function LogsTab({
+  initial,
+  focusId,
+  timezone,
+}: {
+  initial: Paginated<WorkLogDto>;
+  focusId: string | null;
+  timezone: string;
+}) {
   const [logs, setLogs] = useState(initial.items);
   const [cursor, setCursor] = useState(initial.nextCursor);
   const [loading, setLoading] = useState(false);
@@ -27,7 +60,9 @@ export function LogsTab({ initial, focusId, timezone }: { initial: Paginated<Wor
     if (!cursor) return;
     setLoading(true);
     try {
-      const page = await apiFetch<Paginated<WorkLogDto>>(`/api/v1/me/work-logs?cursor=${encodeURIComponent(cursor)}`);
+      const page = await apiFetch<Paginated<WorkLogDto>>(
+        `/api/v1/me/work-logs?cursor=${encodeURIComponent(cursor)}`,
+      );
       setLogs((l) => [...l, ...page.items]);
       setCursor(page.nextCursor);
     } catch (e) {
@@ -171,7 +206,11 @@ function LogCard({
               label={t.chatVisibility}
               value={log.chatSummaryVisibility}
               options={visibilityOptions}
-              onChange={(v) => v !== log.chatSummaryVisibility && !busy && patch({ chat_summary_visibility: v }, t.visibilitySaved)}
+              onChange={(v) =>
+                v !== log.chatSummaryVisibility &&
+                !busy &&
+                patch({ chat_summary_visibility: v }, t.visibilitySaved)
+              }
             />
           </div>
           <div style={{ flex: 1 }} />
@@ -207,7 +246,9 @@ function LogView({ log }: { log: WorkLogDto }) {
           <ul className={s.tasks}>
             {log.tasks.map((task, i) => (
               <li key={i} className={s.task}>
-                <Badge tone={TASK_TONE[task.status] ?? 'gray'}>{ko.taskStatus[task.status as TaskStatus] ?? task.status}</Badge>
+                <Badge tone={TASK_TONE[task.status] ?? 'gray'}>
+                  {ko.taskStatus[task.status as TaskStatus] ?? task.status}
+                </Badge>
                 <span>{task.title}</span>
                 {task.ref && <span className={s.taskRef}>{task.ref}</span>}
               </li>
@@ -228,7 +269,9 @@ function LogView({ log }: { log: WorkLogDto }) {
       <div className={s.logSection}>
         <div className={s.logSectionTitle}>
           {t.chatSummary}
-          <Badge tone={log.chatSummaryVisibility === 'company' && log.visibility === 'company' ? 'mint' : 'gray'}>
+          <Badge
+            tone={log.chatSummaryVisibility === 'company' && log.visibility === 'company' ? 'mint' : 'gray'}
+          >
             {ko.visibility[log.visibility === 'company' ? log.chatSummaryVisibility : 'private']}
           </Badge>
         </div>
@@ -259,7 +302,13 @@ function LogEditor({
 }) {
   const [summary, setSummary] = useState(log.summary ?? '');
   const [tasks, setTasks] = useState<TaskDraft[]>(
-    log.tasks.map((x) => ({ title: x.title, status: (TASK_STATUSES as readonly string[]).includes(x.status) ? (x.status as TaskStatus) : 'in_progress', ...(x.ref ? { ref: x.ref } : {}) })),
+    log.tasks.map((x) => ({
+      title: x.title,
+      status: (TASK_STATUSES as readonly string[]).includes(x.status)
+        ? (x.status as TaskStatus)
+        : 'in_progress',
+      ...(x.ref ? { ref: x.ref } : {}),
+    })),
   );
   const [blockers, setBlockers] = useState<string[]>(log.blockers);
   const [chat, setChat] = useState(log.claudeChatSummary ?? '');
@@ -275,7 +324,11 @@ function LogEditor({
 
   return (
     <div className={s.logSection}>
-      <Field label={t.summary} htmlFor={`summary-${log.id}`} help={`${summary.length} / ${LIMITS.workLogSummaryMax}`}>
+      <Field
+        label={t.summary}
+        htmlFor={`summary-${log.id}`}
+        help={`${summary.length} / ${LIMITS.workLogSummaryMax}`}
+      >
         <textarea
           id={`summary-${log.id}`}
           className={textareaClass}
@@ -293,13 +346,17 @@ function LogEditor({
             aria-label={t.taskTitle}
             value={task.title}
             maxLength={LIMITS.workLogTaskTitleMax}
-            onChange={(e) => setTasks((l) => l.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))}
+            onChange={(e) =>
+              setTasks((l) => l.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))
+            }
           />
           <select
             className={selectClass}
             aria-label={ko.me.logs.tasks}
             value={task.status}
-            onChange={(e) => setTasks((l) => l.map((x, j) => (j === i ? { ...x, status: e.target.value as TaskStatus } : x)))}
+            onChange={(e) =>
+              setTasks((l) => l.map((x, j) => (j === i ? { ...x, status: e.target.value as TaskStatus } : x)))
+            }
           >
             {TASK_STATUSES.map((st) => (
               <option key={st} value={st}>
@@ -313,7 +370,11 @@ function LogEditor({
         </div>
       ))}
       {tasks.length < LIMITS.workLogTasksMax && (
-        <Button variant="secondary" size="sm" onClick={() => setTasks((l) => [...l, { title: '', status: 'in_progress' }])}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setTasks((l) => [...l, { title: '', status: 'in_progress' }])}
+        >
           + {t.addTask}
         </Button>
       )}
@@ -342,7 +403,11 @@ function LogEditor({
       )}
 
       <div style={{ marginTop: 16 }}>
-        <Field label={t.chatSummary} htmlFor={`chat-${log.id}`} help={`${chat.length} / ${LIMITS.claudeChatSummaryMax}`}>
+        <Field
+          label={t.chatSummary}
+          htmlFor={`chat-${log.id}`}
+          help={`${chat.length} / ${LIMITS.claudeChatSummaryMax}`}
+        >
           <textarea
             id={`chat-${log.id}`}
             className={textareaClass}

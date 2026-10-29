@@ -21,7 +21,8 @@ let protectedPost: ((req: Request) => Promise<Response>) | undefined;
 
 function mcpHandler(): McpHttpHandler {
   mcp ??= createMcpHandler(
-    ({ authInfo }) => buildEnuTownMcpServer({ db: getDb(), publicUrl: publicUrl() }, callerFromAuthInfo(authInfo)),
+    ({ authInfo }) =>
+      buildEnuTownMcpServer({ db: getDb(), publicUrl: publicUrl() }, callerFromAuthInfo(authInfo)),
     { legacy: 'stateless', responseMode: 'json', maxRequestBodySize: LIMITS.mcpBodyMaxBytes },
   );
   return mcp;

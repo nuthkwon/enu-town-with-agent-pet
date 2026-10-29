@@ -5,12 +5,19 @@ const directive = (csp: string, name: string) => csp.split('; ').find((d) => d.s
 
 describe('buildCsp', () => {
   it('uses a nonce with strict-dynamic and no unsafe-eval in production', () => {
-    const csp = buildCsp({ nonce: 'abc123', dev: false, realtimeUrl: 'wss://town.enu-tech.co.kr/colyseus', upgradeInsecureRequests: true });
+    const csp = buildCsp({
+      nonce: 'abc123',
+      dev: false,
+      realtimeUrl: 'wss://town.enu-tech.co.kr/colyseus',
+      upgradeInsecureRequests: true,
+    });
     expect(directive(csp, 'script-src')).toBe("script-src 'self' 'nonce-abc123' 'strict-dynamic'");
     expect(directive(csp, 'style-src')).toBe("style-src 'self' 'unsafe-inline'");
     expect(directive(csp, 'img-src')).toBe("img-src 'self' data: blob:");
     expect(directive(csp, 'font-src')).toBe("font-src 'self'");
-    expect(directive(csp, 'connect-src')).toBe("connect-src 'self' wss://town.enu-tech.co.kr https://town.enu-tech.co.kr");
+    expect(directive(csp, 'connect-src')).toBe(
+      "connect-src 'self' wss://town.enu-tech.co.kr https://town.enu-tech.co.kr",
+    );
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("base-uri 'self'");
     expect(csp).toContain("object-src 'none'");
@@ -19,7 +26,12 @@ describe('buildCsp', () => {
   });
 
   it('adds unsafe-eval and the HMR socket in development', () => {
-    const csp = buildCsp({ nonce: 'n', dev: true, realtimeUrl: 'ws://localhost:2567', selfOrigin: 'http://localhost:3000' });
+    const csp = buildCsp({
+      nonce: 'n',
+      dev: true,
+      realtimeUrl: 'ws://localhost:2567',
+      selfOrigin: 'http://localhost:3000',
+    });
     expect(directive(csp, 'script-src')).toContain("'unsafe-eval'");
     expect(directive(csp, 'connect-src')).toBe(
       "connect-src 'self' ws://localhost:2567 http://localhost:2567 ws://localhost:3000 http://localhost:3000",

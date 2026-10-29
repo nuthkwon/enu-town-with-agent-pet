@@ -139,7 +139,8 @@ export const ko = {
     googleBusy: 'Google로 이동 중…',
     googleUnavailable: 'Google 로그인이 아직 설정되지 않았어요. 관리자에게 문의해 주세요.',
     domainNotice: (hd: string) => `@${hd} 회사 계정만 로그인할 수 있어요.`,
-    connectorNotice: 'Claude 커넥터를 연결하려면 먼저 로그인해 주세요. 로그인하면 연결 동의 화면으로 이어져요.',
+    connectorNotice:
+      'Claude 커넥터를 연결하려면 먼저 로그인해 주세요. 로그인하면 연결 동의 화면으로 이어져요.',
     devTitle: '개발용 로그인',
     devHelp: '개발 환경에서만 보여요. Google 없이 시드된 사용자로 들어갑니다.',
     devEmpty: '시드된 개발 사용자가 없어요. pnpm seed:dev 를 실행해 주세요.',
@@ -235,8 +236,7 @@ export const ko = {
     },
     chatSummary: {
       title: 'Claude 작업 대화 요약 공개 범위',
-      help:
-        '업무 로그와 함께 내 Claude가 "오늘 Claude와 어떤 주제로 일했는지" 2~3문장으로 요약을 쓸 수 있어요. 원본 대화는 저장하지 않아요.',
+      help: '업무 로그와 함께 내 Claude가 "오늘 Claude와 어떤 주제로 일했는지" 2~3문장으로 요약을 쓸 수 있어요. 원본 대화는 저장하지 않아요.',
       privateTitle: '나만 보기 (추천)',
       privateBody: '요약은 나만 볼 수 있어요.',
       companyTitle: '전사 공개',
@@ -336,7 +336,8 @@ export const ko = {
       revoked: '해제됨',
       revoke: '연결 해제',
       revokeAll: '모든 연결 해제',
-      revokeConfirm: '이 연결을 해제할까요? 이 Claude는 더 이상 ENU Town에 기록할 수 없고, 다시 쓰려면 연결 동의부터 다시 해야 해요.',
+      revokeConfirm:
+        '이 연결을 해제할까요? 이 Claude는 더 이상 ENU Town에 기록할 수 없고, 다시 쓰려면 연결 동의부터 다시 해야 해요.',
       revokeAllConfirm: '모든 Claude 연결을 해제할까요? 발급된 토큰이 모두 무효가 돼요.',
       revokedToast: (n: number) => `${n}개 연결을 해제했어요.`,
     },
@@ -357,7 +358,8 @@ export const ko = {
       addBlocker: '막힌 점 추가',
       taskTitle: '작업 이름',
       blockerText: '막힌 점',
-      deleteConfirm: '이 로그를 삭제할까요? 내용은 바로 지워지고 되돌릴 수 없어요. 그날 로그는 Claude도 다시 쓰지 않아요.',
+      deleteConfirm:
+        '이 로그를 삭제할까요? 내용은 바로 지워지고 되돌릴 수 없어요. 그날 로그는 Claude도 다시 쓰지 않아요.',
       deleted: '로그를 삭제했어요.',
       visibilitySaved: '공개 범위를 바꿨어요.',
       source: {
@@ -528,7 +530,9 @@ export const ko = {
     fontsTitle: '글꼴',
     fonts: ['갈무리(Galmuri) — Lee Minseo (quiple), SIL Open Font License 1.1'],
     artTitle: '픽셀 아트',
-    art: ['아바타, 펫, 사무실 타일은 이 저장소에서 코드로 직접 그린 오리지널 픽셀 아트입니다. 외부 에셋을 쓰지 않았습니다.'],
+    art: [
+      '아바타, 펫, 사무실 타일은 이 저장소에서 코드로 직접 그린 오리지널 픽셀 아트입니다. 외부 에셋을 쓰지 않았습니다.',
+    ],
     libsTitle: '오픈소스 라이브러리',
     libs: [
       'Phaser — MIT',

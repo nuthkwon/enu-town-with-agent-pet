@@ -21,7 +21,12 @@ function dmPair(a: string, b: string): [string, string] {
   return a < b ? [a, b] : [b, a];
 }
 
-async function fetchPage(db: DbOrTx, where: SQL | undefined, cursor: Cursor | null, limit: number): Promise<Page<ChatItemDto>> {
+async function fetchPage(
+  db: DbOrTx,
+  where: SQL | undefined,
+  cursor: Cursor | null,
+  limit: number,
+): Promise<Page<ChatItemDto>> {
   const rows = await db
     .select({
       id: chatMessages.id,
@@ -37,7 +42,13 @@ async function fetchPage(db: DbOrTx, where: SQL | undefined, cursor: Cursor | nu
     .from(chatMessages)
     .leftJoin(sender, eq(sender.userId, chatMessages.senderId))
     .leftJoin(senderUser, eq(senderUser.id, chatMessages.senderId))
-    .where(and(where, isNull(chatMessages.deletedAt), beforeMicros(chatMessages.createdAt, chatMessages.id, cursor)))
+    .where(
+      and(
+        where,
+        isNull(chatMessages.deletedAt),
+        beforeMicros(chatMessages.createdAt, chatMessages.id, cursor),
+      ),
+    )
     .orderBy(desc(chatMessages.createdAt), desc(chatMessages.id))
     .limit(limit + 1);
   const page = paginate(rows, limit, (r) => ({ k: r.micros, id: r.id }));
@@ -63,7 +74,12 @@ export async function chatHistory(
 ): Promise<Page<ChatItemDto>> {
   if (kind === 'dm') {
     const [low, high] = dmPair(viewerId, peerId);
-    return fetchPage(db, and(eq(chatMessages.kind, 'dm'), eq(chatMessages.dmLow, low), eq(chatMessages.dmHigh, high)), cursor, limit);
+    return fetchPage(
+      db,
+      and(eq(chatMessages.kind, 'dm'), eq(chatMessages.dmLow, low), eq(chatMessages.dmHigh, high)),
+      cursor,
+      limit,
+    );
   }
   if (kind === 'nearby') {
     const heardBy = (uid: string) =>
@@ -71,7 +87,9 @@ export async function chatHistory(
         db
           .select({ one: sql`1` })
           .from(chatMessageRecipients)
-          .where(and(eq(chatMessageRecipients.messageId, chatMessages.id), eq(chatMessageRecipients.userId, uid))),
+          .where(
+            and(eq(chatMessageRecipients.messageId, chatMessages.id), eq(chatMessageRecipients.userId, uid)),
+          ),
       );
     return fetchPage(
       db,
@@ -156,4 +174,3 @@ export async function dmThreads(db: DbOrTx, viewerId: string): Promise<DmThreadD
     };
   });
 }
-

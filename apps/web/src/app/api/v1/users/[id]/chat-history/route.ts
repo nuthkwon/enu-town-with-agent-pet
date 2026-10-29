@@ -20,7 +20,9 @@ export const GET = route<{ id: string }>(async (req, { id }) => {
   const url = new URL(req.url);
   const kind = url.searchParams.get('kind') as HistoryKind | null;
   if (!kind || !KINDS.includes(kind)) {
-    throw new HttpError(400, 'invalid_query', ko.errors.invalidQuery, [{ field: 'kind', reason: 'invalid_value' }]);
+    throw new HttpError(400, 'invalid_query', ko.errors.invalidQuery, [
+      { field: 'kind', reason: 'invalid_value' },
+    ]);
   }
   const db = getDb();
   await requireVisibleAuthor(db, viewer, id);

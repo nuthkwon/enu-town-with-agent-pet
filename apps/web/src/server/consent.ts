@@ -60,7 +60,11 @@ export type ConsentOutcome =
  * session -> signed query -> provider consent endpoint (issues the code or access_denied) ->
  * claude_links upsert + audit (allow) or audit (deny) -> the client's redirect URL.
  */
-export async function performConsent(input: { headers: Headers; accept: boolean; rawQuery: string }): Promise<ConsentOutcome> {
+export async function performConsent(input: {
+  headers: Headers;
+  accept: boolean;
+  rawQuery: string;
+}): Promise<ConsentOutcome> {
   const viewer = await getViewer(input.headers);
   const signed = signedOAuthQuery(input.rawQuery);
   if (!viewer) return { kind: 'sign_in', url: `/sign-in${signed ? `?${signed}` : ''}` };
@@ -84,7 +88,9 @@ export async function performConsent(input: { headers: Headers; accept: boolean;
       request: new Request(`${publicUrl()}/api/auth/oauth2/consent`, { method: 'POST', headers: forwarded }),
     });
     // With an explicit `request` the endpoint answers with a Response; without one, with JSON.
-    const res = (raw instanceof Response ? await raw.json().catch(() => null) : raw) as { url?: string } | null;
+    const res = (raw instanceof Response ? await raw.json().catch(() => null) : raw) as {
+      url?: string;
+    } | null;
     if (!res?.url) {
       console.error('[enu-town] oauth2 consent returned no redirect URL');
       return { kind: 'failed' };

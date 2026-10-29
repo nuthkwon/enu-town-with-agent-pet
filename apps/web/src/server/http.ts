@@ -36,12 +36,17 @@ export function apiError(
   fields?: FieldIssue[],
   headers?: Record<string, string>,
 ): Response {
-  const body: ApiError = { error, ...(message ? { message } : {}), ...(fields && fields.length ? { fields } : {}) };
+  const body: ApiError = {
+    error,
+    ...(message ? { message } : {}),
+    ...(fields && fields.length ? { fields } : {}),
+  };
   return json(body, { status, headers });
 }
 
 export function errorResponse(e: unknown): Response {
-  if (e instanceof HttpError) return apiError(e.status, e.code, e.message === e.code ? undefined : e.message, e.fields, e.headers);
+  if (e instanceof HttpError)
+    return apiError(e.status, e.code, e.message === e.code ? undefined : e.message, e.fields, e.headers);
   console.error('[enu-town] unhandled route error', e);
   return apiError(500, 'internal_error', ko.errors.internal);
 }
@@ -54,7 +59,8 @@ export const MAX_JSON_BODY_BYTES = 64 * 1024;
 /** Reads and validates a JSON body: 400 with field-level reasons on failure. */
 export async function parseBody<S extends z.ZodType>(req: Request, schema: S): Promise<z.output<S>> {
   const text = await req.text();
-  if (Buffer.byteLength(text, 'utf8') > MAX_JSON_BODY_BYTES) throw new HttpError(413, 'payload_too_large', ko.errors.tooLarge);
+  if (Buffer.byteLength(text, 'utf8') > MAX_JSON_BODY_BYTES)
+    throw new HttpError(413, 'payload_too_large', ko.errors.tooLarge);
   let raw: unknown;
   try {
     raw = text.trim() ? JSON.parse(text) : {};
@@ -126,7 +132,8 @@ export function decodeCursor(raw: string | null | undefined, kind: CursorKind): 
   } catch {
     throw bad();
   }
-  if (!Array.isArray(v) || v.length !== 2 || typeof v[0] !== 'string' || typeof v[1] !== 'string') throw bad();
+  if (!Array.isArray(v) || v.length !== 2 || typeof v[0] !== 'string' || typeof v[1] !== 'string')
+    throw bad();
   const [k, id] = v as [string, string];
   if (!(kind === 'micros' ? MICROS_RE : DATE_RE).test(k) || !isUuid(id)) throw bad();
   return { k, id };

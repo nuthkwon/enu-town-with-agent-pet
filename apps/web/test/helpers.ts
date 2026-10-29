@@ -15,7 +15,10 @@ export async function freshDb(h?: DbHandle): Promise<DbHandle> {
 }
 
 /** Signs in through the real dev-login endpoint (auth.handler) and returns the session cookie. */
-export async function devLogin(email: string, oauthQuery?: string): Promise<{ cookie: string; body: unknown }> {
+export async function devLogin(
+  email: string,
+  oauthQuery?: string,
+): Promise<{ cookie: string; body: unknown }> {
   const res = await authPost(
     new Request(`${ORIGIN}/api/auth/dev/login`, {
       method: 'POST',

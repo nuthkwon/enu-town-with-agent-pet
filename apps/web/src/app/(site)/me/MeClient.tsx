@@ -73,7 +73,8 @@ export function MeClient({
             <span>{me.pet.name}</span>
           </div>
           <div className={s.lastLog}>
-            {ko.me.link.lastLog}: {me.lastWorkLogAt ? formatDateTime(me.lastWorkLogAt, me.timezone) : ko.common.never}
+            {ko.me.link.lastLog}:{' '}
+            {me.lastWorkLogAt ? formatDateTime(me.lastWorkLogAt, me.timezone) : ko.common.never}
           </div>
         </div>
       </aside>

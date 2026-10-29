@@ -20,7 +20,14 @@ import { asc, eq, isNull, and } from 'drizzle-orm';
  */
 export async function buildExport(db: DbOrTx, userId: string, now = new Date()) {
   const [account] = await db
-    .select({ id: user.id, email: user.email, name: user.name, status: user.status, role: user.role, createdAt: user.createdAt })
+    .select({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      status: user.status,
+      role: user.role,
+      createdAt: user.createdAt,
+    })
     .from(user)
     .where(eq(user.id, userId));
   const [profile] = await db.select().from(profiles).where(eq(profiles.userId, userId));
@@ -31,7 +38,11 @@ export async function buildExport(db: DbOrTx, userId: string, now = new Date()) 
     .where(and(eq(workLogs.userId, userId), isNull(workLogs.deletedAt)))
     .orderBy(asc(workLogs.periodKey));
   const myTodos = await db.select().from(todos).where(eq(todos.userId, userId)).orderBy(asc(todos.createdAt));
-  const nudges = await db.select().from(petNudges).where(eq(petNudges.userId, userId)).orderBy(asc(petNudges.createdAt));
+  const nudges = await db
+    .select()
+    .from(petNudges)
+    .where(eq(petNudges.userId, userId))
+    .orderBy(asc(petNudges.createdAt));
   const sent = await db
     .select({
       id: chatMessages.id,

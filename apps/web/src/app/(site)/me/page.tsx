@@ -13,7 +13,11 @@ export const metadata: Metadata = { title: ko.me.title };
 
 const TABS: readonly MeTab[] = ['link', 'logs', 'todos', 'settings', 'profile', 'export'];
 
-export default async function MePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function MePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const viewer = await requirePageViewer('/me');
   const sp = await searchParams;
   const db = getDb();
@@ -27,6 +31,14 @@ export default async function MePage({ searchParams }: { searchParams: Promise<R
   const tabParam = typeof sp.tab === 'string' ? (sp.tab as MeTab) : null;
   const tab: MeTab = tabParam && TABS.includes(tabParam) ? tabParam : focusLog ? 'logs' : 'link';
   return (
-    <MeClient me={me} links={links} logs={logs} todos={todos} swatches={AVATAR_SWATCHES} initialTab={tab} focusLogId={focusLog} />
+    <MeClient
+      me={me}
+      links={links}
+      logs={logs}
+      todos={todos}
+      swatches={AVATAR_SWATCHES}
+      initialTab={tab}
+      focusLogId={focusLog}
+    />
   );
 }

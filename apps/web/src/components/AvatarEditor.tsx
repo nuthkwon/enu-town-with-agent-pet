@@ -60,7 +60,13 @@ export function AvatarEditor({
           <span className={s.groupLabel}>{t.hair}</span>
           <div className={s.chips} role="group" aria-label={t.hair}>
             {HAIR_STYLES.map((h) => (
-              <button key={h} type="button" className={s.chip} aria-pressed={value.hair === h} onClick={() => set('hair', h)}>
+              <button
+                key={h}
+                type="button"
+                className={s.chip}
+                aria-pressed={value.hair === h}
+                onClick={() => set('hair', h)}
+              >
                 {t.hairLabel[h]}
               </button>
             ))}

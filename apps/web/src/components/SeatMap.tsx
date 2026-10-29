@@ -36,7 +36,13 @@ export function SeatMap({
     const mine = d?.userId === myUserId;
     const taken = Boolean(d?.userId) && !mine;
     const isSelected = selected === id;
-    const label = taken ? (d?.displayName ?? w.taken) : mine ? w.mine : d?.displayName ? w.reserved(d.displayName) : w.free;
+    const label = taken
+      ? (d?.displayName ?? w.taken)
+      : mine
+        ? w.mine
+        : d?.displayName
+          ? w.reserved(d.displayName)
+          : w.free;
     return (
       <button
         key={id}

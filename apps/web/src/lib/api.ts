@@ -15,7 +15,10 @@ export class ApiRequestError extends Error {
   }
 }
 
-export async function apiFetch<T>(path: string, init: { method?: string; body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
+export async function apiFetch<T>(
+  path: string,
+  init: { method?: string; body?: unknown; signal?: AbortSignal } = {},
+): Promise<T> {
   let res: Response;
   try {
     res = await fetch(path, {
@@ -32,7 +35,12 @@ export async function apiFetch<T>(path: string, init: { method?: string; body?: 
   const data = (await res.json().catch(() => null)) as (T & Partial<ApiError>) | null;
   if (!res.ok) {
     const err = (data ?? {}) as Partial<ApiError>;
-    throw new ApiRequestError(res.status, err.error ?? 'http_error', err.message ?? ko.common.unknownError, err.fields ?? []);
+    throw new ApiRequestError(
+      res.status,
+      err.error ?? 'http_error',
+      err.message ?? ko.common.unknownError,
+      err.fields ?? [],
+    );
   }
   return data as T;
 }

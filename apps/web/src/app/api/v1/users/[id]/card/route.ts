@@ -17,7 +17,10 @@ export const GET = route<{ id: string }>(async (req, { id }) => {
   const person = await findPerson(db, id);
   if (!person || (person.status !== 'active' && id !== viewer.userId)) throw notFound();
   const dto = toPersonDto(person.profile, person.deskId);
-  const latestLog = await latestVisibleLog(db, viewer, id, { name: dto.displayName, active: person.status === 'active' });
+  const latestLog = await latestVisibleLog(db, viewer, id, {
+    name: dto.displayName,
+    active: person.status === 'active',
+  });
   const body: ProfileCardDto = { person: dto, latestLog, stale: dto.linkState === 'stale' };
   return json(body);
 });

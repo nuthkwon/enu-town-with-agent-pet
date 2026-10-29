@@ -56,7 +56,12 @@ export function SettingsTab({ me, onSaved }: { me: MeDto; onSaved: (me: MeDto) =
   return (
     <>
       <Card title={t.nudgesTitle}>
-        <Toggle id="nudges-enabled" checked={nudgesEnabled} onChange={setNudgesEnabled} label={t.nudgesEnabled} />
+        <Toggle
+          id="nudges-enabled"
+          checked={nudgesEnabled}
+          onChange={setNudgesEnabled}
+          label={t.nudgesEnabled}
+        />
         <div className={s.formGrid} style={{ marginTop: 16 }}>
           <Field label={t.interval} htmlFor="nudge-interval">
             <input
@@ -70,13 +75,33 @@ export function SettingsTab({ me, onSaved }: { me: MeDto; onSaved: (me: MeDto) =
             />
           </Field>
           <Field label={t.dailyCap} htmlFor="nudge-cap">
-            <input id="nudge-cap" type="number" min={0} max={30} className={inputClass} value={cap} onChange={(e) => setCap(Number(e.target.value))} />
+            <input
+              id="nudge-cap"
+              type="number"
+              min={0}
+              max={30}
+              className={inputClass}
+              value={cap}
+              onChange={(e) => setCap(Number(e.target.value))}
+            />
           </Field>
           <Field label={t.quietStart} htmlFor="quiet-start">
-            <input id="quiet-start" type="time" className={inputClass} value={quietStart} onChange={(e) => setQuietStart(e.target.value)} />
+            <input
+              id="quiet-start"
+              type="time"
+              className={inputClass}
+              value={quietStart}
+              onChange={(e) => setQuietStart(e.target.value)}
+            />
           </Field>
           <Field label={t.quietEnd} htmlFor="quiet-end">
-            <input id="quiet-end" type="time" className={inputClass} value={quietEnd} onChange={(e) => setQuietEnd(e.target.value)} />
+            <input
+              id="quiet-end"
+              type="time"
+              className={inputClass}
+              value={quietEnd}
+              onChange={(e) => setQuietEnd(e.target.value)}
+            />
           </Field>
         </div>
         <p className={s.footNote}>{t.quietHelp}</p>
@@ -84,10 +109,20 @@ export function SettingsTab({ me, onSaved }: { me: MeDto; onSaved: (me: MeDto) =
 
       <Card title={t.visibilityTitle}>
         <Field label={t.defaultLog} help={t.defaultLogHelp}>
-          <Segmented<Visibility> label={t.defaultLog} value={defaultLog} options={visibilityOptions} onChange={setDefaultLog} />
+          <Segmented<Visibility>
+            label={t.defaultLog}
+            value={defaultLog}
+            options={visibilityOptions}
+            onChange={setDefaultLog}
+          />
         </Field>
         <Field label={t.defaultChat} help={t.defaultChatHelp}>
-          <Segmented<Visibility> label={t.defaultChat} value={defaultChat} options={visibilityOptions} onChange={setDefaultChat} />
+          <Segmented<Visibility>
+            label={t.defaultChat}
+            value={defaultChat}
+            options={visibilityOptions}
+            onChange={setDefaultChat}
+          />
         </Field>
       </Card>
 

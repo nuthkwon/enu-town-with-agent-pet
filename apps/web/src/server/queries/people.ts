@@ -14,7 +14,13 @@ export interface PersonRecord {
 /** Profile + desk + account state of one user (null when unknown or without a profile). */
 export async function findPerson(db: DbOrTx, userId: string): Promise<PersonRecord | null> {
   const [row] = await db
-    .select({ profile: profiles, deskId: desks.deskId, email: user.email, status: user.status, role: user.role })
+    .select({
+      profile: profiles,
+      deskId: desks.deskId,
+      email: user.email,
+      status: user.status,
+      role: user.role,
+    })
     .from(profiles)
     .innerJoin(user, eq(user.id, profiles.userId))
     .leftJoin(desks, eq(desks.userId, profiles.userId))

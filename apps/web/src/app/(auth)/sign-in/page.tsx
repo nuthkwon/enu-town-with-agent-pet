@@ -16,7 +16,14 @@ export const metadata: Metadata = { title: '로그인' };
 
 async function listDevUsers(hd: string): Promise<DevUser[]> {
   const rows = await getDb()
-    .select({ email: user.email, name: profiles.displayName, avatar: profiles.avatar, team: profiles.team, deskId: desks.deskId, role: user.role })
+    .select({
+      email: user.email,
+      name: profiles.displayName,
+      avatar: profiles.avatar,
+      team: profiles.team,
+      deskId: desks.deskId,
+      role: user.role,
+    })
     .from(user)
     .innerJoin(profiles, eq(profiles.userId, user.id))
     .leftJoin(desks, eq(desks.userId, user.id))
@@ -24,11 +31,22 @@ async function listDevUsers(hd: string): Promise<DevUser[]> {
     .orderBy(asc(desks.deskId), asc(user.email));
   return rows.map((r) => {
     const avatar = normalizeAvatar(r.avatar);
-    return { email: r.email, name: r.name, avatar, avatarKey: avatarSpriteKey(avatar), deskId: r.deskId ?? null, isAdmin: r.role === 'admin' };
+    return {
+      email: r.email,
+      name: r.name,
+      avatar,
+      avatarKey: avatarSpriteKey(avatar),
+      deskId: r.deskId ?? null,
+      isAdmin: r.role === 'admin',
+    };
   });
 }
 
-export default async function SignInPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function SignInPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const sp = toSearchParams(await searchParams);
   const env = getEnv();
   const oauthQuery = signedOAuthQuery(sp);

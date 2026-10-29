@@ -11,12 +11,22 @@ import s from './me.module.css';
 
 const t = ko.me.profile;
 
-export function ProfileTab({ me, swatches, onSaved }: { me: MeDto; swatches: AvatarSwatches; onSaved: (me: MeDto) => void }) {
+export function ProfileTab({
+  me,
+  swatches,
+  onSaved,
+}: {
+  me: MeDto;
+  swatches: AvatarSwatches;
+  onSaved: (me: MeDto) => void;
+}) {
   const [displayName, setDisplayName] = useState(me.displayName);
   const [statusText, setStatusText] = useState(me.statusText ?? '');
   const [avatar, setAvatar] = useState<AvatarPreset>(me.avatar);
   const [pet, setPet] = useState<{ species: PetSpecies; name: string }>({
-    species: (PET_SPECIES as readonly string[]).includes(me.pet.species) ? (me.pet.species as PetSpecies) : 'cat',
+    species: (PET_SPECIES as readonly string[]).includes(me.pet.species)
+      ? (me.pet.species as PetSpecies)
+      : 'cat',
     name: me.pet.name,
   });
   const [busy, setBusy] = useState(false);

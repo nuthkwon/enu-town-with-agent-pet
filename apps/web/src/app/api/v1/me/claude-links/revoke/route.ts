@@ -13,6 +13,10 @@ export const POST = route(async (req) => {
   const viewer = await requireViewer(req);
   const body = await parseBody(req, claudeLinkRevoke);
   if (body.link_id !== undefined && !isUuid(body.link_id)) throw notFound();
-  const revoked = await revokeClaudeLinks(getDb(), viewer.userId, { linkId: body.link_id, actor: 'user', reason: 'user_revoked' });
+  const revoked = await revokeClaudeLinks(getDb(), viewer.userId, {
+    linkId: body.link_id,
+    actor: 'user',
+    reason: 'user_revoked',
+  });
   return json({ revoked });
 });

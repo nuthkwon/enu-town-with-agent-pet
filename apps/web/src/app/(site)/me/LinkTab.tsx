@@ -75,7 +75,11 @@ export function LinkTab({ me, initialLinks }: { me: MeDto; initialLinks: ClaudeL
             {links.map((l) => (
               <li key={l.id} className={cx(s.linkItem, l.revokedAt && s.revoked)}>
                 <span
-                  className={cx(s.linkIcon, l.clientKind === 'claude_code' && s.linkIconCode, l.clientKind === 'other' && s.linkIconOther)}
+                  className={cx(
+                    s.linkIcon,
+                    l.clientKind === 'claude_code' && s.linkIconCode,
+                    l.clientKind === 'other' && s.linkIconOther,
+                  )}
                   aria-hidden="true"
                 >
                   {l.clientKind === 'claude_code' ? '>_' : '✦'}
@@ -83,7 +87,9 @@ export function LinkTab({ me, initialLinks }: { me: MeDto; initialLinks: ClaudeL
                 <div className={s.linkBody}>
                   <div className={s.linkTitle}>
                     <span>{l.clientName ?? t.kind[l.clientKind]}</span>
-                    <Badge tone={l.clientKind === 'claude_code' ? 'lavender' : 'sky'}>{t.kind[l.clientKind]}</Badge>
+                    <Badge tone={l.clientKind === 'claude_code' ? 'lavender' : 'sky'}>
+                      {t.kind[l.clientKind]}
+                    </Badge>
                     {l.revokedAt && <Badge tone="gray">{t.revoked}</Badge>}
                   </div>
                   <div className={s.linkMeta}>
@@ -96,7 +102,8 @@ export function LinkTab({ me, initialLinks }: { me: MeDto; initialLinks: ClaudeL
                       </span>
                     )}
                     <span>
-                      {t.lastToolCall} {l.lastToolCallAt ? formatDateTime(l.lastToolCallAt, me.timezone) : ko.common.never}
+                      {t.lastToolCall}{' '}
+                      {l.lastToolCallAt ? formatDateTime(l.lastToolCallAt, me.timezone) : ko.common.never}
                     </span>
                     <span>{t.calls(l.toolCallCount)}</span>
                   </div>

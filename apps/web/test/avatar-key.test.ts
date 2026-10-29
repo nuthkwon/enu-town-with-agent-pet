@@ -1,4 +1,12 @@
-import { BODY_TYPES, DEFAULT_AVATAR, HAIR_COLORS, HAIR_STYLES, OUTFIT_COLORS, SKIN_TONES, avatarSpriteKey } from '@enu/shared';
+import {
+  BODY_TYPES,
+  DEFAULT_AVATAR,
+  HAIR_COLORS,
+  HAIR_STYLES,
+  OUTFIT_COLORS,
+  SKIN_TONES,
+  avatarSpriteKey,
+} from '@enu/shared';
 import { describe, expect, it } from 'vitest';
 import { avatarSheetUrl, parseAvatarKey } from '@/lib/avatar-key';
 

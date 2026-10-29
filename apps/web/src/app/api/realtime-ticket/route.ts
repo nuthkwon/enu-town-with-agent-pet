@@ -23,6 +23,10 @@ export const GET = route(async (req) => {
     .setExpirationTime(exp)
     .setJti(newId())
     .sign(new TextEncoder().encode(env.REALTIME_TICKET_SECRET));
-  const body: RealtimeTicketDto = { token, expiresAt: new Date(exp * 1000).toISOString(), wsUrl: env.REALTIME_PUBLIC_URL };
+  const body: RealtimeTicketDto = {
+    token,
+    expiresAt: new Date(exp * 1000).toISOString(),
+    wsUrl: env.REALTIME_PUBLIC_URL,
+  };
   return json(body, { headers: { 'cache-control': 'no-store, private' } });
 });

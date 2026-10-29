@@ -10,7 +10,11 @@ export function cx(...names: (string | false | null | undefined)[]): string {
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
-export function buttonClass(variant: ButtonVariant = 'primary', size: ButtonSize = 'md', block = false): string {
+export function buttonClass(
+  variant: ButtonVariant = 'primary',
+  size: ButtonSize = 'md',
+  block = false,
+): string {
   return cx(s.button, s[variant], size === 'sm' && s.sm, size === 'lg' && s.lg, block && s.block);
 }
 
@@ -21,7 +25,11 @@ export function Button({
   className,
   type = 'button',
   ...rest
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant; size?: ButtonSize; block?: boolean }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  block?: boolean;
+}) {
   return <button type={type} className={cx(buttonClass(variant, size, block), className)} {...rest} />;
 }
 
@@ -60,7 +68,17 @@ export function Card({
 
 export type Tone = 'lavender' | 'pink' | 'mint' | 'amber' | 'sky' | 'gray' | 'danger';
 
-export function Badge({ tone = 'lavender', dot = false, children, title }: { tone?: Tone; dot?: boolean; children: ReactNode; title?: string }) {
+export function Badge({
+  tone = 'lavender',
+  dot = false,
+  children,
+  title,
+}: {
+  tone?: Tone;
+  dot?: boolean;
+  children: ReactNode;
+  title?: string;
+}) {
   return (
     <span className={cx(s.badge, s[`tone-${tone}`], dot && s.dot)} title={title}>
       {children}
@@ -114,7 +132,13 @@ export function Toggle({
 }) {
   return (
     <label className={s.toggle} htmlFor={id}>
-      <input id={id} type="checkbox" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+      />
       <span className={s.track} aria-hidden="true" />
       <span className={s.toggleText}>
         <span>{label}</span>
@@ -138,7 +162,13 @@ export function Segmented<T extends string>({
   return (
     <div className={s.segmented} role="group" aria-label={label}>
       {options.map((o) => (
-        <button key={o.value} type="button" className={s.segment} aria-pressed={o.value === value} onClick={() => onChange(o.value)}>
+        <button
+          key={o.value}
+          type="button"
+          className={s.segment}
+          aria-pressed={o.value === value}
+          onClick={() => onChange(o.value)}
+        >
           {o.label}
         </button>
       ))}
@@ -150,7 +180,15 @@ export type NoticeTone = 'info' | 'warn' | 'error' | 'success';
 
 const NOTICE_ICON: Record<NoticeTone, string> = { info: 'i', warn: '!', error: '!', success: '✓' };
 
-export function Notice({ tone = 'info', title, children }: { tone?: NoticeTone; title?: ReactNode; children?: ReactNode }) {
+export function Notice({
+  tone = 'info',
+  title,
+  children,
+}: {
+  tone?: NoticeTone;
+  title?: ReactNode;
+  children?: ReactNode;
+}) {
   return (
     <div className={cx(s.notice, s[`notice-${tone}`])} role={tone === 'error' ? 'alert' : 'status'}>
       <span className={s.noticeIcon} aria-hidden="true">

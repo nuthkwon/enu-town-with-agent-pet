@@ -34,7 +34,13 @@ export async function requireVisibleAuthor(db: DbOrTx, viewer: Viewer, ownerId: 
  * Logs of `ownerId` that `viewer` may see, newest day first. SQL only pre-filters (never more
  * permissive than the domain rule); every row still passes canViewLog in toWorkLogDto.
  */
-export async function listLogs(db: DbOrTx, viewer: Viewer, ownerId: string, cursor: Cursor | null, limit: number): Promise<Page<WorkLogDto>> {
+export async function listLogs(
+  db: DbOrTx,
+  viewer: Viewer,
+  ownerId: string,
+  cursor: Cursor | null,
+  limit: number,
+): Promise<Page<WorkLogDto>> {
   const author = await requireVisibleAuthor(db, viewer, ownerId);
   const own = ownerId === viewer.userId;
   const rows = await db
@@ -51,16 +57,30 @@ export async function listLogs(db: DbOrTx, viewer: Viewer, ownerId: string, curs
     .orderBy(desc(workLogs.periodKey), desc(workLogs.id))
     .limit(limit + 1);
   const page = paginate(rows, limit, (r) => ({ k: r.periodKey, id: r.id }));
-  return { items: page.items.map((r) => toWorkLogDto(r, author, viewer)).filter((d) => d !== null), nextCursor: page.nextCursor };
+  return {
+    items: page.items.map((r) => toWorkLogDto(r, author, viewer)).filter((d) => d !== null),
+    nextCursor: page.nextCursor,
+  };
 }
 
 /** The most recent log the viewer may see (profile card). */
-export async function latestVisibleLog(db: DbOrTx, viewer: Viewer, ownerId: string, author: LogAuthor): Promise<WorkLogDto | null> {
+export async function latestVisibleLog(
+  db: DbOrTx,
+  viewer: Viewer,
+  ownerId: string,
+  author: LogAuthor,
+): Promise<WorkLogDto | null> {
   const own = ownerId === viewer.userId;
   const [row] = await db
     .select()
     .from(workLogs)
-    .where(and(eq(workLogs.userId, ownerId), isNull(workLogs.deletedAt), own ? undefined : eq(workLogs.visibility, 'company')))
+    .where(
+      and(
+        eq(workLogs.userId, ownerId),
+        isNull(workLogs.deletedAt),
+        own ? undefined : eq(workLogs.visibility, 'company'),
+      ),
+    )
     .orderBy(desc(workLogs.periodKey), desc(workLogs.id))
     .limit(1);
   return row ? toWorkLogDto(row, author, viewer) : null;
@@ -84,7 +104,9 @@ export async function listClaudeSummaries(
         eq(workLogs.userId, ownerId),
         isNull(workLogs.deletedAt),
         isNotNull(workLogs.claudeChatSummary),
-        own ? undefined : and(eq(workLogs.visibility, 'company'), eq(workLogs.chatSummaryVisibility, 'company')),
+        own
+          ? undefined
+          : and(eq(workLogs.visibility, 'company'), eq(workLogs.chatSummaryVisibility, 'company')),
         beforeDate(workLogs.periodKey, workLogs.id, cursor),
       ),
     )
@@ -114,7 +136,13 @@ const CONTENT_KEYS = ['summary', 'tasks', 'blockers', 'claude_chat_summary'] as 
  * skip it); visibility changes pin visibility_set_by='user' without marking content edited.
  * Edited text goes through the same publishability rules as Claude's (rejected, never rewritten).
  */
-export async function patchOwnLog(db: Db, viewer: Viewer, id: string, patch: WorkLogPatch, now = new Date()): Promise<WorkLogDto> {
+export async function patchOwnLog(
+  db: Db,
+  viewer: Viewer,
+  id: string,
+  patch: WorkLogPatch,
+  now = new Date(),
+): Promise<WorkLogDto> {
   const hasContent = CONTENT_KEYS.some((k) => patch[k] !== undefined);
   if (!hasContent && patch.visibility === undefined && patch.chat_summary_visibility === undefined) {
     throw new HttpError(400, 'empty_patch', ko.errors.emptyPatch);
@@ -130,7 +158,9 @@ export async function patchOwnLog(db: Db, viewer: Viewer, id: string, patch: Wor
         summary: patch.summary ?? row.summary ?? '',
         tasks: patch.tasks ?? row.tasks,
         blockers: patch.blockers ?? row.blockers,
-        claudeChatSummary: (patch.claude_chat_summary !== undefined ? patch.claude_chat_summary : row.claudeChatSummary) ?? undefined,
+        claudeChatSummary:
+          (patch.claude_chat_summary !== undefined ? patch.claude_chat_summary : row.claudeChatSummary) ??
+          undefined,
       });
       if (problems.length) {
         throw new HttpError(
@@ -144,7 +174,8 @@ export async function patchOwnLog(db: Db, viewer: Viewer, id: string, patch: Wor
         summary: patch.summary !== undefined ? log.summary : row.summary,
         tasks: patch.tasks !== undefined ? log.tasks : row.tasks,
         blockers: patch.blockers !== undefined ? log.blockers : row.blockers,
-        claudeChatSummary: patch.claude_chat_summary !== undefined ? log.claudeChatSummary : row.claudeChatSummary,
+        claudeChatSummary:
+          patch.claude_chat_summary !== undefined ? log.claudeChatSummary : row.claudeChatSummary,
       };
       const changed =
         next.summary !== row.summary ||
@@ -180,7 +211,10 @@ export async function patchOwnLog(db: Db, viewer: Viewer, id: string, patch: Wor
         metadata: { from: visibilityBefore, to: patch.visibility },
       });
     }
-    if (patch.chat_summary_visibility !== undefined && patch.chat_summary_visibility !== row.chatSummaryVisibility) {
+    if (
+      patch.chat_summary_visibility !== undefined &&
+      patch.chat_summary_visibility !== row.chatSummaryVisibility
+    ) {
       await audit(tx, {
         actorType: 'user',
         actorUserId: viewer.userId,
@@ -191,7 +225,13 @@ export async function patchOwnLog(db: Db, viewer: Viewer, id: string, patch: Wor
       });
     }
     if (set.editedByUser) {
-      await audit(tx, { actorType: 'user', actorUserId: viewer.userId, action: 'work_log.edit', targetType: 'work_log', targetId: row.id });
+      await audit(tx, {
+        actorType: 'user',
+        actorUserId: viewer.userId,
+        action: 'work_log.edit',
+        targetType: 'work_log',
+        targetId: row.id,
+      });
     }
     await notifyTown(tx, {
       v: 1,
@@ -218,7 +258,13 @@ export async function deleteOwnLog(db: Db, viewer: Viewer, id: string, now = new
       .where(and(eq(workLogs.id, id), eq(workLogs.userId, viewer.userId), isNull(workLogs.deletedAt)))
       .returning({ id: workLogs.id, visibility: workLogs.visibility });
     if (!row) throw notFound();
-    await audit(tx, { actorType: 'user', actorUserId: viewer.userId, action: 'work_log.delete', targetType: 'work_log', targetId: row.id });
+    await audit(tx, {
+      actorType: 'user',
+      actorUserId: viewer.userId,
+      action: 'work_log.delete',
+      targetType: 'work_log',
+      targetId: row.id,
+    });
     await notifyTown(tx, {
       v: 1,
       type: 'work_log_changed',

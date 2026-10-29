@@ -7,7 +7,12 @@ import type { Viewer } from '../session';
 import { ensureProfile } from './me';
 
 /** Records (or re-activates) a consent scope for the current notice version. */
-export async function grantConsent(tx: DbOrTx, userId: string, scope: 'service' | 'claude_chat_summary', now: Date): Promise<void> {
+export async function grantConsent(
+  tx: DbOrTx,
+  userId: string,
+  scope: 'service' | 'claude_chat_summary',
+  now: Date,
+): Promise<void> {
   await tx
     .insert(privacyConsents)
     .values({ id: newId(), userId, noticeVersion: PRIVACY_NOTICE_VERSION, scope, acceptedAt: now })
@@ -17,11 +22,22 @@ export async function grantConsent(tx: DbOrTx, userId: string, scope: 'service' 
     });
 }
 
-export async function withdrawConsent(tx: DbOrTx, userId: string, scope: 'claude_chat_summary', now: Date): Promise<void> {
+export async function withdrawConsent(
+  tx: DbOrTx,
+  userId: string,
+  scope: 'claude_chat_summary',
+  now: Date,
+): Promise<void> {
   await tx
     .update(privacyConsents)
     .set({ withdrawnAt: now })
-    .where(and(eq(privacyConsents.userId, userId), eq(privacyConsents.scope, scope), isNull(privacyConsents.withdrawnAt)));
+    .where(
+      and(
+        eq(privacyConsents.userId, userId),
+        eq(privacyConsents.scope, scope),
+        isNull(privacyConsents.withdrawnAt),
+      ),
+    );
 }
 
 const line = (v: string) => normalizeLine(v);
@@ -31,7 +47,12 @@ const optLine = (v: string | null) => (v === null ? null : normalizeLine(v) || n
  * Applies a partial profile update. Organisation fields (title, team, role note) come from the
  * roster and may only be changed by admins; members sending their current value is a no-op.
  */
-export async function patchProfile(db: Db, viewer: Viewer, patch: ProfilePatch, now = new Date()): Promise<void> {
+export async function patchProfile(
+  db: Db,
+  viewer: Viewer,
+  patch: ProfilePatch,
+  now = new Date(),
+): Promise<void> {
   const keys = Object.keys(patch) as (keyof ProfilePatch)[];
   if (keys.length === 0) throw new HttpError(400, 'empty_patch', ko.errors.emptyPatch);
   const current = await ensureProfile(db, viewer);
@@ -66,7 +87,8 @@ export async function patchProfile(db: Db, viewer: Viewer, patch: ProfilePatch, 
     else set.petName = v;
   }
   if (patch.default_log_visibility !== undefined) set.defaultLogVisibility = patch.default_log_visibility;
-  if (patch.default_chat_summary_visibility !== undefined) set.defaultChatSummaryVisibility = patch.default_chat_summary_visibility;
+  if (patch.default_chat_summary_visibility !== undefined)
+    set.defaultChatSummaryVisibility = patch.default_chat_summary_visibility;
   if (patch.share_dms_with_my_claude !== undefined) set.shareDmsWithMyClaude = patch.share_dms_with_my_claude;
   if (patch.nudges_enabled !== undefined) set.nudgesEnabled = patch.nudges_enabled;
   if (patch.nudge_min_interval_min !== undefined) set.nudgeMinIntervalMin = patch.nudge_min_interval_min;
@@ -92,7 +114,10 @@ export async function patchProfile(db: Db, viewer: Viewer, patch: ProfilePatch, 
         metadata: { from: chatBefore, to: chatAfter },
       });
     }
-    if (patch.default_log_visibility !== undefined && patch.default_log_visibility !== current.defaultLogVisibility) {
+    if (
+      patch.default_log_visibility !== undefined &&
+      patch.default_log_visibility !== current.defaultLogVisibility
+    ) {
       await audit(tx, {
         actorType: 'user',
         actorUserId: viewer.userId,
@@ -102,7 +127,10 @@ export async function patchProfile(db: Db, viewer: Viewer, patch: ProfilePatch, 
         metadata: { from: current.defaultLogVisibility, to: patch.default_log_visibility },
       });
     }
-    if (patch.share_dms_with_my_claude !== undefined && patch.share_dms_with_my_claude !== current.shareDmsWithMyClaude) {
+    if (
+      patch.share_dms_with_my_claude !== undefined &&
+      patch.share_dms_with_my_claude !== current.shareDmsWithMyClaude
+    ) {
       await audit(tx, {
         actorType: 'user',
         actorUserId: viewer.userId,
@@ -113,7 +141,13 @@ export async function patchProfile(db: Db, viewer: Viewer, patch: ProfilePatch, 
       });
     }
     if (set.title !== undefined || set.team !== undefined || set.roleNote !== undefined) {
-      await audit(tx, { actorType: 'admin', actorUserId: viewer.userId, action: 'profile.org_fields', targetType: 'user', targetId: viewer.userId });
+      await audit(tx, {
+        actorType: 'admin',
+        actorUserId: viewer.userId,
+        action: 'profile.org_fields',
+        targetType: 'user',
+        targetId: viewer.userId,
+      });
     }
     await notifyTown(tx, { v: 1, type: 'profile_changed', user_id: viewer.userId });
   });
