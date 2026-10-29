@@ -7,3 +7,4 @@ export * from './schemas/ticket';
 export * from './schemas/rest';
 export * from './tiles';
 export * from './schemas/dto';
+export * from './schemas/pet-channel';

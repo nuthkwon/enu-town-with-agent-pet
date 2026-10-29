@@ -132,3 +132,76 @@ export function projectForColleagues(r: ResolvedActivity, c: ProjectionCtx): Col
     groupKey: c.share ? r.groupKey : null,
   };
 }
+
+/*
+ * Pets and pet conversations (ADR 0005, docs/design/messenger-spec.md §3). Pet names and looks are company-visible
+ * (they are drawn in the town); everything else about a pet room is decided here.
+ */
+
+export interface PetOwnership {
+  ownerId: string;
+}
+
+/** A pet (its name and look) is shown while its owner's account is active; the owner always sees their own. */
+export function canViewPet(viewer: Viewer, pet: PetOwnership, author: AuthorState): boolean {
+  return viewer.userId === pet.ownerId || author.active;
+}
+
+/** Only the owner talks to their pets: colleagues never message someone's pet. */
+export function canChatWithPet(viewer: Viewer, pet: PetOwnership, author: AuthorState): boolean {
+  return viewer.userId === pet.ownerId && author.active;
+}
+
+/**
+ * Role instructions, reply route, defaults, exact times, reply source, answer and claim state, unread counts, the
+ * channel state, nudges and to-dos: the owner's alone (admins see what colleagues see).
+ */
+export function canViewPetPrivateFields(viewer: Viewer, ownerId: string): boolean {
+  return viewer.userId === ownerId;
+}
+
+export interface PetMessageVisibilityFields {
+  ownerId: string;
+  author: 'owner' | 'pet';
+  visibility: Visibility;
+}
+
+/**
+ * A colleague sees a company message of an active author; a pet reply only while the message it answers is also
+ * company. The parent is checked when reading, so hiding a question hides its replies at once. `parent` is null
+ * only for owner messages.
+ */
+export function canViewPetMessage(
+  viewer: Viewer,
+  m: PetMessageVisibilityFields,
+  parent: { visibility: Visibility } | null,
+  author: AuthorState,
+): boolean {
+  if (viewer.userId === m.ownerId) return true;
+  if (!author.active || m.visibility !== 'company') return false;
+  if (m.author === 'owner') return true;
+  return parent !== null && parent.visibility === 'company';
+}
+
+/** A pet's default: its own setting, else the owner's profile default. */
+export function petDefaultVisibility(petDefault: Visibility | null, profileDefault: Visibility): Visibility {
+  return petDefault ?? profileDefault;
+}
+
+/** The owner chooses freely per message; omitted means the pet's default. */
+export function petMessageVisibility(requested: Visibility | undefined, petDefault: Visibility): Visibility {
+  return requested ?? petDefault;
+}
+
+/** Claude only lowers: a reply is never more visible than the pet's default or the message it answers. */
+export function petReplyVisibility(
+  requested: Visibility | undefined,
+  petDefault: Visibility,
+  question: Visibility,
+): Visibility {
+  const base = minVisibility(petDefault, question);
+  return requested ? minVisibility(requested, base) : base;
+}
+
+/** The SQL pre-filter for pet messages a colleague may see; rows must still pass `canViewPetMessage`. */
+export const COLLEAGUE_VISIBLE_PET_MESSAGE_VISIBILITY: Visibility = 'company';

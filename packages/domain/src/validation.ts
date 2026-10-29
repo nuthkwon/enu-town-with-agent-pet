@@ -7,6 +7,7 @@ import {
   localDateKey,
   normalizeLine,
   normalizeText,
+  prepareHumanText,
 } from '@enu/shared';
 import type { NowKind, PostActivityInput, RejectionReason, ScheduleKind } from '@enu/shared';
 import { officeDayBounds } from './activity';
@@ -40,6 +41,48 @@ export function prepareNudgeText(raw: string): { text: string } | { problem: Fie
   if (graphemeLength(text) > LIMITS.nudgeTextMax) return { problem: { field: 'text', reason: 'too_long' } };
   const [first] = checkPublishableText('text', text, { allowUrl: false });
   return first ? { problem: first } : { text };
+}
+
+/**
+ * A pet reply written by the owner's Claude. It follows the publishing rules whatever its visibility (the owner may
+ * raise it later): personal data and links are rejected, and so is anything over the limit. Never cut or edited.
+ */
+export function preparePetReplyText(raw: string): { text: string } | { problem: FieldProblem } {
+  const r = prepareHumanText(raw, { multiline: true, max: LIMITS.petReplyMax });
+  if (!r.ok) return { problem: { field: 'text', reason: r.error === 'EMPTY' ? 'empty' : 'too_long' } };
+  const [first] = checkPublishableText('text', r.text, { allowUrl: false });
+  return first ? { problem: first } : { text: r.text };
+}
+
+/**
+ * A message the owner typed to their pet: hygiene only (people may paste links). `pii` lists personal data found,
+ * so a company-visible send can be refused with the option to send it as 나만 보기 instead.
+ */
+export function prepareOwnerPetText(
+  raw: string,
+): { ok: true; text: string; pii: string[] } | { ok: false; reason: 'empty' | 'too_long' } {
+  const r = prepareHumanText(raw, { multiline: true, max: LIMITS.petMessageMax });
+  if (!r.ok) return { ok: false, reason: r.error === 'EMPTY' ? 'empty' : 'too_long' };
+  return { ok: true, text: r.text, pii: detectPii(r.text) };
+}
+
+export function preparePetName(
+  raw: string,
+): { ok: true; name: string } | { ok: false; reason: 'empty' | 'too_long' } {
+  const r = prepareHumanText(raw, { multiline: false, max: LIMITS.petNameMax });
+  return r.ok
+    ? { ok: true, name: r.text }
+    : { ok: false, reason: r.error === 'EMPTY' ? 'empty' : 'too_long' };
+}
+
+/** Role instructions are the owner's own words to their own Claude: hygiene only; empty means none. */
+export function preparePetRoleInstructions(
+  raw: string | null,
+): { ok: true; text: string | null } | { ok: false; reason: 'too_long' } {
+  if (raw === null) return { ok: true, text: null };
+  const r = prepareHumanText(raw, { multiline: true, max: LIMITS.petRoleInstructionsMax });
+  if (r.ok) return { ok: true, text: r.text };
+  return r.error === 'EMPTY' ? { ok: true, text: null } : { ok: false, reason: 'too_long' };
 }
 
 export interface WorkLogTextInput {

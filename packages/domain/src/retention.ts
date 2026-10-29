@@ -4,9 +4,18 @@ export interface RetentionDays {
   workLog: number;
   nudge: number;
   audit: number;
+  /** Pet conversations, by the message's day (`pet_messages.day_key`). */
+  petMessage: number;
 }
 
-export const DEFAULT_RETENTION: RetentionDays = { dm: 90, roomChat: 30, workLog: 90, nudge: 14, audit: 365 };
+export const DEFAULT_RETENTION: RetentionDays = {
+  dm: 90,
+  roomChat: 30,
+  workLog: 90,
+  nudge: 14,
+  audit: 365,
+  petMessage: 90,
+};
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -18,5 +27,6 @@ export function retentionCutoffs(now: Date, days: RetentionDays) {
     workLog: before(days.workLog),
     nudge: before(days.nudge),
     audit: before(days.audit),
+    petMessage: before(days.petMessage),
   };
 }

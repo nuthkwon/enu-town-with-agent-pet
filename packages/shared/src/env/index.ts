@@ -97,6 +97,7 @@ export const workerEnvSchema = z.object({
   RETENTION_WORKLOG_DAYS: z.coerce.number().int().positive().default(90),
   RETENTION_NUDGE_DAYS: z.coerce.number().int().positive().default(14),
   RETENTION_AUDIT_DAYS: z.coerce.number().int().positive().default(365),
+  RETENTION_PET_MESSAGE_DAYS: z.coerce.number().int().positive().default(90),
 });
 export type WorkerEnv = z.infer<typeof workerEnvSchema>;
 

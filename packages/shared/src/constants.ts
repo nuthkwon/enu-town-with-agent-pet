@@ -129,6 +129,20 @@ export const LIMITS = {
   nowMaxMin: 120,
   toolResultMaxChars: 20_000,
   mcpBodyMaxBytes: 65_536,
+  /** Pets per person, the default pet included (docs/design/messenger-spec.md). */
+  petsPerOwnerMax: 5,
+  petRoleInstructionsMax: 1000,
+  /** An owner message to a pet. */
+  petMessageMax: 1000,
+  /** One part of a pet reply (Claude-authored); a reply has at most `petRepliesPerMessageMax` parts. */
+  petReplyMax: 1000,
+  petRepliesPerMessageMax: 3,
+  petRepliesBatchMax: 5,
+  petRepliesPerDayMax: 300,
+  petInboxMax: 10,
+  petInboxRecentMax: 6,
+  petInboxRecentTextMax: 300,
+  petThreadPageMax: 50,
 } as const;
 
 export const EXTERNAL_REF_PATTERN = /^[\w:.\-/#@]{1,200}$/;
@@ -196,6 +210,74 @@ export const PET_SPECIES_LABEL_KO: Record<PetSpecies, string> = {
   whale: '고래',
   lamb: '아기양',
 };
+
+/**
+ * Pet looks: a species plus a tint. `base` is reserved for each person's default pet (unique species among active
+ * members); further pets use another tint. Append-only (stored in `pets.tint`).
+ */
+export const PET_TINTS = ['base', 'rose', 'mint', 'sky', 'lemon', 'lilac'] as const;
+export type PetTint = (typeof PET_TINTS)[number];
+export const PET_EXTRA_TINTS = PET_TINTS.filter((t) => t !== 'base') as Exclude<PetTint, 'base'>[];
+
+export const PET_TINT_LABEL_KO: Record<PetTint, string> = {
+  base: '기본',
+  rose: '장밋빛',
+  mint: '민트',
+  sky: '하늘',
+  lemon: '레몬',
+  lilac: '라일락',
+};
+
+/** Which of the owner's Claude paths may answer a pet: the Claude Code channel, the connector check-in, or both. */
+export const PET_REPLY_ROUTES = ['channel', 'checkin', 'both'] as const;
+export type PetReplyRoute = (typeof PET_REPLY_ROUTES)[number];
+
+export const PET_MESSAGE_AUTHORS = ['owner', 'pet'] as const;
+export type PetMessageAuthor = (typeof PET_MESSAGE_AUTHORS)[number];
+
+/** How a pet reply arrived: the local Claude Code channel, or a connector run (same values as work logs). */
+export const PET_REPLY_SOURCES = ['claude_code_channel', ...WORK_LOG_SOURCES] as const;
+export type PetReplySource = (typeof PET_REPLY_SOURCES)[number];
+
+/** Answer state of an owner message (owner-only). */
+export const PET_ANSWER_STATES = ['pending', 'claimed', 'answered'] as const;
+export type PetAnswerState = (typeof PET_ANSWER_STATES)[number];
+
+/** Why a pet reply was not stored (in addition to the text reasons pii/url/too_long/empty). */
+export const PET_REPLY_REJECTIONS = [
+  'unknown_pet',
+  'unknown_message',
+  'already_answered',
+  'route_not_allowed',
+  'outside_office_hours',
+  'daily_limit',
+] as const;
+export type PetReplyRejection = (typeof PET_REPLY_REJECTIONS)[number];
+
+/** Opt-in scopes recorded in `privacy_consents` (one row per notice version). */
+export const CONSENT_SCOPES = [
+  'service',
+  'claude_chat_summary',
+  'activity_sharing',
+  'pet_chat_sharing',
+] as const;
+export type ConsentScope = (typeof CONSENT_SCOPES)[number];
+
+/** The Claude Code pet channel (ADR 0006): pairing, tokens, long-poll and claims. */
+export const PET_CHANNEL = {
+  tokenPrefix: 'edc_',
+  tokenTtlDays: 90,
+  maxTokensPerUser: 3,
+  pairCodeTtlMin: 10,
+  pollWaitMaxS: 25,
+  pollBatchMax: 10,
+  /** A polled message is held for this long; then the connector or another machine may answer it. */
+  claimTtlMin: 10,
+  /** A channel counts as listening this long after its last poll (owner-only, memory only). */
+  liveWindowS: 60,
+  /** Older unanswered messages are no longer pushed into a Claude Code session. */
+  deliverMaxAgeHours: 24,
+} as const;
 
 export const BODY_TYPES = ['f', 'm'] as const;
 export type BodyType = (typeof BODY_TYPES)[number];

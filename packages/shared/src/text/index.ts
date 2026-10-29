@@ -104,3 +104,20 @@ export function detectPii(input: string): PiiKind[] {
   }
   return [...found];
 }
+
+export type HumanTextError = 'EMPTY' | 'TOO_LONG';
+
+/**
+ * Hygiene for text a person typed (chat, DMs, messages to a pet): only meaning-preserving normalization, and
+ * over-long text is rejected, never cut. `max` holds both as graphemes (the product limit) and as code points (the
+ * DB CHECKs count those).
+ */
+export function prepareHumanText(
+  raw: string,
+  opts: { multiline: boolean; max: number },
+): { ok: true; text: string } | { ok: false; error: HumanTextError } {
+  const text = opts.multiline ? normalizeText(raw) : normalizeLine(raw);
+  if (text.length === 0) return { ok: false, error: 'EMPTY' };
+  if (graphemeLength(text) > opts.max || [...text].length > opts.max) return { ok: false, error: 'TOO_LONG' };
+  return { ok: true, text };
+}

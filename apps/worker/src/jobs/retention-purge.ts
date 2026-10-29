@@ -54,6 +54,7 @@ export type RetentionEnv = Pick<
   | 'RETENTION_WORKLOG_DAYS'
   | 'RETENTION_NUDGE_DAYS'
   | 'RETENTION_AUDIT_DAYS'
+  | 'RETENTION_PET_MESSAGE_DAYS'
 >;
 
 export function retentionDaysFromEnv(env: RetentionEnv): RetentionDays {
@@ -63,6 +64,7 @@ export function retentionDaysFromEnv(env: RetentionEnv): RetentionDays {
     workLog: env.RETENTION_WORKLOG_DAYS,
     nudge: env.RETENTION_NUDGE_DAYS,
     audit: env.RETENTION_AUDIT_DAYS,
+    petMessage: env.RETENTION_PET_MESSAGE_DAYS,
   };
 }
 

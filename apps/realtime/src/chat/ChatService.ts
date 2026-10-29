@@ -1,9 +1,9 @@
 import { chatMessages, dmReadState, newId, user, type Db } from '@enu/db';
 import type { DmUnreadMsg } from '@enu/protocol';
-import { LIMITS, graphemeLength, normalizeLine, normalizeText } from '@enu/shared';
+import { LIMITS, prepareHumanText, type HumanTextError } from '@enu/shared';
 import { and, count, eq, gt, isNull, ne, or, sql } from 'drizzle-orm';
 
-export type ChatTextError = 'EMPTY' | 'TOO_LONG';
+export type ChatTextError = HumanTextError;
 
 /**
  * Meaning-preserving hygiene only (NFC, control/invisible characters). Room chat is a single line;
@@ -13,13 +13,7 @@ export function prepareChatText(
   raw: string,
   opts: { multiline: boolean },
 ): { ok: true; text: string } | { ok: false; error: ChatTextError } {
-  const text = opts.multiline ? normalizeText(raw) : normalizeLine(raw);
-  if (text.length === 0) return { ok: false, error: 'EMPTY' };
-  // The DB CHECK counts code points; the product limit counts graphemes. Both must hold.
-  if (graphemeLength(text) > LIMITS.chatMaxLen || [...text].length > LIMITS.chatMaxLen) {
-    return { ok: false, error: 'TOO_LONG' };
-  }
-  return { ok: true, text };
+  return prepareHumanText(raw, { multiline: opts.multiline, max: LIMITS.chatMaxLen });
 }
 
 export interface StoredMessage {

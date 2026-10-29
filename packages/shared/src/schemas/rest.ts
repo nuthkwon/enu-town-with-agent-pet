@@ -6,7 +6,10 @@ import {
   HAIR_STYLES,
   LIMITS,
   OUTFIT_COLORS,
+  PET_EXTRA_TINTS,
+  PET_REPLY_ROUTES,
   PET_SPECIES,
+  PET_TINTS,
   SKIN_TONES,
   TASK_STATUSES,
   TEAM_IDS,
@@ -98,6 +101,67 @@ export const nudgeAction = z.object({
     .optional(),
 });
 export type NudgeAction = z.infer<typeof nudgeAction>;
+
+/**
+ * Pets (docs/design/messenger-spec.md §4). Raw strings may be up to twice the limit: the server normalizes, then
+ * rejects anything still over the limit (never cuts).
+ */
+const petName = z
+  .string()
+  .min(1)
+  .max(LIMITS.petNameMax * 2);
+const petRoleInstructions = z
+  .string()
+  .max(LIMITS.petRoleInstructionsMax * 2)
+  .nullable();
+
+export const petCreate = z
+  .object({
+    name: petName,
+    species: z.enum(PET_SPECIES),
+    /** Extra pets never use the `base` look, which is reserved for each person's default pet. */
+    tint: z.enum(PET_EXTRA_TINTS),
+    role_instructions: petRoleInstructions.default(null),
+    reply_route: z.enum(PET_REPLY_ROUTES).default('both'),
+    /** null: follow my profile default. */
+    default_visibility: z.enum(VISIBILITIES).nullable().default(null),
+  })
+  .strict();
+export type PetCreate = z.infer<typeof petCreate>;
+
+export const petPatch = z
+  .object({
+    name: petName,
+    species: z.enum(PET_SPECIES),
+    tint: z.enum(PET_TINTS),
+    role_instructions: petRoleInstructions,
+    reply_route: z.enum(PET_REPLY_ROUTES),
+    default_visibility: z.enum(VISIBILITIES).nullable(),
+    sort_order: z.number().int().min(0).max(99),
+  })
+  .partial()
+  .strict()
+  .refine((p) => Object.keys(p).length > 0, { message: 'nothing to change' });
+export type PetPatch = z.infer<typeof petPatch>;
+
+export const petMessageSend = z
+  .object({
+    text: z
+      .string()
+      .min(1)
+      .max(LIMITS.petMessageMax * 2),
+    client_msg_id: z.string().min(8).max(64),
+    /** Omitted: the pet's default, else my profile default. */
+    visibility: z.enum(VISIBILITIES).optional(),
+  })
+  .strict();
+export type PetMessageSend = z.infer<typeof petMessageSend>;
+
+export const petMessagePatch = z.object({ visibility: z.enum(VISIBILITIES) }).strict();
+export type PetMessagePatch = z.infer<typeof petMessagePatch>;
+
+export const petRead = z.object({ last_message_id: z.uuid() }).strict();
+export type PetRead = z.infer<typeof petRead>;
 
 export const claudeLinkRevoke = z.object({ link_id: z.string().optional() });
 

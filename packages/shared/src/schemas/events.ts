@@ -26,6 +26,15 @@ export const townEvent = z.discriminatedUnion('type', [
   z.object({ v: z.literal(1), type: z.literal('activity_changed'), user_id: z.string() }),
   z.object({ v: z.literal(1), type: z.literal('user_deactivated'), user_id: z.string() }),
   z.object({ v: z.literal(1), type: z.literal('desks_changed') }),
+  /** Something changed in one of the owner's pet rooms (a message, a reply, a hide, a read). Ids only. */
+  z.object({
+    v: z.literal(1),
+    type: z.literal('pet_thread_changed'),
+    user_id: z.string(),
+    pet_id: z.string(),
+  }),
+  /** The owner created, edited or deleted a pet. */
+  z.object({ v: z.literal(1), type: z.literal('pets_changed'), user_id: z.string() }),
 ]);
 export type TownEvent = z.infer<typeof townEvent>;
 

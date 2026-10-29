@@ -5,7 +5,12 @@ import type {
   NowKind,
   NudgeKind,
   NudgeStatus,
+  PetAnswerState,
+  PetMessageAuthor,
+  PetReplyRoute,
+  PetReplySource,
   PetSpecies,
+  PetTint,
   ScheduleKind,
   TeamId,
   TodoStatus,
@@ -43,6 +48,18 @@ import type {
  *   GET    /api/v1/chat/room?before                     -> Paginated<ChatItemDto>
  *   GET    /api/v1/dm/threads                           -> DmThreadDto[]
  *   GET    /api/v1/dm/:peerId?before                    -> Paginated<ChatItemDto>
+ *   GET    /api/v1/me/pets                              -> OwnerPetDto[]
+ *   POST   /api/v1/me/pets               (petCreate)     -> OwnerPetDto (201)
+ *   PATCH  /api/v1/me/pets/:petId        (petPatch)      -> OwnerPetDto
+ *   DELETE /api/v1/me/pets/:petId                       -> 204 (409 default_pet)
+ *   GET    /api/v1/me/pets/:petId/thread?cursor         -> PetThreadPageDto<OwnerPetMessageDto>
+ *   POST   /api/v1/me/pets/:petId/messages (petMessageSend) -> OwnerPetMessageDto (201; 200 when repeated)
+ *   PATCH  /api/v1/me/pets/:petId/messages/:id (petMessagePatch) -> OwnerPetMessageDto
+ *   DELETE /api/v1/me/pets/:petId/messages/:id          -> 204
+ *   POST   /api/v1/me/pets/:petId/hide-history          -> { updated: number }
+ *   POST   /api/v1/me/pets/:petId/read   (petRead)       -> { unread: number }
+ *   GET    /api/v1/users/:id/pets                       -> PetInfoDto[]
+ *   GET    /api/v1/users/:id/pets/:petId/thread?cursor  -> PetThreadPageDto<ColleaguePetMessageDto>
  *   GET    /api/v1/admin/seats                          -> AdminSeatsDto (admins only)
  *   POST   /api/v1/admin/seats           (seatAssign)    -> AdminSeatsDto
  *   POST   /api/v1/admin/users/:id/deactivate           -> { ok: true }
@@ -256,6 +273,84 @@ export interface MyPetDto {
   nudges: NudgeDto[];
   links: ClaudeLinkDto[];
   mcpUrl: string;
+}
+
+/** A pet as anyone may see it (names and looks are drawn in the town). */
+export interface PetInfoDto {
+  id: string;
+  ownerId: string;
+  name: string;
+  species: PetSpecies;
+  tint: PetTint;
+  isDefault: boolean;
+  sortOrder: number;
+}
+
+/** A pet as its owner sees it. Role instructions and the reply route are owner-only. */
+export interface OwnerPetDto extends PetInfoDto {
+  roleInstructions: string | null;
+  replyRoute: PetReplyRoute;
+  /** null: follows `prefs.petChatDefaultVisibility`. */
+  defaultVisibility: Visibility | null;
+  effectiveDefaultVisibility: Visibility;
+  /** Pet replies the owner has not read. */
+  unread: number;
+  /** Owner messages still waiting for an answer. */
+  pendingCount: number;
+  last: { author: PetMessageAuthor; text: string; createdAt: string } | null;
+}
+
+/** A message in my own pet room. */
+export interface OwnerPetMessageDto {
+  view: 'owner';
+  id: string;
+  petId: string;
+  author: PetMessageAuthor;
+  text: string;
+  createdAt: string;
+  /** The owner's local date of the message. */
+  dayKey: string;
+  visibility: Visibility;
+  visibilitySetBy: 'owner' | 'claude';
+  /** How a pet reply arrived; null for my own messages. */
+  source: PetReplySource | null;
+  clientMsgId: string | null;
+  inReplyTo: string | null;
+  replyPart: number | null;
+  /** For my messages: waiting, held by a Claude Code channel, or answered. */
+  answerState: PetAnswerState | null;
+  unread: boolean;
+}
+
+/** A message in a colleague's pet room: the date only, no time and no owner-only fields. */
+export interface ColleaguePetMessageDto {
+  view: 'colleague';
+  id: string;
+  petId: string;
+  author: PetMessageAuthor;
+  text: string;
+  dayKey: string;
+}
+
+/** One page of a pet room, oldest first. Work-log day cards (default pet only) cover the page's dates. */
+export interface PetThreadPageDto<M> {
+  items: M[];
+  workLogs: WorkLogDto[];
+  nextCursor: string | null;
+}
+
+export interface PetChannelPairingCodeDto {
+  code: string;
+  expiresAt: string;
+  /** What to type in a terminal, e.g. `enu-pet pair K7QF-3MXP`. */
+  command: string;
+}
+
+/** Owner-only: whether a paired Claude Code is listening right now (memory only, never stored). */
+export interface PetChannelStatusDto {
+  paired: boolean;
+  live: boolean;
+  machines: { linkId: string; label: string; platform: string; expiresAt: string }[];
 }
 
 export interface DmThreadDto {
