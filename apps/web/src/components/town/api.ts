@@ -23,7 +23,10 @@ async function parse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     if (res.status === 401 && typeof window !== 'undefined') {
       window.location.assign(
-        new URL(`/sign-in?next=${encodeURIComponent('/town')}`, window.location.origin).href,
+        new URL(
+          `/sign-in?next=${encodeURIComponent(window.location.pathname + window.location.search)}`,
+          window.location.origin,
+        ).href,
       );
     }
     throw new ApiFailure(res.status, (body as ApiError | null) ?? null);

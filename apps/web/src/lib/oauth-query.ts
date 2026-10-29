@@ -31,7 +31,7 @@ export function toSearchParams(sp: Record<string, string | string[] | undefined>
 }
 
 /** A same-site relative path for ?next= (never an absolute or protocol-relative URL). */
-export function safeNextPath(next: string | string[] | null | undefined, fallback = '/town'): string {
+export function safeNextPath(next: string | string[] | null | undefined, fallback = '/'): string {
   const v = Array.isArray(next) ? next[0] : next;
   if (!v || !v.startsWith('/') || v.startsWith('//') || v.startsWith('/\\') || v.includes('\n'))
     return fallback;

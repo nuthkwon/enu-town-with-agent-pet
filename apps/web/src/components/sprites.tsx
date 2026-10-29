@@ -48,16 +48,22 @@ export function AvatarSprite({
 
 export function PetSprite({
   species,
+  tint = 'base',
   scale = 3,
   animate = false,
   label,
 }: {
   species: string;
+  /** PetTint: tinted sheets come from the sprite API. */
+  tint?: string;
   scale?: number;
   animate?: boolean;
   label?: string;
 }) {
-  const url = `/assets/sprites/pets/${encodeURIComponent(species)}.png`;
+  const url =
+    tint === 'base'
+      ? `/assets/sprites/pets/${encodeURIComponent(species)}.png`
+      : `/api/sprites/pet/pt-${encodeURIComponent(species)}-${encodeURIComponent(tint)}`;
   return (
     <span
       role="img"

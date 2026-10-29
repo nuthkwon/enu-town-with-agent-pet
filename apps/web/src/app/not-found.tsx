@@ -11,7 +11,7 @@ export default function NotFound() {
         <h1>{ko.notFound.title}</h1>
         <p className={s.body}>{ko.notFound.body}</p>
         <div className={s.actions}>
-          <Link href="/town" className={buttonClass('primary')}>
+          <Link href="/" className={buttonClass('primary')}>
             {ko.notFound.home}
           </Link>
         </div>

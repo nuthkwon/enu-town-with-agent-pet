@@ -7,12 +7,29 @@ const req = (path: string, cookie?: string) =>
 
 describe('proxy', () => {
   it('sends signed-out visitors of app pages to /sign-in with next', () => {
-    for (const path of ['/town', '/me?tab=logs', '/admin', '/welcome']) {
+    for (const path of [
+      '/',
+      '/pets/abc',
+      '/people/u1/pets/p1',
+      '/all',
+      '/dm/u2',
+      '/settings/pets',
+      '/town',
+      '/me?tab=logs',
+      '/admin',
+      '/welcome',
+    ]) {
       const res = proxy(req(path));
       expect(res.status, path).toBe(307);
       const location = new URL(res.headers.get('location')!);
       expect(location.pathname).toBe('/sign-in');
       expect(location.searchParams.get('next')).toBe(path);
+    }
+  });
+
+  it('does not protect pages that only share a prefix with an app page', () => {
+    for (const path of ['/privacy', '/credits', '/allowed', '/pets-info']) {
+      expect(proxy(req(path)).headers.get('location'), path).toBeNull();
     }
   });
 

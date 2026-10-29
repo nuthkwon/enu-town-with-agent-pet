@@ -76,7 +76,7 @@ export function WelcomeWizard({
           share_activity: shareActivity,
         },
       });
-      router.replace('/town');
+      router.replace('/');
     } catch (e) {
       setBusy(false);
       if (e instanceof ApiRequestError && e.code === 'pet_taken') {

@@ -66,7 +66,11 @@ export default tseslint.config(
   },
   {
     // Browser game/UI code must not reach server-only modules.
-    files: ['apps/web/src/game/**/*.{ts,tsx}', 'apps/web/src/components/**/*.{ts,tsx}'],
+    files: [
+      'apps/web/src/game/**/*.{ts,tsx}',
+      'apps/web/src/components/**/*.{ts,tsx}',
+      'apps/web/src/realtime/**/*.{ts,tsx}',
+    ],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -85,7 +89,7 @@ export default tseslint.config(
   {
     // The web app talks to realtime only through @enu/protocol.
     files: ['apps/web/**/*.{ts,tsx}'],
-    ignores: ['apps/web/src/game/**', 'apps/web/src/components/**'],
+    ignores: ['apps/web/src/game/**', 'apps/web/src/components/**', 'apps/web/src/realtime/**'],
     rules: {
       'no-restricted-imports': [
         'error',

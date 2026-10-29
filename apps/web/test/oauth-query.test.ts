@@ -27,11 +27,11 @@ describe('signedOAuthQuery', () => {
 describe('safeNextPath', () => {
   it('only allows same-site relative paths', () => {
     expect(safeNextPath('/me?tab=logs')).toBe('/me?tab=logs');
-    expect(safeNextPath('https://evil.example')).toBe('/town');
-    expect(safeNextPath('//evil.example')).toBe('/town');
-    expect(safeNextPath('/\\evil.example')).toBe('/town');
-    expect(safeNextPath('/sign-in')).toBe('/town');
-    expect(safeNextPath(undefined)).toBe('/town');
+    expect(safeNextPath('https://evil.example')).toBe('/');
+    expect(safeNextPath('//evil.example')).toBe('/');
+    expect(safeNextPath('/\\evil.example')).toBe('/');
+    expect(safeNextPath('/sign-in')).toBe('/');
+    expect(safeNextPath(undefined)).toBe('/');
     expect(safeNextPath(['/admin', '/me'])).toBe('/admin');
   });
 });

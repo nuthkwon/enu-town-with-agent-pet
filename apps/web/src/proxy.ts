@@ -4,15 +4,28 @@ import { buildCsp, redirectOrigin } from '@/lib/csp';
 
 /**
  * Next 16 proxy (formerly middleware):
- *  1. App pages need a session: without the session cookie, /town /me /admin /welcome redirect
- *     to /sign-in?next=… (cookie presence only — every page re-validates the session itself).
+ *  1. App pages need a session: without the session cookie, the messenger (/, /pets, /people, /all, /dm,
+ *     /settings), /town, /me, /admin and /welcome redirect to /sign-in?next=… (cookie presence only — every
+ *     page re-validates the session itself). The path is passed on as `x-den-path` for the den layout's own
+ *     sign-in redirect (a layout does not know its page's path).
  *  2. A per-request CSP with a script nonce (Next applies it to its own scripts automatically).
  * API routes, OAuth discovery and static assets are excluded by the matcher.
  */
 
-const PROTECTED_PREFIXES = ['/town', '/me', '/admin', '/welcome'];
+const PROTECTED_PREFIXES = [
+  '/pets',
+  '/people',
+  '/all',
+  '/dm',
+  '/settings',
+  '/town',
+  '/me',
+  '/admin',
+  '/welcome',
+];
 
 function isProtected(pathname: string): boolean {
+  if (pathname === '/') return true;
   return PROTECTED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
@@ -46,6 +59,7 @@ export function proxy(request: NextRequest) {
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
+  requestHeaders.set('x-den-path', pathname + search);
   requestHeaders.set('content-security-policy', csp);
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set('content-security-policy', csp);

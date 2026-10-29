@@ -14,7 +14,7 @@ export default async function WelcomePage() {
   const viewer = await requirePageViewer('/welcome');
   const db = getDb();
   const me = await buildMeDto(db, viewer);
-  if (me.onboardingCompleted && me.noticeAccepted) redirect('/town');
+  if (me.onboardingCompleted && me.noticeAccepted) redirect('/');
   const desks = await listDesks(db);
   return <WelcomeWizard me={me} desks={desks} swatches={AVATAR_SWATCHES} />;
 }
