@@ -1,0 +1,1437 @@
+{
+ "compressionlevel": -1,
+ "height": 23,
+ "infinite": false,
+ "layers": [
+  {
+   "data": [
+    4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
+    4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
+    4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
+    2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+    2,2,2,2,2,2,2,2,2,3,3,3,3,2,2,2,2,2,2,2,2,2,
+    2,2,2,2,2,2,2,2,2,3,3,3,3,2,2,2,2,2,2,2,2,2,
+    2,2,2,2,2,2,2,2,2,3,3,3,3,2,2,2,2,2,2,2,2,2,
+    2,2,2,2,2,2,2,2,2,3,3,3,3,2,2,2,2,2,2,2,2,2,
+    2,2,2,2,2,2,2,2,2,3,3,3,3,2,2,2,2,2,2,2,2,2,
+    2,2,2,2,2,2,2,2,2,3,3,3,3,2,2,2,2,2,2,2,2,2,
+    2,2,2,2,2,2,2,2,2,3,3,3,3,2,2,2,2,2,2,2,2,2,
+    2,2,2,2,2,2,2,2,2,3,3,3,3,2,2,2,2,2,2,2,2,2,
+    2,2,2,2,2,2,2,2,2,3,3,3,3,2,2,2,2,2,2,2,2,2,
+    2,2,2,2,2,2,2,2,2,3,3,3,3,2,2,2,2,2,2,2,2,2,
+    2,2,2,2,2,2,2,2,2,3,3,3,3,5,5,5,5,5,5,5,5,2,
+    2,2,2,2,2,2,2,2,2,3,3,3,3,5,5,5,5,5,5,5,5,2,
+    2,2,2,2,2,2,2,2,2,3,3,3,3,5,5,5,5,5,5,5,5,2,
+    2,2,2,2,2,2,2,2,2,3,3,3,3,2,2,2,2,2,2,2,2,2,
+    2,6,6,6,6,6,6,6,6,3,3,3,3,2,7,7,7,7,7,7,7,2,
+    2,6,6,6,6,6,6,6,6,3,3,3,3,7,7,7,7,7,7,7,7,2,
+    2,6,6,6,6,6,6,6,6,3,3,3,3,2,7,7,7,7,7,7,7,2,
+    2,6,6,6,6,6,6,6,6,3,3,3,3,2,7,7,7,7,7,7,7,2,
+    2,2,2,2,2,2,2,2,2,2,3,3,2,2,2,2,2,2,2,2,2,2
+   ],
+   "height": 23,
+   "id": 1,
+   "name": "floor",
+   "opacity": 1,
+   "type": "tilelayer",
+   "visible": true,
+   "width": 22,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "data": [
+    12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,
+    12,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,12,
+    12,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,12,
+    9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,10,10,9,9,
+    8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,
+    8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,
+    8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,
+    8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,
+    8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,
+    8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,
+    8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,
+    8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,
+    8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,
+    8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,
+    8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,
+    8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,
+    8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,
+    8,0,0,0,0,0,0,0,0,0,0,0,0,8,8,8,8,8,8,8,8,8,
+    8,0,0,0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,8,
+    8,0,0,0,0,0,0,0,0,0,0,0,0,30,0,0,0,0,0,0,0,8,
+    8,0,0,0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,8,
+    8,0,0,0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,8,
+    8,8,8,8,8,8,8,8,8,8,11,11,8,8,8,8,8,8,8,8,8,8
+   ],
+   "height": 23,
+   "id": 2,
+   "name": "walls",
+   "opacity": 1,
+   "type": "tilelayer",
+   "visible": true,
+   "width": 22,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "data": [
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,32,0,
+    0,0,0,18,0,0,18,0,0,0,0,0,0,0,21,16,16,0,0,0,32,0,
+    0,0,13,14,15,13,14,15,0,0,0,0,0,0,21,16,16,19,0,0,31,0,
+    0,0,13,14,15,13,14,15,0,0,0,0,0,0,23,22,22,22,22,22,22,0,
+    0,0,0,17,0,0,17,0,0,0,0,0,0,0,13,14,15,13,14,15,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,17,0,0,17,0,0,0,
+    0,0,0,18,0,0,18,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,13,14,15,13,14,15,0,0,0,0,0,0,0,0,0,0,18,0,0,0,
+    0,0,13,14,15,13,14,15,0,0,0,0,0,0,31,31,31,13,14,15,0,0,
+    0,0,0,17,0,0,17,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,32,0,0,0,0,0,0,26,0,
+    0,0,0,18,0,0,18,0,0,0,0,0,0,0,0,0,0,0,0,0,27,0,
+    0,0,13,14,15,13,14,15,0,0,0,0,0,0,0,0,0,0,0,28,28,0,
+    0,0,0,0,0,0,0,0,32,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,25,25,25,25,0,0,0,0,0,0,0,0,29,0,29,0,29,0,0,
+    0,0,25,24,24,24,24,25,0,0,0,0,0,0,0,29,0,29,0,29,0,0,
+    0,0,25,24,24,24,24,25,0,0,0,0,0,0,0,29,0,29,0,29,0,0,
+    0,33,0,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+   ],
+   "height": 23,
+   "id": 3,
+   "name": "furniture",
+   "opacity": 1,
+   "type": "tilelayer",
+   "visible": true,
+   "width": 22,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "data": [
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,34,0,0,34,0,0,0,0,0,0,0,0,0,36,0,0,0,0,0,
+    0,0,0,35,0,0,35,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,35,0,0,35,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,34,0,0,34,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,35,0,0,35,0,0,0,0,0,0,0,0,0,0,0,34,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,34,0,0,34,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+   ],
+   "height": 23,
+   "id": 4,
+   "name": "furniture-top",
+   "opacity": 1,
+   "type": "tilelayer",
+   "visible": true,
+   "width": 22,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "draworder": "topdown",
+   "id": 5,
+   "name": "desks",
+   "objects": [
+    {
+     "height": 32,
+     "id": 1,
+     "name": "L1a",
+     "properties": [
+      {
+       "name": "deskId",
+       "type": "string",
+       "value": "L1a"
+      },
+      {
+       "name": "facing",
+       "type": "string",
+       "value": "down"
+      },
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "desk"
+      },
+      {
+       "name": "seatX",
+       "type": "int",
+       "value": 3
+      },
+      {
+       "name": "seatY",
+       "type": "int",
+       "value": 5
+      }
+     ],
+     "rotation": 0,
+     "type": "desk",
+     "visible": true,
+     "width": 96,
+     "x": 64,
+     "y": 192
+    },
+    {
+     "height": 32,
+     "id": 2,
+     "name": "L1b",
+     "properties": [
+      {
+       "name": "deskId",
+       "type": "string",
+       "value": "L1b"
+      },
+      {
+       "name": "facing",
+       "type": "string",
+       "value": "down"
+      },
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "desk"
+      },
+      {
+       "name": "seatX",
+       "type": "int",
+       "value": 6
+      },
+      {
+       "name": "seatY",
+       "type": "int",
+       "value": 5
+      }
+     ],
+     "rotation": 0,
+     "type": "desk",
+     "visible": true,
+     "width": 96,
+     "x": 160,
+     "y": 192
+    },
+    {
+     "height": 32,
+     "id": 3,
+     "name": "L2a",
+     "properties": [
+      {
+       "name": "deskId",
+       "type": "string",
+       "value": "L2a"
+      },
+      {
+       "name": "facing",
+       "type": "string",
+       "value": "up"
+      },
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "desk"
+      },
+      {
+       "name": "seatX",
+       "type": "int",
+       "value": 3
+      },
+      {
+       "name": "seatY",
+       "type": "int",
+       "value": 8
+      }
+     ],
+     "rotation": 0,
+     "type": "desk",
+     "visible": true,
+     "width": 96,
+     "x": 64,
+     "y": 224
+    },
+    {
+     "height": 32,
+     "id": 4,
+     "name": "L2b",
+     "properties": [
+      {
+       "name": "deskId",
+       "type": "string",
+       "value": "L2b"
+      },
+      {
+       "name": "facing",
+       "type": "string",
+       "value": "up"
+      },
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "desk"
+      },
+      {
+       "name": "seatX",
+       "type": "int",
+       "value": 6
+      },
+      {
+       "name": "seatY",
+       "type": "int",
+       "value": 8
+      }
+     ],
+     "rotation": 0,
+     "type": "desk",
+     "visible": true,
+     "width": 96,
+     "x": 160,
+     "y": 224
+    },
+    {
+     "height": 32,
+     "id": 5,
+     "name": "L3a",
+     "properties": [
+      {
+       "name": "deskId",
+       "type": "string",
+       "value": "L3a"
+      },
+      {
+       "name": "facing",
+       "type": "string",
+       "value": "down"
+      },
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "desk"
+      },
+      {
+       "name": "seatX",
+       "type": "int",
+       "value": 3
+      },
+      {
+       "name": "seatY",
+       "type": "int",
+       "value": 10
+      }
+     ],
+     "rotation": 0,
+     "type": "desk",
+     "visible": true,
+     "width": 96,
+     "x": 64,
+     "y": 352
+    },
+    {
+     "height": 32,
+     "id": 6,
+     "name": "L3b",
+     "properties": [
+      {
+       "name": "deskId",
+       "type": "string",
+       "value": "L3b"
+      },
+      {
+       "name": "facing",
+       "type": "string",
+       "value": "down"
+      },
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "desk"
+      },
+      {
+       "name": "seatX",
+       "type": "int",
+       "value": 6
+      },
+      {
+       "name": "seatY",
+       "type": "int",
+       "value": 10
+      }
+     ],
+     "rotation": 0,
+     "type": "desk",
+     "visible": true,
+     "width": 96,
+     "x": 160,
+     "y": 352
+    },
+    {
+     "height": 32,
+     "id": 7,
+     "name": "L4a",
+     "properties": [
+      {
+       "name": "deskId",
+       "type": "string",
+       "value": "L4a"
+      },
+      {
+       "name": "facing",
+       "type": "string",
+       "value": "up"
+      },
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "desk"
+      },
+      {
+       "name": "seatX",
+       "type": "int",
+       "value": 3
+      },
+      {
+       "name": "seatY",
+       "type": "int",
+       "value": 13
+      }
+     ],
+     "rotation": 0,
+     "type": "desk",
+     "visible": true,
+     "width": 96,
+     "x": 64,
+     "y": 384
+    },
+    {
+     "height": 32,
+     "id": 8,
+     "name": "L4b",
+     "properties": [
+      {
+       "name": "deskId",
+       "type": "string",
+       "value": "L4b"
+      },
+      {
+       "name": "facing",
+       "type": "string",
+       "value": "up"
+      },
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "desk"
+      },
+      {
+       "name": "seatX",
+       "type": "int",
+       "value": 6
+      },
+      {
+       "name": "seatY",
+       "type": "int",
+       "value": 13
+      }
+     ],
+     "rotation": 0,
+     "type": "desk",
+     "visible": true,
+     "width": 96,
+     "x": 160,
+     "y": 384
+    },
+    {
+     "height": 32,
+     "id": 9,
+     "name": "L5a",
+     "properties": [
+      {
+       "name": "deskId",
+       "type": "string",
+       "value": "L5a"
+      },
+      {
+       "name": "facing",
+       "type": "string",
+       "value": "down"
+      },
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "desk"
+      },
+      {
+       "name": "seatX",
+       "type": "int",
+       "value": 3
+      },
+      {
+       "name": "seatY",
+       "type": "int",
+       "value": 15
+      }
+     ],
+     "rotation": 0,
+     "type": "desk",
+     "visible": true,
+     "width": 96,
+     "x": 64,
+     "y": 512
+    },
+    {
+     "height": 32,
+     "id": 10,
+     "name": "L5b",
+     "properties": [
+      {
+       "name": "deskId",
+       "type": "string",
+       "value": "L5b"
+      },
+      {
+       "name": "facing",
+       "type": "string",
+       "value": "down"
+      },
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "desk"
+      },
+      {
+       "name": "seatX",
+       "type": "int",
+       "value": 6
+      },
+      {
+       "name": "seatY",
+       "type": "int",
+       "value": 15
+      }
+     ],
+     "rotation": 0,
+     "type": "desk",
+     "visible": true,
+     "width": 96,
+     "x": 160,
+     "y": 512
+    },
+    {
+     "height": 64,
+     "id": 11,
+     "name": "R1",
+     "properties": [
+      {
+       "name": "deskId",
+       "type": "string",
+       "value": "R1"
+      },
+      {
+       "name": "facing",
+       "type": "string",
+       "value": "left"
+      },
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "ceo"
+      },
+      {
+       "name": "seatX",
+       "type": "int",
+       "value": 17
+      },
+      {
+       "name": "seatY",
+       "type": "int",
+       "value": 6
+      }
+     ],
+     "rotation": 0,
+     "type": "desk",
+     "visible": true,
+     "width": 64,
+     "x": 480,
+     "y": 160
+    },
+    {
+     "height": 32,
+     "id": 12,
+     "name": "R2a",
+     "properties": [
+      {
+       "name": "deskId",
+       "type": "string",
+       "value": "R2a"
+      },
+      {
+       "name": "facing",
+       "type": "string",
+       "value": "up"
+      },
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "desk"
+      },
+      {
+       "name": "seatX",
+       "type": "int",
+       "value": 15
+      },
+      {
+       "name": "seatY",
+       "type": "int",
+       "value": 9
+      }
+     ],
+     "rotation": 0,
+     "type": "desk",
+     "visible": true,
+     "width": 96,
+     "x": 448,
+     "y": 256
+    },
+    {
+     "height": 32,
+     "id": 13,
+     "name": "R2b",
+     "properties": [
+      {
+       "name": "deskId",
+       "type": "string",
+       "value": "R2b"
+      },
+      {
+       "name": "facing",
+       "type": "string",
+       "value": "up"
+      },
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "desk"
+      },
+      {
+       "name": "seatX",
+       "type": "int",
+       "value": 18
+      },
+      {
+       "name": "seatY",
+       "type": "int",
+       "value": 9
+      }
+     ],
+     "rotation": 0,
+     "type": "desk",
+     "visible": true,
+     "width": 96,
+     "x": 544,
+     "y": 256
+    },
+    {
+     "height": 32,
+     "id": 14,
+     "name": "R3b",
+     "properties": [
+      {
+       "name": "deskId",
+       "type": "string",
+       "value": "R3b"
+      },
+      {
+       "name": "facing",
+       "type": "string",
+       "value": "down"
+      },
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "desk"
+      },
+      {
+       "name": "seatX",
+       "type": "int",
+       "value": 18
+      },
+      {
+       "name": "seatY",
+       "type": "int",
+       "value": 11
+      }
+     ],
+     "rotation": 0,
+     "type": "desk",
+     "visible": true,
+     "width": 96,
+     "x": 544,
+     "y": 384
+    }
+   ],
+   "opacity": 1,
+   "type": "objectgroup",
+   "visible": true,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "draworder": "topdown",
+   "id": 6,
+   "name": "zones",
+   "objects": [
+    {
+     "height": 64,
+     "id": 15,
+     "name": "balcony",
+     "properties": [
+      {
+       "name": "label",
+       "type": "string",
+       "value": "발코니"
+      },
+      {
+       "name": "walkable",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "zoneId",
+       "type": "string",
+       "value": "balcony"
+      }
+     ],
+     "rotation": 0,
+     "type": "zone",
+     "visible": true,
+     "width": 640,
+     "x": 32,
+     "y": 32
+    },
+    {
+     "height": 96,
+     "id": 16,
+     "name": "ceo",
+     "properties": [
+      {
+       "name": "label",
+       "type": "string",
+       "value": "대표석"
+      },
+      {
+       "name": "walkable",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "zoneId",
+       "type": "string",
+       "value": "ceo"
+      }
+     ],
+     "rotation": 0,
+     "type": "zone",
+     "visible": true,
+     "width": 192,
+     "x": 480,
+     "y": 128
+    },
+    {
+     "height": 96,
+     "id": 17,
+     "name": "pantry",
+     "properties": [
+      {
+       "name": "label",
+       "type": "string",
+       "value": "탕비실"
+      },
+      {
+       "name": "walkable",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "zoneId",
+       "type": "string",
+       "value": "pantry"
+      }
+     ],
+     "rotation": 0,
+     "type": "zone",
+     "visible": true,
+     "width": 256,
+     "x": 416,
+     "y": 448
+    },
+    {
+     "height": 128,
+     "id": 18,
+     "name": "server",
+     "properties": [
+      {
+       "name": "label",
+       "type": "string",
+       "value": "서버실"
+      },
+      {
+       "name": "walkable",
+       "type": "bool",
+       "value": false
+      },
+      {
+       "name": "zoneId",
+       "type": "string",
+       "value": "server"
+      }
+     ],
+     "rotation": 0,
+     "type": "zone",
+     "visible": true,
+     "width": 224,
+     "x": 448,
+     "y": 576
+    },
+    {
+     "height": 128,
+     "id": 19,
+     "name": "meeting",
+     "properties": [
+      {
+       "name": "label",
+       "type": "string",
+       "value": "회의실"
+      },
+      {
+       "name": "walkable",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "zoneId",
+       "type": "string",
+       "value": "meeting"
+      }
+     ],
+     "rotation": 0,
+     "type": "zone",
+     "visible": true,
+     "width": 256,
+     "x": 32,
+     "y": 576
+    }
+   ],
+   "opacity": 1,
+   "type": "objectgroup",
+   "visible": true,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "draworder": "topdown",
+   "id": 7,
+   "name": "spawn",
+   "objects": [
+    {
+     "height": 32,
+     "id": 20,
+     "name": "spawn",
+     "rotation": 0,
+     "type": "spawn",
+     "visible": true,
+     "width": 64,
+     "x": 320,
+     "y": 672
+    }
+   ],
+   "opacity": 1,
+   "type": "objectgroup",
+   "visible": true,
+   "x": 0,
+   "y": 0
+  }
+ ],
+ "nextlayerid": 8,
+ "nextobjectid": 21,
+ "orientation": "orthogonal",
+ "renderorder": "right-down",
+ "tiledversion": "1.10.2",
+ "tileheight": 32,
+ "tilesets": [
+  {
+   "columns": 8,
+   "firstgid": 1,
+   "image": "office-tiles.png",
+   "imageheight": 160,
+   "imagewidth": 256,
+   "margin": 0,
+   "name": "office-tiles",
+   "spacing": 0,
+   "tilecount": 36,
+   "tileheight": 32,
+   "tiles": [
+    {
+     "id": 0,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "void"
+      }
+     ]
+    },
+    {
+     "id": 1,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": false
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "floor_carpet"
+      }
+     ]
+    },
+    {
+     "id": 2,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": false
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "floor_runner"
+      }
+     ]
+    },
+    {
+     "id": 3,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": false
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "floor_wood"
+      }
+     ]
+    },
+    {
+     "id": 4,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": false
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "floor_tile"
+      }
+     ]
+    },
+    {
+     "id": 5,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": false
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "floor_meeting"
+      }
+     ]
+    },
+    {
+     "id": 6,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": false
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "floor_server"
+      }
+     ]
+    },
+    {
+     "id": 7,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "wall"
+      }
+     ]
+    },
+    {
+     "id": 8,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "window"
+      }
+     ]
+    },
+    {
+     "id": 9,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": false
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "door_glass"
+      }
+     ]
+    },
+    {
+     "id": 10,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": false
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "door_entrance"
+      }
+     ]
+    },
+    {
+     "id": 11,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "railing"
+      }
+     ]
+    },
+    {
+     "id": 12,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_left"
+      }
+     ]
+    },
+    {
+     "id": 13,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_mid"
+      }
+     ]
+    },
+    {
+     "id": 14,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_right"
+      }
+     ]
+    },
+    {
+     "id": 15,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_block"
+      }
+     ]
+    },
+    {
+     "id": 16,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": false
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "chair_up"
+      }
+     ]
+    },
+    {
+     "id": 17,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": false
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "chair_down"
+      }
+     ]
+    },
+    {
+     "id": 18,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": false
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "chair_left"
+      }
+     ]
+    },
+    {
+     "id": 19,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": false
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "chair_right"
+      }
+     ]
+    },
+    {
+     "id": 20,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "partition_v"
+      }
+     ]
+    },
+    {
+     "id": 21,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "partition_h"
+      }
+     ]
+    },
+    {
+     "id": 22,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "partition_corner"
+      }
+     ]
+    },
+    {
+     "id": 23,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "meeting_table"
+      }
+     ]
+    },
+    {
+     "id": 24,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": false
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "meeting_chair"
+      }
+     ]
+    },
+    {
+     "id": 25,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "fridge"
+      }
+     ]
+    },
+    {
+     "id": 26,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "microwave"
+      }
+     ]
+    },
+    {
+     "id": 27,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "counter"
+      }
+     ]
+    },
+    {
+     "id": 28,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "server_rack"
+      }
+     ]
+    },
+    {
+     "id": 29,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "server_door"
+      }
+     ]
+    },
+    {
+     "id": 30,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "cabinet"
+      }
+     ]
+    },
+    {
+     "id": 31,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "plant"
+      }
+     ]
+    },
+    {
+     "id": 32,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "whiteboard"
+      }
+     ]
+    },
+    {
+     "id": 33,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": false
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "monitor_back"
+      }
+     ]
+    },
+    {
+     "id": 34,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": false
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "monitor_front"
+      }
+     ]
+    },
+    {
+     "id": 35,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": false
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "monitor_side"
+      }
+     ]
+    }
+   ],
+   "tilewidth": 32
+  }
+ ],
+ "tilewidth": 32,
+ "type": "map",
+ "version": "1.10",
+ "width": 22
+}
