@@ -16,11 +16,15 @@ import type { Template } from '../draw/template';
  *   cat       lavender, pointy ears          bunny     white, long ears
  *   fox       orange, pointy ears, big tail  chick     yellow, round bird, orange beak
  *   hamster   peach-tan + cream, wide blob   dragon    mint, gold horns, belly plates
- *   puppy     cream + chocolate floppy ears  panda     white with black ears, eye patches, limbs
+ *   puppy     cream, chocolate floppy ears   panda     white with black ears, eye patches, limbs
+ *             + one eye patch, red collar
  *   penguin   navy + white face, beak        owl       violet, cream face discs, ear tufts
  *   hedgehog  chocolate spikes, tan face     koala     grey, big fluffy round ears, big nose
  *   frog      lime, eye bumps, wide smile    unicorn   white, rainbow mane + tail, gold horn
- *   whale     sky blue, tail fluke, spout    lamb      pink cotton wool, mauve face
+ *   whale     sky blue, tail fluke, Y spout  lamb      pink scalloped wool, cream face, pink ears
+ *
+ * Thin single-pixel details get a full ink outline and read as dark scribbles at 1x; draw them at
+ * least two pixels thick (see the whale's spout).
  */
 export interface PetArt {
   body: Template;
@@ -206,13 +210,15 @@ export const PET_ART: Record<PetSpecies, PetArt> = {
     bendRow: 9,
   },
   puppy: {
+    // The far eye sits on a chocolate patch: `x`/`q` are its shine and eye so they can close onto
+    // the patch colour when sleeping (the near eye closes onto the cream base as usual).
     body: [
       '...bbbbbbb......',
       '..bbbbbbbbbb....',
       'ddbbbbbbbbbbdd..',
-      'ddbbbbbbbbbbdd..',
-      'ddbwebbbwebbdd..',
-      'ddbEEbbbEEbbdd.d',
+      'ddbbbbbbdddbdd..',
+      'ddbwebbdxqdbdd..',
+      'ddbEEbbdEEdbdd.d',
       'ddkccccccbkbdd.d',
       '.dccccnccbbbd.dd',
       '..bcccpcbbbddbb.',
@@ -230,7 +236,10 @@ export const PET_ART: Record<PetSpecies, PetArt> = {
       p: hex('#ff8fa8'),
       r: hex('#ff6b81'),
       y: hex('#ffd45e'),
+      x: WHITE,
+      q: INK,
     },
+    asleep: { x: hex('#9a6450'), q: hex('#9a6450') },
     wingAt: [11, 6],
     bendRow: 10,
   },
@@ -425,8 +434,9 @@ export const PET_ART: Record<PetSpecies, PetArt> = {
   },
   whale: {
     body: [
-      '..s...s.........',
-      '...s.s..........',
+      '.ss...ss........',
+      '..ss.ss.........',
+      '...sss..........',
       '....s...........',
       '..bbbbbbb.......',
       '.bbbbbbbbbb...bb',
@@ -443,36 +453,38 @@ export const PET_ART: Record<PetSpecies, PetArt> = {
       b: hex('#86c8f4'),
       B: hex('#62a8de'),
       c: hex('#eef8ff'),
-      s: hex('#a8dcff'),
+      s: hex('#d4f1ff'),
     },
-    wingAt: [8, 4],
-    bendRow: 8,
+    // Behind the spout, so the far wing does not cover it.
+    wingAt: [10, 5],
+    bendRow: 9,
   },
   lamb: {
     body: [
-      '..o.oo.o........',
-      '.oooooooo.o.o...',
-      'ooooooooooooooo.',
-      'ooffffffoooooooO',
-      'FfwefffwefFoooo.',
-      'FfEEfffEEfoooooO',
-      '.kfffnfffkooooo.',
-      '..offfffoooooooO',
+      '....o.oo.o......',
+      '..oooooooooo.o..',
+      '.oooooooooooooo.',
+      'oooffffooooooooO',
+      'FfweffwefFooooo.',
+      '.fEEffEEfooooooO',
+      '.kffnfffkoooooo.',
+      '.offfffooooooooO',
       '.ooooooooooooOo.',
       'oooooooooooooOoO',
       '.o.ooooooooOoO..',
-      '..ff.ff..ff.ff..',
+      '..LL.LL..LL.LL..',
     ],
     colors: {
       ...common,
-      b: hex('#ffd9e8'),
-      o: hex('#ffd9e8'),
-      O: hex('#f5bcd3'),
-      f: hex('#a88aa0'),
-      F: hex('#8c6e86'),
-      n: hex('#ffc2d6'),
+      b: hex('#ffd2e4'),
+      o: hex('#ffd2e4'),
+      O: hex('#f4b6d0'),
+      f: hex('#fff3ea'),
+      F: hex('#f597b9'),
+      L: hex('#c68fac'),
+      n: hex('#ff9fbf'),
     },
-    asleep: { w: hex('#a88aa0'), e: hex('#a88aa0') },
+    asleep: { w: hex('#fff3ea'), e: hex('#fff3ea') },
     wingAt: [11, 3],
     bendRow: 8,
   },
