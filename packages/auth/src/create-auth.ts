@@ -2,7 +2,7 @@ import { cimd } from '@better-auth/cimd';
 import { fetchClientMetadataResource } from '@better-auth/cimd/node';
 import { mcp } from '@better-auth/mcp';
 import { audit, newId, schema, type Db } from '@enu/db';
-import { devLoginBody } from '@enu/shared';
+import { APP_NAME, devLoginBody } from '@enu/shared';
 import { betterAuth, type BetterAuthPlugin } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { APIError, createAuthEndpoint } from 'better-auth/api';
@@ -79,7 +79,7 @@ export function createAuth(cfg: AuthConfig) {
     !!u && (u.role === 'admin' || (typeof u.email === 'string' && isAdminEmail(u.email)));
 
   return betterAuth({
-    appName: 'ENU Town',
+    appName: APP_NAME,
     baseURL: cfg.publicUrl,
     basePath: AUTH_BASE_PATH,
     secret: cfg.secret,

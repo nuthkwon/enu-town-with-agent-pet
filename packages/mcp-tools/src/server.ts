@@ -1,7 +1,9 @@
 import { safeErr, type Db } from '@enu/db';
 import {
+  APP_NAME,
   APP_TIMEZONE_DEFAULT,
   INSTRUCTIONS_VERSION,
+  MCP_SERVER_NAME,
   MCP_TOOL_NAMES,
   formatLocalHm,
   getMyContextInput,
@@ -238,7 +240,7 @@ export function nudgesSummaryKo(o: PostPetNudgesOutput): string {
  */
 export function buildEnuTownMcpServer(deps: McpDeps, caller: CallerInfo | undefined): McpServer {
   const server = new McpServer(
-    { name: 'enu-town', title: 'ENU Town', version: INSTRUCTIONS_VERSION },
+    { name: MCP_SERVER_NAME, title: APP_NAME, version: INSTRUCTIONS_VERSION },
     { instructions: SERVER_INSTRUCTIONS },
   );
   const run = makeRunner(deps, caller);

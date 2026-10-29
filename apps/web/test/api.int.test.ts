@@ -17,6 +17,7 @@ import {
   PET_SPECIES,
   PRIVACY_NOTICE_VERSION,
   REALTIME_TICKET_AUDIENCE,
+  TOWN_EVENTS_CHANNEL,
   localDateKey,
   type ChatItemDto,
   type MeDto,
@@ -107,7 +108,7 @@ async function listenEvents() {
   const conn = await h.pool.connect();
   const events: TownEvent[] = [];
   conn.on('notification', (m) => events.push(JSON.parse(m.payload ?? 'null') as TownEvent));
-  await conn.query('listen enu_town_events');
+  await conn.query(`listen ${TOWN_EVENTS_CHANNEL}`);
   return {
     events,
     stop: async () => {
@@ -556,7 +557,7 @@ describe('work logs and visibility', () => {
     const listener = await h.pool.connect();
     const events: unknown[] = [];
     listener.on('notification', (m) => events.push(JSON.parse(m.payload ?? 'null')));
-    await listener.query('listen enu_town_events');
+    await listener.query(`listen ${TOWN_EVENTS_CHANNEL}`);
 
     const res = await call(myLogRoute.PATCH, `/api/v1/me/work-logs/${id}`, {
       method: 'PATCH',
@@ -1202,7 +1203,7 @@ describe('to-dos and pet bubbles', () => {
     const listener = await h.pool.connect();
     const events: { type: string }[] = [];
     listener.on('notification', (m) => events.push(JSON.parse(m.payload ?? 'null')));
-    await listener.query('listen enu_town_events');
+    await listener.query(`listen ${TOWN_EVENTS_CHANNEL}`);
 
     const foreign = await call(todoRoute.PATCH, `/api/v1/me/todos/${todoId}`, {
       method: 'PATCH',

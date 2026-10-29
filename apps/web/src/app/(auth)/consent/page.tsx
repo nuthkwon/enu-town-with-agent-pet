@@ -60,7 +60,7 @@ export default async function ConsentPage({
         <span className={s.plug} aria-hidden="true">
           <span>Claude</span>
           <span className={s.plugDots}>· · ✦ · ·</span>
-          <span>ENU Town</span>
+          <span>{ko.app.name}</span>
         </span>
         <h1 className={s.title}>{ko.consent.title}</h1>
         <p className={s.lead}>{ko.consent.lead(clientName)}</p>

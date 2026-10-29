@@ -1,5 +1,5 @@
 import type { Db } from '@enu/db';
-import { INSTRUCTIONS_VERSION, MCP_TOOL_NAMES } from '@enu/shared';
+import { APP_NAME, INSTRUCTIONS_VERSION, MCP_SERVER_NAME, MCP_TOOL_NAMES } from '@enu/shared';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { NOT_AUTHENTICATED_MESSAGE, callerFromAuthInfo, type RateLimiter } from '../src/index';
 import { MODES, callTool, connectClient, createTestHandler, errorPayload, testDeps } from './harness';
@@ -51,6 +51,7 @@ describe.each(MODES)('tools/list (%s negotiation)', (mode) => {
   let tools: Awaited<ReturnType<Awaited<ReturnType<typeof connectClient>>['listTools']>>['tools'] = [];
   let instructions: string | undefined;
   let serverVersion: string | undefined;
+  let serverInfo: ReturnType<Awaited<ReturnType<typeof connectClient>>['getServerVersion']>;
 
   beforeAll(async () => {
     const client = await connectClient(handler, { userId: 'u-1', clientId: 'client-1' }, mode);
@@ -58,7 +59,8 @@ describe.each(MODES)('tools/list (%s negotiation)', (mode) => {
     tools = listed.tools;
     listJson = JSON.stringify(listed);
     instructions = client.getInstructions();
-    serverVersion = client.getServerVersion()?.version;
+    serverInfo = client.getServerVersion();
+    serverVersion = serverInfo?.version;
     await client.close();
   });
   afterAll(async () => {
@@ -68,6 +70,14 @@ describe.each(MODES)('tools/list (%s negotiation)', (mode) => {
   it('advertises exactly the five ENU Town tools', () => {
     expect(ALL_NAMES).toHaveLength(5);
     expect(tools.map((t) => t.name).sort()).toEqual(ALL_NAMES);
+  });
+
+  it('names the server from the shared constants', () => {
+    expect(serverInfo).toMatchObject({
+      name: MCP_SERVER_NAME,
+      title: APP_NAME,
+      version: INSTRUCTIONS_VERSION,
+    });
   });
 
   it('never sets requiresUserInteraction anywhere', () => {

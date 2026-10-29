@@ -6,6 +6,12 @@ export const ALLOWED_GOOGLE_HD_DEFAULT = 'enu-tech.co.kr';
 /** Current privacy notice version (docs/privacy-notice.ko.md); bump to require re-acceptance. */
 export const PRIVACY_NOTICE_VERSION = '2026-11';
 
+/** Product name: UI title, MCP server title and the Better Auth app name. */
+export const APP_NAME = 'ENU Town';
+
+/** serverInfo.name of the remote MCP connector (Claude Code names its tools mcp__<server>__<tool>). */
+export const MCP_SERVER_NAME = 'enu-town';
+
 /** Version of the check-in instructions; the Claude skill compares this to its own. */
 export const INSTRUCTIONS_VERSION = '2026-11-02.1';
 

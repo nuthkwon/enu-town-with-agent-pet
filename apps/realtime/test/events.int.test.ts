@@ -1,5 +1,6 @@
 import { desks, newId, notifyTown, petNudges, profiles, user } from '@enu/db';
 import { Anim, CloseCodes, Indicator, PetLink, type NoticeMsg } from '@enu/protocol';
+import { TOWN_EVENTS_CHANNEL } from '@enu/shared';
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -54,7 +55,7 @@ describe('roster', () => {
   });
 });
 
-describe('LISTEN enu_town_events', () => {
+describe(`LISTEN ${TOWN_EVENTS_CHANNEL}`, () => {
   it('link_state_changed wakes the pet (and puts it back to sleep, hiding any bubble)', async () => {
     const u = await makeUser(h, { linkState: 'not_linked', deskId: 'L2b' });
     const j = await joinAs(h, u.id);
@@ -179,8 +180,8 @@ describe('LISTEN enu_town_events', () => {
   it('ignores malformed payloads on the channel', async () => {
     const u = await makeUser(h, { deskId: 'L2a' });
     const j = await joinAs(h, u.id);
-    await h.handle.pool.query(`select pg_notify('enu_town_events', 'not json')`);
-    await h.handle.pool.query(`select pg_notify('enu_town_events', '{"v":1,"type":"nope"}')`);
+    await h.handle.pool.query('select pg_notify($1, $2)', [TOWN_EVENTS_CHANNEL, 'not json']);
+    await h.handle.pool.query('select pg_notify($1, $2)', [TOWN_EVENTS_CHANNEL, '{"v":1,"type":"nope"}']);
     await sleep(200);
     expect(j.room.connection.isOpen).toBe(true);
   });

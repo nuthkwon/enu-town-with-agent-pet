@@ -3,6 +3,7 @@
  * Claude-authored text is never stored here; these are ENU Town's own words.
  */
 import type { ActivityCode, PlateNote, SourceCode } from '@enu/protocol';
+import { APP_NAME } from '@enu/shared';
 import type {
   BodyType,
   HairColor,
@@ -49,7 +50,7 @@ export function roParticle(word: string): '로' | '으로' {
 
 export const ko = {
   app: {
-    name: 'ENU Town',
+    name: APP_NAME,
     tagline: 'A동 606호 · 우리 사무실',
     description: 'ENU-Tech 사내 2D 오피스. 각자의 Claude가 쓴 할 일 체크인을 요정 펫이 알려 줘요.',
   },
@@ -176,7 +177,7 @@ export const ko = {
   signIn: {
     /** Browser tab title of /sign-in. */
     pageTitle: '로그인',
-    title: 'ENU Town',
+    title: APP_NAME,
     subtitle: 'A동 606호에 오신 걸 환영해요',
     google: 'Google로 로그인',
     googleBusy: 'Google로 이동 중…',
