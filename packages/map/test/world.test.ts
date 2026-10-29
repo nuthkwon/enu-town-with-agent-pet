@@ -137,7 +137,7 @@ describe('buildWorld: zones, desks and spawn', () => {
       tileRect: { x: 2, y: 6, w: 3, h: 1 },
       pixelRect: { x: 64, y: 192, width: 96, height: 32 },
     });
-    expect(desk('R1')).toMatchObject({ kind: 'ceo', tileRect: { x: 15, y: 5, w: 2, h: 2 } });
+    expect(desk('R1')).toMatchObject({ kind: 'ceo', tileRect: { x: 16, y: 5, w: 1, h: 2 } });
     expect(world.seatOf('R1')).toEqual({ x: 17, y: 6 });
     expect(world.seatOf('nope')).toBeNull();
     expect(world.deskById('nope')).toBeNull();

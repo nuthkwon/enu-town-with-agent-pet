@@ -1,4 +1,10 @@
-import type { TileName } from '@enu/shared';
+import {
+  type DeskLinks,
+  type DeskPalette,
+  TILE_CATALOG,
+  type TileName,
+  parseDeskJoinTile,
+} from '@enu/shared';
 import { Canvas } from '../draw/canvas';
 import { type RGBA, hex, lighten, mix, withAlpha } from '../draw/color';
 import { tileNoise } from '../draw/noise';
@@ -472,6 +478,114 @@ const deskBlock: Painter = (c) => {
   fill(c, 21, 26, 5, 1, C.goldDark);
 };
 
+/* ---------- connected desks (any shape: bars, L-shaped team desks, the executive desk) ---------- */
+
+interface DeskColors {
+  top: RGBA;
+  light: RGBA;
+  grain: RGBA;
+  front: RGBA;
+  frontDark: RGBA;
+  handle: RGBA;
+}
+
+const DESK_COLORS: Record<DeskPalette, DeskColors> = {
+  desk: {
+    top: C.deskTop,
+    light: C.deskTopLight,
+    grain: C.deskGrain,
+    front: C.deskFront,
+    frontDark: C.deskFrontDark,
+    handle: C.deskFrontDark,
+  },
+  exec: {
+    top: C.ceoTop,
+    light: C.ceoLight,
+    grain: C.ceoGrain,
+    front: C.ceoFront,
+    frontDark: C.ceoSeam,
+    handle: C.goldDark,
+  },
+};
+
+type Links4 = Pick<DeskLinks, 'n' | 'e' | 's' | 'w'>;
+const CLEAR: RGBA = [0, 0, 0, 0];
+
+/** One desk cell at (ox, oy): top surface, plus the front face when nothing of the desk lies south. */
+function deskCell(o: Canvas, ox: number, oy: number, l: Links4, k: DeskColors): void {
+  const x0 = ox + (l.w ? 0 : 1);
+  const x1 = ox + (l.e ? S - 1 : S - 2);
+  const y0 = oy + (l.n ? 0 : 1);
+  const topEnd = oy + (l.s ? S - 1 : 21);
+  const w = x1 - x0 + 1;
+  fill(o, x0, y0, w, topEnd - y0 + 1, k.top);
+  if (!l.n) fill(o, x0, y0, w, 1, k.light);
+  if (!l.w) o.vline(x0, y0 + 1, topEnd, k.light);
+  for (let x = x0; x <= x1; x++) {
+    if (tileNoise(x - ox, 0, 7) < 0.25) o.set(x, oy + 8, k.grain);
+    if (tileNoise(x - ox, 1, 7) < 0.2) o.set(x, oy + 15, k.grain);
+    if (l.s && tileNoise(x - ox, 2, 7) < 0.22) o.set(x, oy + 26, k.grain);
+  }
+  if (!l.s) {
+    fill(o, x0, oy + 22, w, 6, k.front);
+    fill(o, x0, oy + 22, w, 1, k.frontDark);
+    fill(o, x0, oy + 27, w, 1, k.frontDark);
+    if (!l.w) fill(o, x0 + 4, oy + 24, 5, 1, k.handle);
+    if (!l.e) fill(o, x1 - 8, oy + 24, 5, 1, k.handle);
+    if (!l.w) o.set(x0, oy + 27, CLEAR);
+    if (!l.e) o.set(x1, oy + 27, CLEAR);
+  }
+  // rounded outer corners
+  if (!l.n && !l.w) o.set(x0, y0, CLEAR);
+  if (!l.n && !l.e) o.set(x1, y0, CLEAR);
+}
+
+/**
+ * A desk cell drawn together with its same-desk neighbours on a 3x3 scratch canvas, outlined as one
+ * shape and cropped to the centre, so inner corners and front faces line up across tiles.
+ */
+function deskJoined(c: Canvas, j: DeskLinks & { palette: DeskPalette }): void {
+  const k = DESK_COLORS[j.palette];
+  const occupied = (dx: number, dy: number): boolean =>
+    (dx === 0 && dy === 0) ||
+    (dx === 0 && dy === -1 && j.n) ||
+    (dx === 1 && dy === 0 && j.e) ||
+    (dx === 0 && dy === 1 && j.s) ||
+    (dx === -1 && dy === 0 && j.w) ||
+    (dx === 1 && dy === 1 && j.se) ||
+    (dx === -1 && dy === 1 && j.sw);
+  const big = new Canvas(S * 3, S * 3);
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (!occupied(dx, dy)) continue;
+      const links = {
+        n: occupied(dx, dy - 1),
+        e: occupied(dx + 1, dy),
+        s: occupied(dx, dy + 1),
+        w: occupied(dx - 1, dy),
+      };
+      deskCell(big, (dx + 1) * S, (dy + 1) * S, links, k);
+    }
+  }
+  big.outline(C.ink);
+  c.blit(big.crop(S, S, S, S), 0, 0);
+  if (j.s) return;
+  // seam where this front face meets a piece that continues south (the inside of an L)
+  if (j.w && j.sw) c.vline(0, 22, 27, C.ink);
+  if (j.e && j.se) c.vline(S - 1, 22, 27, C.ink);
+  for (let y = 29; y <= 30; y++)
+    for (let x = 0; x < S; x++) if (c.alpha(x, y) === 0 && c.alpha(x, 27) > 0) c.plot(x, y, C.shadowSoft);
+}
+
+type DeskJoinTileName = Extract<TileName, `${DeskPalette}_j_${string}`>;
+
+const DESK_JOIN_PAINTERS = Object.fromEntries(
+  TILE_CATALOG.flatMap((t) => {
+    const j = parseDeskJoinTile(t.name);
+    return j ? [[t.name, (c: Canvas) => deskJoined(c, j)] as const] : [];
+  }),
+) as Record<DeskJoinTileName, Painter>;
+
 /* ---------- chairs ---------- */
 
 function chairBase(o: Canvas, cx: number, y: number): void {
@@ -921,6 +1035,7 @@ export const TILE_PAINTERS: Record<TileName, Painter> = {
   monitor_back: monitorBack,
   monitor_front: monitorFront,
   monitor_side: monitorSide,
+  ...DESK_JOIN_PAINTERS,
 };
 
 /** Paints one 32x32 tile. */

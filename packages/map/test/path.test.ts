@@ -52,9 +52,9 @@ describe('findPath (A*)', () => {
       if (p.x === 14) expect(p.y).toBe(4);
       expect(p.y === 7 && p.x >= 14).toBe(false);
     }
-    // right next to the partition, but the only way in is around it
+    // right next to the partition, but the only way in is around it (and around the desk return)
     const around = findPath(world, { x: 13, y: 6 }, seat)!;
-    expect(around).toHaveLength(8);
+    expect(around).toHaveLength(10);
     expect(around.map(key)).toContain('14,4');
   });
 

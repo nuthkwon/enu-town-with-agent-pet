@@ -20,17 +20,17 @@ export const OFFICE_606_ASCII = [
   'R,,,,,,,,,,,,,,,,,,,,R', // 2
   'WWWWWWWWWWWWWWWWWWDDWW', // 3  window wall, balcony door at x18-19 (to the CEO's right)
   '#L.......::::.......L#', // 4  walkway (aisle -> balcony door / CEO seat)
-  '#..v..v..::::.Pdd...L#', // 5  L1a L1b (facing down)        | CEO desk
-  '#.dddddd.::::.Pdd<..C#', // 6  L1 desks                       | R1 CEO chair facing left (toward L1b)
+  '#.dv..vd.::::.P.dd..L#', // 5  L1a L1b (facing down), desk returns | CEO desk + return (to his right)
+  '#.dddddd.::::.P.d<..C#', // 6  L1 desks                       | R1 CEO chair facing left (toward L1b)
   '#.dddddd.::::.PPPPPPP#', // 7  L2 desks (joined with L1)      | partition
-  '#..^..^..::::.dddddd.#', // 8  L2a L2b (facing up)            | R2 desks
-  '#........::::..^..^..#', // 9  back-to-back gap               | R2a R2b (facing up)
-  '#..v..v..::::........#', // 10 L3a L3b (facing down)          | back-to-back gap
-  '#.dddddd.::::.....v..#', // 11 L3 desks                       | R3b (facing down)
+  '#.d^..^d.::::.dddddd.#', // 8  L2a L2b (facing up), returns   | R2 desks
+  '#........::::.d^..^d.#', // 9  back-to-back gap               | R2a R2b (facing up), returns
+  '#.dv..vd.::::........#', // 10 L3a L3b (facing down), returns | back-to-back gap
+  '#.dddddd.::::.....vd.#', // 11 L3 desks                       | R3b (facing down), return
   '#.dddddd.::::.CCCddd.#', // 12 L4 desks (joined with L3)      | storage (R3a spot) + R3b desk
-  '#..^..^..::::........#', // 13 L4a L4b (facing up)
+  '#.d^..^d.::::........#', // 13 L4a L4b (facing up), returns
   '#........::::LppppppF#', // 14 back-to-back gap               | pantry: fridge
-  '#..v..v..::::pppppppM#', // 15 L5a L5b (facing down)          | microwave
+  '#.dv..vd.::::pppppppM#', // 15 L5a L5b (facing down), returns | microwave
   '#.dddddd.::::ppppppKK#', // 16 L5 desks                       | counter
   '#.......L::::#########', // 17                                | server room wall
   '#mmhhhhmm::::#sSsSsSs#', // 18 meeting area                   | server room
@@ -57,6 +57,8 @@ export interface DeskSpec {
   deskY: number;
   deskW: number;
   deskH: number;
+  /** One-tile return next to the seat that makes the desk L-shaped (ㄱ자 책상). */
+  wing?: { x: number; y: number };
 }
 
 const L = (deskId: DeskId, col: 'a' | 'b', seatY: number, deskY: number, facing: Facing): DeskSpec => ({
@@ -69,6 +71,8 @@ const L = (deskId: DeskId, col: 'a' | 'b', seatY: number, deskY: number, facing:
   deskY,
   deskW: 3,
   deskH: 1,
+  // returns on the outer ends, so each pair sits in the inner corners of mirrored ㄱ shapes
+  wing: { x: col === 'a' ? 2 : 7, y: seatY },
 });
 
 /**
@@ -86,10 +90,55 @@ export const OFFICE_606_DESKS: readonly DeskSpec[] = [
   L('L4b', 'b', 13, 12, 'up'),
   L('L5a', 'a', 15, 16, 'down'),
   L('L5b', 'b', 15, 16, 'down'),
-  { deskId: 'R1', kind: 'ceo', facing: 'left', seatX: 17, seatY: 6, deskX: 15, deskY: 5, deskW: 2, deskH: 2 },
-  { deskId: 'R2a', kind: 'desk', facing: 'up', seatX: 15, seatY: 9, deskX: 14, deskY: 8, deskW: 3, deskH: 1 },
-  { deskId: 'R2b', kind: 'desk', facing: 'up', seatX: 18, seatY: 9, deskX: 17, deskY: 8, deskW: 3, deskH: 1 },
-  { deskId: 'R3b', kind: 'desk', facing: 'down', seatX: 18, seatY: 11, deskX: 17, deskY: 12, deskW: 3, deskH: 1 },
+  // the CEO desk runs north-south in front of the chair (he faces L1b) with a return on his right
+  {
+    deskId: 'R1',
+    kind: 'ceo',
+    facing: 'left',
+    seatX: 17,
+    seatY: 6,
+    deskX: 16,
+    deskY: 5,
+    deskW: 1,
+    deskH: 2,
+    wing: { x: 17, y: 5 },
+  },
+  {
+    deskId: 'R2a',
+    kind: 'desk',
+    facing: 'up',
+    seatX: 15,
+    seatY: 9,
+    deskX: 14,
+    deskY: 8,
+    deskW: 3,
+    deskH: 1,
+    wing: { x: 14, y: 9 },
+  },
+  {
+    deskId: 'R2b',
+    kind: 'desk',
+    facing: 'up',
+    seatX: 18,
+    seatY: 9,
+    deskX: 17,
+    deskY: 8,
+    deskW: 3,
+    deskH: 1,
+    wing: { x: 19, y: 9 },
+  },
+  {
+    deskId: 'R3b',
+    kind: 'desk',
+    facing: 'down',
+    seatX: 18,
+    seatY: 11,
+    deskX: 17,
+    deskY: 12,
+    deskW: 3,
+    deskH: 1,
+    wing: { x: 19, y: 11 },
+  },
 ];
 
 export interface ZoneSpec {

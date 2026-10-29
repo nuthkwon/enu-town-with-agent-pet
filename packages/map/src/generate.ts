@@ -4,6 +4,7 @@ import {
   TILE_SIZE,
   TILESET_COLUMNS,
   ZONE_LABEL_KO,
+  deskJoinTile,
   type TileName,
   type ZoneId,
 } from '@enu/shared';
@@ -159,15 +160,16 @@ export function checkLayout(layout: OfficeLayout): string[] {
   const seats = new Map<string, string>();
   for (const d of layout.desks) {
     if (d.deskW < 1 || d.deskH < 1) errors.push(`${d.deskId}: empty desk rectangle`);
-    for (let y = d.deskY; y < d.deskY + d.deskH; y++) {
-      for (let x = d.deskX; x < d.deskX + d.deskW; x++) {
-        const key = `${x},${y}`;
-        if (charAt(layout, x, y) !== 'd')
-          errors.push(`${d.deskId}: desk tile (${key}) is '${charAt(layout, x, y)}', not 'd'`);
-        const owner = deskOwner.get(key);
-        if (owner) errors.push(`${d.deskId}: desk tile (${key}) already belongs to ${owner}`);
-        deskOwner.set(key, d.deskId);
-      }
+    const wing = d.wing;
+    if (wing && !deskCells({ ...d, wing: undefined }).some((c) => touches(c, wing)))
+      errors.push(`${d.deskId}: return (${wing.x},${wing.y}) does not touch the desk`);
+    for (const { x, y } of deskCells(d)) {
+      const key = `${x},${y}`;
+      if (charAt(layout, x, y) !== 'd')
+        errors.push(`${d.deskId}: desk tile (${key}) is '${charAt(layout, x, y)}', not 'd'`);
+      const owner = deskOwner.get(key);
+      if (owner) errors.push(`${d.deskId}: desk tile (${key}) already belongs to ${owner}`);
+      deskOwner.set(key, d.deskId);
     }
     const seatChar = charAt(layout, d.seatX, d.seatY);
     if (seatChar !== CHAIR_CHAR[d.facing]) {
@@ -227,10 +229,31 @@ function partitionTile(layout: OfficeLayout, x: number, y: number): TileName {
   return horizontal ? 'partition_h' : 'partition_v';
 }
 
-function deskTile(d: DeskSpec, dx: number): TileName {
-  if (d.kind === 'ceo' || d.deskH !== 1 || d.deskW < 2) return 'desk_block';
-  if (dx === 0) return 'desk_left';
-  return dx === d.deskW - 1 ? 'desk_right' : 'desk_mid';
+/** Every tile of a desk: its rectangle plus the optional return. */
+export function deskCells(d: DeskSpec): { x: number; y: number }[] {
+  const cells: { x: number; y: number }[] = [];
+  for (let y = d.deskY; y < d.deskY + d.deskH; y++)
+    for (let x = d.deskX; x < d.deskX + d.deskW; x++) cells.push({ x, y });
+  if (d.wing && !cells.some((c) => c.x === d.wing?.x && c.y === d.wing.y)) cells.push({ ...d.wing });
+  return cells;
+}
+
+function touches(a: { x: number; y: number }, b: { x: number; y: number }): boolean {
+  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y) === 1;
+}
+
+/** Connected desk tile for one cell, from which neighbours belong to the same desk. */
+function deskTile(d: DeskSpec, x: number, y: number): TileName {
+  const own = new Set(deskCells(d).map((c) => `${c.x},${c.y}`));
+  const has = (dx: number, dy: number): boolean => own.has(`${x + dx},${y + dy}`);
+  return deskJoinTile(d.kind === 'ceo' ? 'exec' : 'desk', {
+    n: has(0, -1),
+    e: has(1, 0),
+    s: has(0, 1),
+    w: has(-1, 0),
+    se: has(1, 1),
+    sw: has(-1, 1),
+  });
 }
 
 function tileLayer(id: number, name: string, layout: OfficeLayout, data: number[]): TiledTileLayer {
@@ -320,10 +343,7 @@ export function generateOfficeTmj(
   }
 
   for (const d of layout.desks) {
-    for (let dy = 0; dy < d.deskH; dy++) {
-      for (let dx = 0; dx < d.deskW; dx++)
-        furniture[(d.deskY + dy) * width + d.deskX + dx] = gidOf(deskTile(d, dx));
-    }
+    for (const { x, y } of deskCells(d)) furniture[y * width + x] = gidOf(deskTile(d, x, y));
     furniture[d.seatY * width + d.seatX] = gidOf(CHAIR_TILE[d.facing]);
     const mx = d.seatX + FACING_DELTA[d.facing].x;
     const my = d.seatY + FACING_DELTA[d.facing].y;

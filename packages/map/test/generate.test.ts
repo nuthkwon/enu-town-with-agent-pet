@@ -95,22 +95,28 @@ describe('generateOfficeTmj', () => {
     expect(nameAt(map, 'walls', 0, 10)).toBe('wall');
     expect(nameAt(map, 'walls', 10, 10)).toBeNull();
 
+    // L1a / L1b: mirrored ㄱ-shaped desks, the returns rise beside the chairs at the outer ends
     expect([2, 3, 4, 5, 6, 7].map((x) => nameAt(map, 'furniture', x, 6))).toEqual([
-      'desk_left',
-      'desk_mid',
-      'desk_right',
-      'desk_left',
-      'desk_mid',
-      'desk_right',
+      'desk_j_ne',
+      'desk_j_ew',
+      'desk_j_w',
+      'desk_j_e',
+      'desk_j_ew',
+      'desk_j_nw',
     ]);
-    for (const [x, y] of [
-      [15, 5],
-      [16, 5],
-      [15, 6],
-      [16, 6],
-    ] as const) {
-      expect(nameAt(map, 'furniture', x, y)).toBe('desk_block');
-    }
+    expect([2, 7].map((x) => nameAt(map, 'furniture', x, 5))).toEqual(['desk_j_s', 'desk_j_s']);
+    // L2a: the return hangs below the bar, so the middle piece's front face meets it
+    expect([2, 3, 4].map((x) => nameAt(map, 'furniture', x, 7))).toEqual([
+      'desk_j_es',
+      'desk_j_ew_sw',
+      'desk_j_w',
+    ]);
+    expect(nameAt(map, 'furniture', 2, 8)).toBe('desk_j_n');
+    // R1: executive desk in front of the CEO with a return on his right
+    expect(nameAt(map, 'furniture', 16, 5)).toBe('exec_j_es');
+    expect(nameAt(map, 'furniture', 16, 6)).toBe('exec_j_n');
+    expect(nameAt(map, 'furniture', 17, 5)).toBe('exec_j_w_sw');
+    expect(nameAt(map, 'furniture', 15, 5)).toBeNull();
     expect(nameAt(map, 'furniture', 3, 5)).toBe('chair_down');
     expect(nameAt(map, 'furniture', 3, 8)).toBe('chair_up');
     expect(nameAt(map, 'furniture', 17, 6)).toBe('chair_left');
@@ -150,7 +156,7 @@ describe('generateOfficeTmj', () => {
     const desks = findObjectLayer(map, 'desks')!.objects;
     expect(desks).toHaveLength(14);
     const r1 = desks.find((o) => o.name === 'R1')!;
-    expect(r1).toMatchObject({ type: 'desk', x: 15 * 32, y: 5 * 32, width: 64, height: 64 });
+    expect(r1).toMatchObject({ type: 'desk', x: 16 * 32, y: 5 * 32, width: 32, height: 64 });
     expect(r1.properties).toEqual([
       { name: 'deskId', type: 'string', value: 'R1' },
       { name: 'facing', type: 'string', value: 'left' },
