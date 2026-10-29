@@ -7,7 +7,6 @@ import {
   avatarDirection,
   avatarFrames,
   dirFromDelta,
-  keyToDir,
   petDirection,
   petFrames,
   walkFrameIndex,
@@ -29,6 +28,19 @@ describe('sprite spec copy', () => {
     expect(spec.PET_ORIGIN).toEqual(source.PET_ORIGIN);
     expect(spec.EFFECT_FRAME).toBe(source.EFFECT_FRAME);
     expect(spec.EFFECT_FRAMES).toEqual(source.EFFECT_FRAMES);
+    expect(spec.EFFECT_COLUMNS).toBe(source.EFFECT_COLUMNS);
+    expect(spec.EFFECT_ROWS).toBe(source.EFFECT_ROWS);
+    expect(spec.EFFECT_ROWS).toBe(3);
+    expect(spec.EFFECT_FRAMES).toMatchObject({
+      headset: 16,
+      focus: 17,
+      cup: 18,
+      laptop: 19,
+      magnifier: 20,
+      link: 21,
+      clipboard: 22,
+      plane: 23,
+    });
     expect(spec.SPRITE_PATHS.effects).toBe(source.SPRITE_PATHS.effects);
     expect(spec.SPRITE_PATHS.pet('cat')).toBe(source.SPRITE_PATHS.pet('cat'));
     expect(spec.SPRITE_PATHS.avatarStatic('av-m-short-black-sky-warm')).toBe(
@@ -72,14 +84,6 @@ describe('direction <-> sprite rows', () => {
     expect(dirFromDelta(0, 1)).toBe(Dir.Down);
     expect(dirFromDelta(0, -2)).toBe(Dir.Up);
     expect(dirFromDelta(0, 0)).toBeNull();
-  });
-
-  it('maps WASD and arrows', () => {
-    expect(keyToDir('KeyW')).toBe(Dir.Up);
-    expect(keyToDir('ArrowLeft')).toBe(Dir.Left);
-    expect(keyToDir('s')).toBe(Dir.Down);
-    expect(keyToDir('KeyD')).toBe(Dir.Right);
-    expect(keyToDir('Enter')).toBeNull();
   });
 
   it('builds per-sheet animation keys', () => {

@@ -1,6 +1,7 @@
 /** Pure helpers for the chat dock and composers (unit-tested; no React/DOM). */
 
-export type ChatChannel = 'nearby' | 'room';
+/** The town has one chat channel (전체); DMs live in the DM drawer. */
+export type ChatChannel = 'room';
 
 export interface ChatLine {
   key: string;

@@ -33,7 +33,7 @@ const line = (over: Partial<ChatLine>): ChatLine => ({
   key: 'k',
   id: null,
   clientMsgId: null,
-  kind: 'nearby',
+  kind: 'room',
   fromUserId: 'me',
   fromName: '나',
   text: '안녕',

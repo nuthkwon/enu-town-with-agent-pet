@@ -200,6 +200,34 @@
   color: var(--c-ink-soft);
 }
 
+.question {
+  font-weight: 700;
+  margin: 4px 0 10px;
+}
+
+.choicePreview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--c-ink-soft);
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: var(--c-card-soft);
+  border: 1px dashed var(--c-line-strong);
+}
+
+/* 서로 보기: opening the town usually shows me too (spec §8.1, D21). */
+.reciprocity {
+  margin: 4px 0 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fffaf2;
+  border: 1px solid #f1d9b5;
+  font-size: 13.5px;
+  color: #6b4a1f;
+}
+
 .error {
   margin-top: 16px;
 }

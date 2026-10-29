@@ -8,69 +8,61 @@ import {
   type Deferred,
 } from '@colyseus/core';
 import { StateView } from '@colyseus/schema';
-import { profiles } from '@enu/db';
-import { DEFAULT_TIMING, type PolicyTiming } from '@enu/domain';
-import { nearbyRecipients, type OfficeWorld, type Point, type ProximityPlayer } from '@enu/map';
+import { loadHolidays, profiles } from '@enu/db';
+import { DEFAULT_TIMING, manualStatusUntil, type PolicyTiming } from '@enu/domain';
 import {
-  Anim,
   C2S,
   CloseCodes,
   MSG,
   OfficeState,
-  Pet,
-  Player,
-  STEP_MS,
-  Status,
-  linkStateToCode,
+  isCurrentProtocol,
   type ChatAckMsg,
-  type Dir,
   type ChatMsg,
   type DmMsg,
   type EmoteMsg,
   type ErrorMsg,
-  type MoveCorrectMsg,
   type NoticeMsg,
   type PingedMsg,
+  type StatusSetMsg,
 } from '@enu/protocol';
 import {
   LIMITS,
   OFFICE_ROOM_NAME,
-  ZONE_LABEL_KO,
+  TOWN_TIMING,
   graphemeLength,
+  localDateKey,
   normalizeLine,
   type LinkState,
   type TownEvent,
-  type ZoneId,
 } from '@enu/shared';
 import { eq } from 'drizzle-orm';
 import { TicketError, isOriginAllowed, verifyTicket, type AuthData } from '../auth/verifyTicket';
 import { ChatService, prepareChatText } from '../chat/ChatService';
 import { monotonicMs } from '../clock';
 import { getRealtimeContext, type RealtimeContext } from '../context';
+import { Director, NO_SIGNALS, bubbleHooks, type ManualIn } from '../director/Director';
 import { DbEvents } from '../infra/DbEvents';
-import { loadRecentPresence, savePresence } from '../infra/presence';
-import { loadUserSnapshot } from '../infra/profiles';
+import { loadRoster, loadRosterMember, loadSignals } from '../infra/roster';
 import { BubblePresenter, createDbDeliveryStore } from '../pet/BubblePresenter';
 import { CandidateLoader } from '../pet/CandidateLoader';
 import { NudgeScheduler } from '../pet/NudgeScheduler';
 import { loadOfficeMap } from '../world/loadMap';
-import { chooseSpawn, adjacentWalkable, stepTarget } from '../world/Movement';
-import { PetFollower } from '../world/PetFollower';
 import { createClientLimits, type ClientLimits } from './limits';
 
 export interface OfficeUserData {
   userId: string;
 }
 
-export type OfficeClient = Client<{ auth: AuthData; userData: OfficeUserData }>;
+/** What onAuth hands to onJoin: the verified person plus whether the client speaks PROTOCOL_VERSION. */
+export interface OfficeAuth extends AuthData {
+  protocolOk: boolean;
+}
 
-/** Seconds a dropped connection keeps its seat (and avatar) for an automatic reconnect. */
+export type OfficeClient = Client<{ auth: OfficeAuth; userData: OfficeUserData }>;
+
+/** Seconds a dropped connection keeps its seat (and stays live) for an automatic reconnect. */
 export const RECONNECT_SECONDS = 20;
 export const RESYNC_INTERVAL_MS = 5 * 60 * 1000;
-export const ISOLATED_ZONES: readonly string[] = ['meeting'];
-/** Zones whose label is shown as status text when the user has no custom text. */
-const AUTO_TEXT_ZONES: readonly ZoneId[] = ['pantry', 'balcony'];
-const WALK_SETTLE_MS = Math.round(STEP_MS * 1.6);
 
 /** Close codes after which a seat is never held for reconnection. */
 const NO_RECONNECT_CODES: ReadonlySet<number> = new Set<number>([
@@ -81,19 +73,12 @@ const NO_RECONNECT_CODES: ReadonlySet<number> = new Set<number>([
 
 const WORK_LOG_PUBLISHED_TEXT = '새 업무 로그가 전사 공개되었어요';
 
+/** A connection of one roster member. The avatar itself belongs to the director, not to the session. */
 interface Session {
   userId: string;
   sessionId: string;
   client: OfficeClient;
-  auth: AuthData;
-  player: Player;
-  pet: Pet;
-  follower: PetFollower;
   limits: ClientLimits;
-  /** Status the user chose (the meeting zone may override it while inside). */
-  baseStatus: Status;
-  customStatusText: string;
-  lastStepAt: number;
   reconnection: Deferred<Client> | null;
   /** Another connection of the same user took over (or the user was kicked). */
   ended: boolean;
@@ -106,18 +91,22 @@ interface SafeParser<T> {
 type Handler<T> = (session: Session, msg: T) => void | Promise<void>;
 
 /**
- * The one office room (`office-606`). Server-authoritative grid movement, pets, chat and the
- * owner-only pet bubbles. Players and pets are keyed by user id: one live session per user.
+ * The one office room (`office-606`): a live visualization of the teams at work. The server director
+ * places every roster member from their own signals (nobody steers an avatar); the room adds
+ * sessions, chat and DMs, waves and pings, and the owner-only pet bubbles.
+ * Players and pets are keyed by user id: one actor per roster member, one live session per user.
+ * Logs never carry per-user connection lines (join/leave/replace log only the session count).
  */
 export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient }> {
   override maxClients = 30;
   override autoDispose = false;
-  override patchRate = 50;
+  /** Nothing is predicted client-side any more, so 10 patches per second are plenty. */
+  override patchRate = 100;
   override maxMessagesPerSecond = 40;
   override state = new OfficeState();
 
   private ctx!: RealtimeContext;
-  private world!: OfficeWorld;
+  private director!: Director;
   private chat!: ChatService;
   private presenter!: BubblePresenter;
   private loader!: CandidateLoader;
@@ -125,13 +114,22 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
   private events: DbEvents | null = null;
   private readonly sessions = new Map<string, Session>();
   private readonly byUser = new Map<string, Session>();
+  /** Office date the loaded signals belong to (APP_TIMEZONE). */
+  private signalsDay = '';
+  private dayReload: Promise<void> | null = null;
+  /** Per-key load sequence, so a slow, stale load never overwrites a newer one. */
+  private readonly seqs = new Map<string, number>();
 
   /**
    * Runs on the HTTP matchmake request only (not on the WebSocket connect or on reconnect):
-   * ticket required, Origin allow-list, then the DB re-check in verifyTicket.
+   * ticket required, Origin allow-list, then the DB re-check in verifyTicket. The `protocol` join
+   * option is read here too, but a mismatch is refused at the start of onJoin: Colyseus turns an
+   * onAuth error code into the HTTP status (4111 is not one), while an onJoin error reaches the client
+   * with its code intact, before any state is sent.
    */
-  static override async onAuth(token: string, _options: unknown, context: AuthContext): Promise<AuthData> {
+  static override async onAuth(token: string, options: unknown, context: AuthContext): Promise<OfficeAuth> {
     const ctx = getRealtimeContext();
+    const protocolOk = isCurrentProtocol(options);
     if (!token) throw new ServerError(ErrorCode.AUTH_FAILED, 'missing_ticket');
     const origin = context.headers.get('origin');
     if (!isOriginAllowed(origin, ctx.env.ALLOWED_ORIGINS)) {
@@ -139,14 +137,15 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
       throw new ServerError(ErrorCode.AUTH_FAILED, 'origin_not_allowed');
     }
     try {
-      return await verifyTicket(token, {
+      const auth = await verifyTicket(token, {
         secret: ctx.env.REALTIME_TICKET_SECRET,
         allowedHd: ctx.env.ALLOWED_GOOGLE_HD,
         db: ctx.db,
       });
+      return { ...auth, protocolOk };
     } catch (err) {
       if (err instanceof TicketError) {
-        ctx.logger.info({ reason: err.reason, ip: context.ip }, 'join rejected');
+        ctx.logger.info({ reason: err.reason }, 'join rejected');
         throw new ServerError(ErrorCode.AUTH_FAILED, err.reason);
       }
       ctx.logger.error({ err }, 'ticket verification failed');
@@ -164,9 +163,18 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
         'map file differs from its meta.json (run pnpm map:check)',
       );
     }
-    this.world = map.world;
     this.state.mapId = map.mapId;
     this.state.mapHash = map.mapHash;
+    if (env.TOWN_IGNORE_OFFICE_HOURS) {
+      logger.warn('TOWN_IGNORE_OFFICE_HOURS is set: the town ignores office hours (development/e2e only)');
+    }
+    this.director = new Director({
+      world: map.world,
+      state: this.state,
+      timeZone: env.APP_TIMEZONE,
+      ignoreOfficeHours: env.TOWN_IGNORE_OFFICE_HOURS,
+      warn: (msg, data) => logger.warn(data, msg),
+    });
 
     const timing: PolicyTiming = {
       ...DEFAULT_TIMING,
@@ -187,19 +195,21 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
       clock,
       timing,
       logger,
-      hooks: {
-        pet: (userId) => this.byUser.get(userId)?.pet ?? null,
-        doNotDisturb: (userId) => {
-          const s = this.byUser.get(userId);
-          if (!s) return true;
-          const st = s.player.status;
-          return st === Status.Focus || st === Status.Meeting || ISOLATED_ZONES.includes(s.player.zoneId);
-        },
-      },
+      hooks: bubbleHooks(this.director),
     });
+
+    // A room with nobody connected still shows everyone the DB says is there.
+    this.director.setHolidays(await loadHolidays(db));
+    const day = localDateKey(clock.now(), env.APP_TIMEZONE);
+    await this.reloadRoster(); // creates every actor and loads their signals
+    this.signalsDay = day;
+    logger.info({ actors: this.director.size }, 'roster loaded');
+    this.evaluate({ snap: true });
+    logger.info({ actors: this.director.size, officeOpen: this.state.officeOpen }, 'actors placed');
 
     this.registerMessages();
     this.setTimestep(() => this.fastTick(), 50);
+    this.clock.setInterval(() => this.evaluate(), TOWN_TIMING.directorTickMs);
     this.clock.setInterval(() => void this.scheduler.tick(), env.NUDGE_TICK_MS);
     this.clock.setInterval(() => void this.resyncAll(), RESYNC_INTERVAL_MS);
 
@@ -218,8 +228,20 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
     this.events = null;
   }
 
+  /**
+   * Colyseus reports every error thrown from a room method here, attaching the client, the join options
+   * and the auth data to the exception. A ServerError thrown on purpose (e.g. protocol_mismatch,
+   * not_on_roster in onJoin) is an expected refusal, not a failure. Everything else is logged without the
+   * exception object itself, so no person's data ends up in the logs.
+   */
   override onUncaughtException(error: Error, methodName: string): void {
-    this.ctx?.logger.error({ err: error, methodName }, 'uncaught room exception');
+    const cause = (error as { cause?: unknown }).cause;
+    if (cause instanceof ServerError) return;
+    const inner = cause instanceof Error ? cause : error;
+    this.ctx?.logger.error(
+      { methodName, error: { name: inner.name, message: inner.message, stack: inner.stack } },
+      'uncaught room exception',
+    );
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -228,70 +250,41 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
   override async onJoin(client: OfficeClient): Promise<void> {
     const auth = client.auth;
     if (!auth) throw new ServerError(ErrorCode.AUTH_FAILED, 'unauthenticated');
-    const { db, clock, logger } = this.ctx;
+    // A client built for another protocol version (a cached old bundle) gets nothing: not even the state.
+    if (!auth.protocolOk) throw new ServerError(CloseCodes.ProtocolMismatch, 'protocol_mismatch');
+    const { clock, logger } = this.ctx;
     const userId = auth.userId;
     client.userData = { userId };
 
-    const lastPresence = auth.deskId ? null : await loadRecentPresence(db, userId, clock.now());
+    // Actors come only from the roster; someone who finished onboarding seconds ago is picked up here.
+    if (!this.director.has(userId)) {
+      await this.reloadRoster();
+      if (!this.director.has(userId)) throw new ServerError(CloseCodes.Forbidden, 'not_on_roster');
+    }
+    const pet = this.director.pet(userId);
+    if (!pet) throw new ServerError(CloseCodes.Forbidden, 'not_on_roster');
 
     // Everything below up to the replacement is synchronous, so concurrent joins of one user
     // always end with exactly one live session.
-    const occupied = [...this.byUser.values()].filter((s) => s.userId !== userId).map((s) => s.player);
-    const spawn = chooseSpawn(this.world, { deskId: auth.deskId, lastPresence, occupied });
-    const linked = auth.linkState !== 'not_linked';
-    const player = new Player({
-      id: userId,
-      name: auth.displayName,
-      avatar: auth.avatarKey,
-      deskId: auth.deskId ?? '',
-      x: spawn.x,
-      y: spawn.y,
-      dir: spawn.dir,
-      anim: Anim.Idle,
-      status: Status.Available,
-      statusText: '',
-      zoneId: '',
-    });
-    const pet = new Pet({
-      ownerId: userId,
-      species: auth.petSpecies,
-      name: auth.petName,
-      x: spawn.x,
-      y: spawn.y,
-      dir: spawn.dir,
-      anim: linked ? Anim.Idle : Anim.Sleep,
-      linkState: linkStateToCode(auth.linkState),
-    });
-    const follower = new PetFollower(pet, this.world, { linked });
-    follower.placeNear(spawn, spawn.dir, monotonicMs());
     const session: Session = {
       userId,
       sessionId: client.sessionId,
       client,
-      auth,
-      player,
-      pet,
-      follower,
       limits: createClientLimits(),
-      baseStatus: Status.Available,
-      customStatusText: auth.statusText,
-      lastStepAt: Number.NEGATIVE_INFINITY,
       reconnection: null,
       ended: false,
     };
-
     const previous = this.byUser.get(userId);
     this.sessions.set(client.sessionId, session);
     this.byUser.set(userId, session);
-    this.state.players.set(userId, player);
-    this.state.pets.set(userId, pet);
-    this.refreshZone(session);
-    player.anim = this.restAnim(session);
     client.view = new StateView();
+    // The same Pet instance for the actor's whole life: bubble fields reach only this view.
     client.view.add(pet);
     if (previous) this.endSession(previous, CloseCodes.SessionReplaced);
+    this.director.setSession(userId, 'open', clock.now());
+    this.evaluate();
 
-    logger.info({ userId, spawn: spawn.source, replaced: !!previous }, 'player joined');
+    logger.info({ sessions: this.byUser.size, replaced: !!previous }, 'player joined');
 
     await Promise.all([
       this.scheduler
@@ -307,6 +300,11 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
   override async onDrop(client: OfficeClient, code?: number): Promise<void> {
     const s = this.sessions.get(client.sessionId);
     if (!s || s.ended || (code !== undefined && NO_RECONNECT_CODES.has(code))) return;
+    if (this.byUser.get(s.userId) === s) {
+      // Still live (seat held), but not connected: no online dot, pings fail.
+      this.director.setSession(s.userId, 'held', this.ctx.clock.now());
+      this.evaluate();
+    }
     try {
       const reconnection = this.allowReconnection(client, RECONNECT_SECONDS);
       s.reconnection = reconnection;
@@ -322,7 +320,10 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
     const s = this.sessions.get(client.sessionId);
     if (!s) return;
     s.client = client;
-    this.scheduler.noteActivity(s.userId);
+    if (!s.ended && this.byUser.get(s.userId) === s) {
+      this.director.setSession(s.userId, 'open', this.ctx.clock.now());
+      this.evaluate();
+    }
   }
 
   override async onLeave(client: OfficeClient): Promise<void> {
@@ -333,20 +334,10 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
     if (this.byUser.get(s.userId) !== s) return; // replaced by a newer connection
     this.byUser.delete(s.userId);
     this.scheduler.leave(s.userId);
-    const p = s.player;
-    this.state.players.delete(s.userId);
-    this.state.pets.delete(s.userId);
-    try {
-      await savePresence(
-        this.ctx.db,
-        s.userId,
-        { x: p.x, y: p.y, dir: p.dir, zoneId: p.zoneId || null },
-        this.ctx.clock.now(),
-      );
-    } catch (err) {
-      this.ctx.logger.error({ err, userId: s.userId }, 'saving presence failed');
-    }
-    this.ctx.logger.info({ userId: s.userId }, 'player left');
+    // The 60 s live grace starts now; nothing about the visit is stored.
+    this.director.setSession(s.userId, 'ended', this.ctx.clock.now());
+    this.evaluate();
+    this.ctx.logger.info({ sessions: this.byUser.size }, 'player left');
   }
 
   /** Disconnects a session for good (no reconnection), e.g. replaced by a new tab or deactivated. */
@@ -359,7 +350,7 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
     s.client.leave(code);
   }
 
-  /** Kicks a user (deactivated, ...). */
+  /** Kicks a user (deactivated, left the roster, ...). */
   kickUser(userId: string, code: number): boolean {
     const s = this.byUser.get(userId);
     if (!s) return false;
@@ -370,44 +361,45 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
   // ---------------------------------------------------------------------------------------------
   // loops
 
-  private fastTick(): void {
-    const nowMs = monotonicMs();
-    for (const s of this.byUser.values()) {
-      const p = s.player;
-      if (p.anim === Anim.Walk && nowMs - s.lastStepAt >= WALK_SETTLE_MS) p.anim = this.restAnim(s);
-      s.follower.update(nowMs, { x: p.x, y: p.y }, p.dir as Dir);
+  /** Director pass (1 Hz, and right after status:set, sessions and DB events). */
+  private evaluate(opts: { snap?: boolean } = {}): void {
+    const now = this.ctx.clock.now();
+    if (localDateKey(now, this.ctx.env.APP_TIMEZONE) !== this.signalsDay && !this.dayReload) {
+      // A new office day: yesterday's report no longer applies. Old signals stay until the new ones arrive.
+      this.dayReload = this.reloadAllSignals()
+        .then(() => this.director.evaluate(this.ctx.clock.now(), monotonicMs()))
+        .catch((err: unknown) => this.ctx.logger.error({ err }, 'reloading signals for the new day failed'))
+        .finally(() => {
+          this.dayReload = null;
+        });
     }
-    this.scheduler.expire();
+    this.director.evaluate(now, monotonicMs(), opts);
   }
 
-  private restAnim(s: Session): Anim {
-    const desk = s.player.deskId ? this.world.deskById(s.player.deskId) : null;
-    return desk && desk.seatX === s.player.x && desk.seatY === s.player.y ? Anim.Sit : Anim.Idle;
+  private fastTick(): void {
+    this.director.step(monotonicMs());
+    this.scheduler.expire();
   }
 
   // ---------------------------------------------------------------------------------------------
   // messages
 
   private registerMessages(): void {
-    this.on(MSG.step, C2S.step, (s, m) => this.handleStep(s, m.seq, m.dir as Dir));
-    this.on(MSG.face, C2S.face, (s, m) => {
-      if (!s.limits.face.take(monotonicMs())) return this.sendError(s, MSG.face, 'RATE_LIMITED');
-      s.player.dir = m.dir;
-    });
     this.on(MSG.presence, C2S.presence, (s, m) => {
       if (!s.limits.presence.take(monotonicMs())) return this.sendError(s, MSG.presence, 'RATE_LIMITED');
       this.scheduler.setPresence(s.userId, m.visible, m.uiBusy);
     });
-    this.on(MSG.statusSet, C2S.statusSet, (s, m) => this.handleStatus(s, m.status as Status, m.text));
-    this.on(MSG.chatSend, C2S.chatSend, (s, m) => this.handleChat(s, m.channel, m.text, m.clientMsgId));
+    this.on(MSG.statusSet, C2S.statusSet, (s, m) => this.handleStatus(s, m));
+    this.on(MSG.chatSend, C2S.chatSend, (s, m) => this.handleChat(s, m.text, m.clientMsgId));
     this.on(MSG.dmSend, C2S.dmSend, (s, m) => this.handleDm(s, m.toUserId, m.text, m.clientMsgId));
     this.on(MSG.dmRead, C2S.dmRead, (s, m) => this.handleDmRead(s, m.peerUserId, m.lastMessageId));
-    this.on(MSG.wave, C2S.wave, (s) => this.handleWave(s));
+    this.on(MSG.wave, C2S.wave, (s, m) => this.handleWave(s, m.toUserId));
     this.on(MSG.ping, C2S.ping, (s, m) => this.handlePing(s, m.toUserId));
     this.on(MSG.bubbleSeen, C2S.bubbleSeen, (s, m) => {
       if (!s.limits.bubbleSeen.take(monotonicMs())) return;
       this.scheduler.seen(s.userId, m.bubbleId);
     });
+    // Everything else, including the removed `step` / `face`: nobody steers an avatar.
     this.onMessage('*', (client, type) => {
       (client as OfficeClient).send(MSG.error, {
         code: 'UNKNOWN_MESSAGE',
@@ -442,133 +434,65 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
     s.client.send(MSG.error, { code, type } satisfies ErrorMsg);
   }
 
-  private handleStep(s: Session, seq: number, dir: Dir): void {
-    const p = s.player;
-    const nowMs = monotonicMs();
-    const correct = () => s.client.send(MSG.moveCorrect, { seq, x: p.x, y: p.y } satisfies MoveCorrectMsg);
-    // Both buckets must have a token (no short-circuit refund needed: a rejected step costs one).
-    const cadenceOk = s.limits.step.take(nowMs);
-    const floodOk = s.limits.stepFlood.take(nowMs);
-    if (!cadenceOk || !floodOk) return correct();
-    p.dir = dir;
-    const from = { x: p.x, y: p.y };
-    const to = stepTarget(from, dir);
-    if (!this.world.isWalkable(to.x, to.y)) return correct();
-    p.x = to.x;
-    p.y = to.y;
-    p.anim = Anim.Walk;
-    s.lastStepAt = nowMs;
-    s.follower.ownerMoved(from, to, dir, nowMs);
-    this.refreshZone(s);
-    this.scheduler.noteActivity(s.userId);
+  private nameOf(userId: string): string {
+    return this.director.player(userId)?.name ?? '';
   }
 
-  /** Moves a player server-side (seat changes, admin tools, tests). Long jumps teleport the pet. */
-  relocate(userId: string, x: number, y: number, dir?: Dir): boolean {
-    const s = this.byUser.get(userId);
-    if (!s || !this.world.isWalkable(x, y)) return false;
-    const p = s.player;
-    const from = { x: p.x, y: p.y };
-    p.x = x;
-    p.y = y;
-    if (dir !== undefined) p.dir = dir;
-    s.follower.ownerMoved(from, { x, y }, p.dir as Dir, monotonicMs());
-    this.refreshZone(s);
-    p.anim = this.restAnim(s);
-    return true;
-  }
-
-  private handleStatus(s: Session, status: Status, text: string | undefined): void {
+  /**
+   * The owner's own status. Stored first (so it survives a restart), then applied in memory. Not
+   * audited and no NOTIFY: this room is the only reader that needs it right away.
+   */
+  private async handleStatus(s: Session, m: StatusSetMsg): Promise<void> {
     if (!s.limits.status.take(monotonicMs())) return this.sendError(s, MSG.statusSet, 'RATE_LIMITED');
-    s.baseStatus = status;
-    if (text !== undefined) {
-      const clean = normalizeLine(text);
-      if (graphemeLength(clean) > LIMITS.statusTextMax)
-        return this.sendError(s, MSG.statusSet, 'INVALID_PAYLOAD');
-      s.customStatusText = clean;
-      void this.ctx.db
-        .update(profiles)
-        .set({ statusText: clean || null })
-        .where(eq(profiles.userId, s.userId))
-        .catch((err: unknown) =>
-          this.ctx.logger.error({ err, userId: s.userId }, 'saving status text failed'),
-        );
+    let text: string | undefined;
+    if (m.text !== undefined) {
+      text = normalizeLine(m.text);
+      if (graphemeLength(text) > LIMITS.statusTextMax) return this.sendError(s, MSG.statusSet, 'INVALID_PAYLOAD');
     }
-    this.applyStatus(s);
+    const manual: ManualIn | null =
+      m.status === 'auto'
+        ? null
+        : {
+            status: m.status,
+            until: manualStatusUntil(this.ctx.clock.now(), this.ctx.env.APP_TIMEZONE, m.duration ?? '1h'),
+          };
+    try {
+      await this.ctx.db
+        .update(profiles)
+        .set({
+          manualStatus: manual?.status ?? null,
+          manualStatusUntil: manual?.until ?? null,
+          ...(text !== undefined ? { statusText: text || null } : {}),
+        })
+        .where(eq(profiles.userId, s.userId));
+    } catch (err) {
+      this.ctx.logger.error({ err, userId: s.userId }, 'saving status failed');
+      return this.sendError(s, MSG.statusSet, 'INTERNAL');
+    }
+    // A profile reload that started before this write must not bring the old status back.
+    this.nextSeq(`p:${s.userId}`);
+    this.director.setManual(s.userId, manual);
+    if (text !== undefined) this.director.setStatusText(s.userId, text);
+    this.evaluate();
   }
 
-  /** zoneId + automatic status: the meeting zone shows Meeting unless the user chose Focus. */
-  private refreshZone(s: Session): void {
-    const zone = this.world.zoneAt(s.player.x, s.player.y)?.zoneId ?? '';
-    if (zone !== s.player.zoneId) s.player.zoneId = zone;
-    this.applyStatus(s);
-  }
-
-  private applyStatus(s: Session): void {
-    const p = s.player;
-    const inMeeting = ISOLATED_ZONES.includes(p.zoneId);
-    const status = inMeeting && s.baseStatus !== Status.Focus ? Status.Meeting : s.baseStatus;
-    if (p.status !== status) p.status = status;
-    const zone = p.zoneId as ZoneId;
-    const auto = AUTO_TEXT_ZONES.includes(zone) ? ZONE_LABEL_KO[zone] : '';
-    const text = s.customStatusText || auto;
-    if (p.statusText !== text) p.statusText = text;
-  }
-
-  private proximityList(): ProximityPlayer[] {
-    return [...this.byUser.values()].map((s) => ({
-      id: s.userId,
-      x: s.player.x,
-      y: s.player.y,
-      zoneId: s.player.zoneId || null,
-    }));
-  }
-
-  private nearbyOf(s: Session): string[] {
-    const me: ProximityPlayer = {
-      id: s.userId,
-      x: s.player.x,
-      y: s.player.y,
-      zoneId: s.player.zoneId || null,
-    };
-    return nearbyRecipients(me, this.proximityList(), LIMITS.nearbyRadiusTiles, ISOLATED_ZONES);
-  }
-
-  private async handleChat(
-    s: Session,
-    channel: 'nearby' | 'room',
-    raw: string,
-    clientMsgId: string,
-  ): Promise<void> {
+  private async handleChat(s: Session, raw: string, clientMsgId: string): Promise<void> {
     const ack = (msg: Omit<ChatAckMsg, 'clientMsgId'>) =>
       s.client.send(MSG.chatAck, { clientMsgId, ...msg } satisfies ChatAckMsg);
     if (!s.limits.chat.take(monotonicMs())) return ack({ id: null, error: 'RATE_LIMITED' });
     const prepared = prepareChatText(raw, { multiline: false });
     if (!prepared.ok) return ack({ id: null, error: prepared.error });
-    this.scheduler.noteActivity(s.userId);
-
-    const zoneId = s.player.zoneId || null;
-    const recipients = channel === 'nearby' ? [s.userId, ...this.nearbyOf(s)] : [];
-    const stored = await this.chat.storeChannelMessage({
-      kind: channel,
-      senderId: s.userId,
-      body: prepared.text,
-      clientMsgId,
-      zoneId: channel === 'nearby' ? zoneId : null,
-      recipients,
-    });
+    const stored = await this.chat.storeRoomMessage({ senderId: s.userId, body: prepared.text, clientMsgId });
     if (!stored.duplicate) {
       const msg: ChatMsg = {
         id: stored.id,
-        kind: channel,
+        kind: 'room',
         fromUserId: s.userId,
-        fromName: s.player.name,
+        fromName: this.nameOf(s.userId),
         text: prepared.text,
         createdAt: stored.createdAt.toISOString(),
-        zoneId: channel === 'nearby' ? zoneId : null,
       };
-      if (channel === 'room') this.broadcast(MSG.chatMsg, msg);
-      else for (const id of recipients) this.byUser.get(id)?.client.send(MSG.chatMsg, msg);
+      this.broadcast(MSG.chatMsg, msg);
     }
     ack({ id: stored.id });
   }
@@ -581,7 +505,6 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
     if (!prepared.ok) return ack({ id: null, error: prepared.error });
     if (toUserId === s.userId || !(await this.chat.findActiveUser(toUserId)))
       return ack({ id: null, error: 'NOT_FOUND' });
-    this.scheduler.noteActivity(s.userId);
 
     const stored = await this.chat.storeDm({
       senderId: s.userId,
@@ -593,11 +516,12 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
       const msg: DmMsg = {
         id: stored.id,
         fromUserId: s.userId,
-        fromName: s.player.name,
+        fromName: this.nameOf(s.userId),
         toUserId,
         text: prepared.text,
         createdAt: stored.createdAt.toISOString(),
       };
+      // Only the two participants ever learn about a DM (no relationship metadata for anyone else).
       this.byUser.get(toUserId)?.client.send(MSG.dmMsg, msg);
       s.client.send(MSG.dmMsg, msg);
     }
@@ -611,24 +535,37 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
     s.client.send(MSG.dmUnread, await this.chat.unreadCounts(s.userId));
   }
 
-  private handleWave(s: Session): void {
-    if (!s.limits.wave.take(monotonicMs())) return this.sendError(s, MSG.wave, 'RATE_LIMITED');
-    const msg: EmoteMsg = { fromUserId: s.userId, kind: 'wave' };
-    for (const id of [s.userId, ...this.nearbyOf(s)]) this.byUser.get(id)?.client.send(MSG.emote, msg);
+  /** A human-initiated wave, shown to everyone: both people must be shown and the office open. */
+  private handleWave(s: Session, toUserId: string): void {
+    const nowMs = monotonicMs();
+    if (!s.limits.wave.take(nowMs) || !s.limits.waveTarget.take(toUserId, nowMs)) {
+      return this.sendError(s, MSG.wave, 'RATE_LIMITED');
+    }
+    if (toUserId === s.userId) return this.sendError(s, MSG.wave, 'INVALID_PAYLOAD');
+    const from = this.director.projected(s.userId);
+    const to = this.director.projected(toUserId);
+    if (!this.state.officeOpen || !from?.shown || !to?.shown) return this.sendError(s, MSG.wave, 'NOT_SHOWN');
+    this.broadcast(MSG.emote, { fromUserId: s.userId, toUserId, kind: 'wave' } satisfies EmoteMsg);
   }
 
+  /**
+   * Reaches only someone `online` (connected now, 접속 표시 on, shown, office open). Every failure
+   * answers the same NOT_ONLINE, so a crafted ping cannot tell hidden-but-connected from offline.
+   */
   private handlePing(s: Session, toUserId: string): void {
+    const target = toUserId === s.userId ? undefined : this.byUser.get(toUserId);
+    if (!target || this.director.projected(toUserId)?.online !== true) {
+      return this.sendError(s, MSG.ping, 'NOT_ONLINE');
+    }
     const nowMs = monotonicMs();
-    const target = this.byUser.get(toUserId);
-    if (!target || toUserId === s.userId) return this.sendError(s, MSG.ping, 'NOT_ONLINE');
     if (!s.limits.ping.take(nowMs) || !s.limits.pingTarget.take(toUserId, nowMs)) {
       return this.sendError(s, MSG.ping, 'RATE_LIMITED');
     }
-    target.client.send(MSG.pinged, { fromUserId: s.userId, fromName: s.player.name } satisfies PingedMsg);
+    target.client.send(MSG.pinged, { fromUserId: s.userId, fromName: this.nameOf(s.userId) } satisfies PingedMsg);
   }
 
   // ---------------------------------------------------------------------------------------------
-  // DB events (LISTEN) and resync
+  // DB events (LISTEN), roster and signals
 
   async handleTownEvent(event: TownEvent): Promise<void> {
     try {
@@ -643,73 +580,129 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
             await this.scheduler.reload(event.user_id);
           return;
         case 'profile_changed':
-          await this.reloadProfile(event.user_id);
+          await this.reloadMember(event.user_id);
           return;
-        case 'user_deactivated':
-          if (this.kickUser(event.user_id, CloseCodes.Forbidden)) {
-            this.ctx.logger.info({ userId: event.user_id }, 'deactivated user disconnected');
-          }
-          return;
-        case 'desks_changed':
-          await Promise.all([...this.byUser.keys()].map((id) => this.reloadProfile(id)));
+        case 'activity_changed':
+          await this.reloadSignals([event.user_id]);
+          this.evaluate();
           return;
         case 'work_log_changed': {
+          await this.reloadSignals([event.user_id]);
+          this.evaluate();
+          this.director.noteLogWrite(event.user_id, event.by);
           if (event.visibility !== 'company' || !event.created) return;
-          const s = this.byUser.get(event.user_id);
           const notice: NoticeMsg = {
             kind: 'work_log_published',
             text: WORK_LOG_PUBLISHED_TEXT,
             logId: event.log_id,
           };
-          s?.client.send(MSG.notice, notice);
+          this.byUser.get(event.user_id)?.client.send(MSG.notice, notice);
           return;
         }
+        case 'user_deactivated':
+          this.removeFromTown(event.user_id);
+          this.evaluate();
+          return;
+        case 'desks_changed':
+          await this.reloadRoster();
+          this.evaluate();
+          return;
       }
     } catch (err) {
       this.ctx.logger.error({ err, type: event.type }, 'town event handling failed');
     }
   }
 
-  private applyLinkState(userId: string, linkState: LinkState): void {
-    const s = this.byUser.get(userId);
-    if (!s) return;
-    s.auth = { ...s.auth, linkState };
-    s.pet.linkState = linkStateToCode(linkState);
-    s.follower.setLinked(linkState !== 'not_linked');
-    this.scheduler.setLinkState(userId, linkState);
+  private nextSeq(key: string): number {
+    const n = (this.seqs.get(key) ?? 0) + 1;
+    this.seqs.set(key, n);
+    return n;
   }
 
-  /** Re-reads name/avatar/pet/desk/link state/prefs; deactivated users are disconnected. */
-  async reloadProfile(userId: string): Promise<void> {
-    const s = this.byUser.get(userId);
-    if (!s) return;
-    const snap = await loadUserSnapshot(this.ctx.db, userId);
-    if (this.byUser.get(userId) !== s) return;
-    if (!snap || snap.status !== 'active') {
-      this.kickUser(userId, CloseCodes.Forbidden);
+  private isLatest(key: string, n: number): boolean {
+    return this.seqs.get(key) === n;
+  }
+
+  /** Kicks a connected member and removes their actor (deactivated, or no longer on the roster). */
+  private removeFromTown(userId: string): void {
+    this.kickUser(userId, CloseCodes.Forbidden);
+    this.director.removeActor(userId);
+  }
+
+  private applyLinkState(userId: string, linkState: LinkState): void {
+    if (this.director.setLinkState(userId, linkState)) this.scheduler.setLinkState(userId, linkState);
+  }
+
+  /**
+   * The whole roster: existing actors are updated in place, new members get an actor (and their
+   * signals), and actors that left the roster are removed. A Player/Pet is never swapped.
+   */
+  private async reloadRoster(): Promise<void> {
+    const started = new Map(this.director.ids().map((id) => [id, this.nextSeq(`p:${id}`)]));
+    const snaps = await loadRoster(this.ctx.db);
+    const onRoster = new Set(snaps.map((s) => s.userId));
+    const created: string[] = [];
+    for (const snap of snaps) {
+      const seq = started.get(snap.userId);
+      if (seq !== undefined && !this.isLatest(`p:${snap.userId}`, seq)) continue;
+      const r = this.director.upsertActor(snap);
+      if (r.created) created.push(snap.userId);
+      if (r.linkChanged) this.scheduler.setLinkState(snap.userId, snap.linkState);
+    }
+    for (const id of this.director.ids()) if (!onRoster.has(id)) this.removeFromTown(id);
+    if (created.length > 0) await this.reloadSignals(created);
+  }
+
+  /** One member's profile (name, avatar, desk, pet, manual status, 활동 공유, 접속 표시), applied in place. */
+  private async reloadMember(userId: string): Promise<void> {
+    const seq = this.nextSeq(`p:${userId}`);
+    const snap = await loadRosterMember(this.ctx.db, userId);
+    if (!this.isLatest(`p:${userId}`, seq)) return;
+    if (!snap) {
+      if (this.director.has(userId)) {
+        this.removeFromTown(userId);
+        this.evaluate();
+      }
       return;
     }
-    const { status: _status, ...auth } = snap;
-    s.auth = auth;
-    const p = s.player;
-    if (p.name !== snap.displayName) p.name = snap.displayName;
-    if (p.avatar !== snap.avatarKey) p.avatar = snap.avatarKey;
-    if (p.deskId !== (snap.deskId ?? '')) p.deskId = snap.deskId ?? '';
-    if (s.pet.species !== snap.petSpecies) s.pet.species = snap.petSpecies;
-    if (s.pet.name !== snap.petName) s.pet.name = snap.petName;
-    s.customStatusText = snap.statusText;
-    this.applyStatus(s);
-    if (s.pet.linkState !== linkStateToCode(snap.linkState)) this.applyLinkState(userId, snap.linkState);
-    await this.scheduler.reload(userId);
+    const r = this.director.upsertActor(snap);
+    if (r.linkChanged) this.scheduler.setLinkState(userId, snap.linkState);
+    if (r.created) await this.reloadSignals([userId]);
+    this.evaluate();
+    if (this.byUser.has(userId)) await this.scheduler.reload(userId);
   }
 
-  /** Every 5 minutes (and after a LISTEN reconnect): candidates, link state, profile. */
+  /** Today's report and log flags for these members (an absent row clears what was loaded before). */
+  private async reloadSignals(userIds: readonly string[]): Promise<void> {
+    const seqs = userIds.map((id) => [id, this.nextSeq(`s:${id}`)] as const);
+    const signals = await loadSignals(this.ctx.db, userIds, this.ctx.clock.now(), this.ctx.env.APP_TIMEZONE);
+    for (const [id, seq] of seqs) {
+      if (this.isLatest(`s:${id}`, seq)) this.director.setSignals(id, signals.get(id) ?? NO_SIGNALS);
+    }
+  }
+
+  private async reloadAllSignals(): Promise<void> {
+    const day = localDateKey(this.ctx.clock.now(), this.ctx.env.APP_TIMEZONE);
+    await this.reloadSignals(this.director.ids());
+    this.signalsDay = day;
+  }
+
+  /** Every 5 minutes and after a LISTEN reconnect: holidays, roster, signals, bubble candidates. */
   async resyncAll(): Promise<void> {
+    const { db, logger } = this.ctx;
+    try {
+      this.director.setHolidays(await loadHolidays(db));
+      await this.reloadRoster();
+      await this.reloadAllSignals();
+    } catch (err) {
+      logger.error({ err }, 'resync failed');
+    }
+    this.evaluate({ snap: true });
     for (const userId of [...this.byUser.keys()]) {
       try {
-        await this.reloadProfile(userId);
+        await this.scheduler.reload(userId);
       } catch (err) {
-        this.ctx.logger.error({ err, userId }, 'resync failed');
+        logger.error({ err, userId }, 'resync of pet bubble candidates failed');
       }
     }
   }
@@ -725,9 +718,12 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
     return this.scheduler;
   }
 
-  /** Walkable tile next to a user, e.g. to place someone beside them. */
-  tileNextTo(userId: string): Point | null {
-    const s = this.byUser.get(userId);
-    return s ? adjacentWalkable(this.world, s.player, s.player.dir as Dir) : null;
+  get townDirector(): Director {
+    return this.director;
+  }
+
+  /** Runs one director pass now (tests use it after moving the fake clock). */
+  evaluateNow(): void {
+    this.evaluate();
   }
 }

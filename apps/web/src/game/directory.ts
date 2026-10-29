@@ -19,7 +19,7 @@ export interface DirectorySnapshot {
 
 /**
  * People and desk owners (REST: /api/v1/people, /api/v1/desks), shared by React panels and the
- * Phaser world (name-tag team colours, desk name plates, clicks on offline people's desks).
+ * Phaser world (team colours, desk name plates, desk clicks resolved desk -> roster member).
  */
 export class TownDirectory extends TypedEmitter<{ change: void }> {
   private snapshot: DirectorySnapshot = { version: 0, people: [], desks: [] };

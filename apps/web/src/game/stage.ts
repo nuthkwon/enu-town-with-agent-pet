@@ -8,6 +8,8 @@ export interface Stage {
   readonly font: string;
   /** Width function for `${PIXEL_FONT_SIZE}px ${font}`. */
   readonly measure: Measure;
+  /** Width function for the small plate font (`${SMALL_PIXEL_FONT_SIZE}px ${SMALL_PIXEL_FONT}`). */
+  readonly measureSmall: Measure;
   /** Registers a world-space object (zoomed main camera only). */
   world<T extends Phaser.GameObjects.GameObject>(obj: T): T;
   /** Registers a screen-space overlay object (unzoomed overlay camera only). */
@@ -29,8 +31,12 @@ export const DEPTH = {
   furniture: 2,
   /** Entities and furniture-top tiles sort by their ground line on top of this base. */
   entities: 10,
+  /** World-space night tint over everything drawn in the office (below every overlay). */
+  night: 9_000,
   overlayDesk: 10_000,
+  overlayGroup: 15_000,
   overlayTag: 20_000,
+  overlayIcon: 25_000,
   overlayChat: 30_000,
   overlayPetBubble: 40_000,
 } as const;
@@ -55,5 +61,14 @@ export const COLORS = {
   chipFill: 0x3b2f4a,
   plateFill: 0xfff8ec,
   plateBorder: 0xc9a77a,
-  status: [0x6fcf8f, 0xa98bf5, 0xf3a26b, 0xb6b2c4] as readonly number[],
+  plateMutedCss: '#76688c',
+  plateAwayCss: '#8a5a1f',
+  online: 0x5ccf86,
+  onlineRing: 0xe8f9ee,
+  meYellow: 0xfff3b0,
+  meYellowCss: '#fff3b0',
+  groupHull: 0xa98bf5,
+  groupLink: 0x8a6ee0,
+  pulse: 0xffd166,
+  night: 0x221a48,
 } as const;

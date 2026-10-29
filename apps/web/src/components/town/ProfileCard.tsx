@@ -1,17 +1,17 @@
 'use client';
 
-import { STATUS_LABEL_KO, type Status } from '@enu/protocol';
-import { ZONE_LABEL_KO, teamLabel, type LinkState, type ProfileCardDto, type ZoneId } from '@enu/shared';
+import { teamLabel, type LinkState, type ProfileCardDto } from '@enu/shared';
 import { AvatarSprite } from '@/components/sprites';
 import { Button } from '@/components/ui';
 import { teamColor } from '@/game/directory';
 import { ko } from '@/i18n/ko';
-import { useRoster } from '@/realtime/useRealtime';
+import { useOfficeOpen, useRoster } from '@/realtime/useRealtime';
 import { api } from './api';
 import { Sheet } from './Chrome';
 import { formatAbsolute, formatRelative } from './format';
 import { useFetch, useNow } from './hooks';
 import { useTown } from './TownContext';
+import { profileStatus } from './townModel';
 import { WorkLogView } from './WorkLogPanel';
 import s from './town.module.css';
 
@@ -28,10 +28,14 @@ export function LinkBadge({ state }: { state: LinkState }) {
   );
 }
 
-/** Profile of a colleague (GET /api/v1/users/:id/card) + live room status. */
+/**
+ * Profile of a colleague (GET /api/v1/users/:id/card, which carries no status or activity times) plus
+ * what the town shows about them right now (the projected Player fields; `online` drives the dot).
+ */
 export function ProfileCard({ userId }: { userId: string }) {
   const { ui, session, me } = useTown();
   const roster = useRoster(session);
+  const officeOpen = useOfficeOpen(session);
   const now = useNow();
   const { data, error, loading, reload } = useFetch<ProfileCardDto>(api.card(userId));
   const t = ko.townUi.profile;
@@ -39,8 +43,8 @@ export function ProfileCard({ userId }: { userId: string }) {
   const person = data?.person;
   const name = player?.name || person?.displayName || '';
   const link = person ? effectiveLinkState(person.linkState, data?.stale ?? false) : null;
-  const zoneLabel = player?.zoneId ? (ZONE_LABEL_KO[player.zoneId as ZoneId] ?? player.zoneId) : null;
   const isMe = userId === me.userId;
+  const status = profileStatus(player, officeOpen, me.officeTimeZone);
 
   return (
     <Sheet title={t.title} onClose={ui.closeSheet}>
@@ -80,25 +84,13 @@ export function ProfileCard({ userId }: { userId: string }) {
             )}
             <dt>{t.status}</dt>
             <dd>
-              {player ? (
+              {status.online && (
                 <>
-                  <span className={`${s.statusDot} ${s[`status-${player.status}`]}`} aria-hidden="true" />{' '}
-                  {STATUS_LABEL_KO[player.status as Status] ?? ''}
-                  {player.statusText ? ` · ${player.statusText}` : ''}
-                </>
-              ) : (
-                <>
-                  {t.offline}
-                  {person.statusText ? ` · ${person.statusText}` : ''}
+                  <span className={s.onlineDot} aria-hidden="true" /> <span className="visually-hidden">{t.online}</span>
                 </>
               )}
+              {status.text}
             </dd>
-            {zoneLabel && (
-              <>
-                <dt>{t.zone}</dt>
-                <dd>{zoneLabel}</dd>
-              </>
-            )}
             {person.deskId && (
               <>
                 <dt>{t.desk}</dt>
@@ -114,12 +106,16 @@ export function ProfileCard({ userId }: { userId: string }) {
                 </dd>
               </>
             )}
-            <dt>{t.lastUpdated}</dt>
-            <dd>
-              {person.lastWorkLogAt
-                ? `${formatRelative(person.lastWorkLogAt, now)} · ${formatAbsolute(person.lastWorkLogAt, now)}`
-                : ko.common.never}
-            </dd>
+            {isMe && (
+              <>
+                <dt>{t.lastUpdated}</dt>
+                <dd>
+                  {me.lastWorkLogAt
+                    ? `${formatRelative(me.lastWorkLogAt, now)} · ${formatAbsolute(me.lastWorkLogAt, now)}`
+                    : ko.common.never}
+                </dd>
+              </>
+            )}
           </dl>
           <div className={s.actionRow}>
             <Button size="sm" onClick={() => ui.openWorkLog(userId)}>

@@ -1,6 +1,6 @@
 /**
- * ENU Town realtime server (Colyseus 0.18): room `office-606` with movement, pets, chat and
- * owner-only pet bubbles. Reached through Caddy at `/colyseus` (prefix stripped), so it serves at root.
+ * ENU Town realtime server (Colyseus 0.18): room `office-606` with the director (server-placed
+ * avatars; nobody steers one), pets, chat and DMs, and owner-only pet bubbles. Reached through Caddy at `/colyseus` (prefix stripped), so it serves at root.
  * No LLM calls here: pet bubbles only ever show text the owner's own Claude wrote.
  */
 import { matchMaker } from '@colyseus/core';

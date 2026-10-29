@@ -1,6 +1,12 @@
 /** Pixel font used inside the canvas (name tags, bubbles). */
 export const PIXEL_FONT_FALLBACK = '"Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
 export const PIXEL_FONT_SIZE = 12;
+/**
+ * Small crisp pixel font for secondary plate lines (source, time): Galmuri9 is drawn for 10px, so it
+ * stays sharp where Galmuri11 at 10-11px would blur. Its @font-face lives in town.module.css.
+ */
+export const SMALL_PIXEL_FONT = `Galmuri9, ${PIXEL_FONT_FALLBACK}`;
+export const SMALL_PIXEL_FONT_SIZE = 10;
 
 /** CSS custom properties the app shell may use to expose its Galmuri font family. */
 const FONT_VARIABLES = ['--font-galmuri', '--font-pixel', '--font-galmuri11', '--town-font'];
@@ -28,11 +34,7 @@ export function resolvePixelFontFamily(): string {
   return `Galmuri11, ${PIXEL_FONT_FALLBACK}`;
 }
 
-/** Waits (bounded) until the pixel font is usable so canvas text does not render in a fallback. */
-export async function waitForPixelFont(family: string, timeoutMs = 2500): Promise<boolean> {
-  if (typeof document === 'undefined' || !document.fonts) return false;
-  const first = family.split(',')[0]?.trim() ?? 'Galmuri11';
-  const spec = `${PIXEL_FONT_SIZE}px ${first}`;
+async function loadFace(spec: string, timeoutMs: number): Promise<boolean> {
   try {
     const loaded = await Promise.race([
       document.fonts.load(spec, '가A').then((faces) => faces.length > 0),
@@ -42,4 +44,18 @@ export async function waitForPixelFont(family: string, timeoutMs = 2500): Promis
   } catch {
     return false;
   }
+}
+
+/**
+ * Waits (bounded) until the pixel fonts are usable so canvas text does not render in a fallback: the
+ * main family at 12px and the small Galmuri9 at 10px (both in parallel).
+ */
+export async function waitForPixelFont(family: string, timeoutMs = 2500): Promise<boolean> {
+  if (typeof document === 'undefined' || !document.fonts) return false;
+  const first = family.split(',')[0]?.trim() ?? 'Galmuri11';
+  const [main] = await Promise.all([
+    loadFace(`${PIXEL_FONT_SIZE}px ${first}`, timeoutMs),
+    loadFace(`${SMALL_PIXEL_FONT_SIZE}px Galmuri9`, timeoutMs),
+  ]);
+  return main;
 }

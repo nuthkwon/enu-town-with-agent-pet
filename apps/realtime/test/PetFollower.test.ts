@@ -110,4 +110,47 @@ describe('PetFollower', () => {
     f.setLinked(true);
     expect(pet.anim).toBe(Anim.Idle);
   });
+
+  it('perch mode: flies straight to the perch (over walls), one tile per PET_STEP_MS, then rests facing its way', () => {
+    const { pet, f } = setup(true);
+    f.placeNear({ x: 8, y: 6 }, Dir.Right, 0);
+    expect({ x: pet.x, y: pet.y }).toEqual({ x: 7, y: 6 });
+    const perch = { x: 10, y: 8, dir: Dir.Up }; // a blocked tile (the wall column): pets fly
+    let t = 0;
+    const seen: { x: number; y: number }[] = [];
+    for (let i = 0; i < 40; i++) {
+      t += 50;
+      f.update(t, { x: 8, y: 6 }, Dir.Right, perch);
+      const last = seen.at(-1);
+      if (!last || last.x !== pet.x || last.y !== pet.y) seen.push({ x: pet.x, y: pet.y });
+    }
+    expect(seen.at(-1)).toEqual({ x: 10, y: 8 });
+    // every hop is one tile
+    for (let i = 1; i < seen.length; i++) {
+      expect(Math.abs(seen[i]!.x - seen[i - 1]!.x) + Math.abs(seen[i]!.y - seen[i - 1]!.y)).toBe(1);
+    }
+    expect(f.perching).toBe(true);
+    expect(pet.dir).toBe(Dir.Up);
+    t += PET_IDLE_AFTER_MS;
+    f.update(t, { x: 8, y: 6 }, Dir.Right, perch);
+    expect(pet.anim).toBe(Anim.Idle);
+    // back to the owner: placeNear leaves perch mode
+    f.placeNear({ x: 3, y: 3 }, Dir.Down, t);
+    expect(f.perching).toBe(false);
+    expect(Math.abs(pet.x - 3) + Math.abs(pet.y - 3)).toBe(1);
+  });
+
+  it('perchAt snaps onto the perch; setAsleep puts the pet to sleep there (office closed)', () => {
+    const { pet, f } = setup(true);
+    f.perchAt({ x: 10, y: 6, dir: Dir.Down }, 0);
+    expect({ x: pet.x, y: pet.y, dir: pet.dir, anim: pet.anim }).toEqual({ x: 10, y: 6, dir: Dir.Down, anim: Anim.Idle });
+    f.setAsleep(true);
+    expect(pet.anim).toBe(Anim.Sleep);
+    f.update(5000, { x: 2, y: 2 }, Dir.Down, { x: 10, y: 6, dir: Dir.Down });
+    expect({ x: pet.x, y: pet.y, anim: pet.anim }).toEqual({ x: 10, y: 6, anim: Anim.Sleep });
+    f.setAsleep(false);
+    expect(pet.anim).toBe(Anim.Idle);
+    f.setLinked(false);
+    expect(pet.anim).toBe(Anim.Sleep);
+  });
 });

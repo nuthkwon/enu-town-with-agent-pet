@@ -12,14 +12,12 @@ import { formatHm } from './format';
 import { useTown } from './TownContext';
 import s from './town.module.css';
 
-type Channel = 'nearby' | 'room';
-
 function fromChatMsg(m: ChatMsg): Line {
   return {
     key: m.id,
     id: m.id,
     clientMsgId: null,
-    kind: m.kind,
+    kind: 'room',
     fromUserId: m.fromUserId,
     fromName: m.fromName,
     text: m.text,
@@ -42,16 +40,17 @@ function fromHistory(m: ChatItemDto): Line {
   };
 }
 
-/** Bottom-left chat: 근처 (live, nearby + same meeting room) and 전체 (history + live). */
-export function ChatDock() {
+/**
+ * 전체 채팅 (history + live). Floating at the bottom-left on narrow windows; inside the docked team rail
+ * at >= 1280 px so it never covers the map (the meeting table sits at the bottom-left).
+ */
+export function ChatDock({ docked = false }: { docked?: boolean }) {
   const { session, me } = useTown();
   const conn = useConnectionStatus(session);
-  const [tab, setTab] = useState<Channel>('nearby');
   const [collapsed, setCollapsed] = useState(false);
   const [lines, setLines] = useState<Line[]>([]);
   const [unseen, setUnseen] = useState(0);
-  const [drafts, setDrafts] = useState<Record<Channel, string>>({ nearby: '', room: '' });
-  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [draft, setDraft] = useState('');
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const stickRef = useRef(true);
   const collapsedRef = useRef(collapsed);
@@ -61,8 +60,8 @@ export function ChatDock() {
 
   // Small screens start with the dock folded so the map stays visible.
   useEffect(() => {
-    if (window.matchMedia('(max-width: 640px)').matches) setCollapsed(true);
-  }, []);
+    if (!docked && window.matchMedia('(max-width: 640px)').matches) setCollapsed(true);
+  }, [docked]);
 
   useEffect(() => {
     const offMsg = session.on('chat:msg', (m) => {
@@ -87,11 +86,9 @@ export function ChatDock() {
   }, [session, me.userId]);
 
   useEffect(() => {
-    if (tab !== 'room' || historyLoaded) return;
     const ctrl = new AbortController();
     getJson<Paginated<ChatItemDto>>(api.roomChat(), ctrl.signal)
       .then((page) => {
-        setHistoryLoaded(true);
         const hist = (page?.items ?? []).map(fromHistory).sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
         setLines((prev) => {
           let merged: Line[] = [];
@@ -100,27 +97,23 @@ export function ChatDock() {
           return merged;
         });
       })
-      .catch(() => {
-        if (!ctrl.signal.aborted) setHistoryLoaded(true);
-      });
+      .catch(() => undefined);
     return () => ctrl.abort();
-  }, [tab, historyLoaded, me.userId]);
-
-  const visible = lines.filter((l) => l.kind === tab);
+  }, [me.userId]);
 
   useLayoutEffect(() => {
     const el = bodyRef.current;
     if (el && stickRef.current) el.scrollTop = el.scrollHeight;
-  }, [visible.length, tab, collapsed]);
+  }, [lines.length, collapsed]);
 
   const send = (text: string): boolean => {
-    const clientMsgId = session.sendChat(tab, text);
+    const clientMsgId = session.sendChat(text);
     if (!clientMsgId) return false;
     const line: Line = {
       key: clientMsgId,
       id: null,
       clientMsgId,
-      kind: tab,
+      kind: 'room',
       fromUserId: me.userId,
       fromName: me.displayName,
       text,
@@ -135,7 +128,7 @@ export function ChatDock() {
   const t = ko.townUi.chat;
   if (collapsed) {
     return (
-      <div className={`${s.dock} ${s.dockCollapsed}`}>
+      <div className={`${s.dock} ${s.dockCollapsed} ${docked ? s.dockDocked : ''}`}>
         <button
           type="button"
           className={s.pill}
@@ -154,26 +147,10 @@ export function ChatDock() {
   }
 
   return (
-    <section className={s.dock} aria-label={t.title}>
+    <section className={`${s.dock} ${docked ? s.dockDocked : ''}`} aria-label={t.title}>
       <div className={s.dockHeader}>
         <span className={s.dockTitle}>{t.title}</span>
-        <div className={s.dockTabs} role="tablist" aria-label={t.title}>
-          {(['nearby', 'room'] as const).map((k) => (
-            <button
-              key={k}
-              type="button"
-              role="tab"
-              aria-selected={tab === k}
-              className={s.dockTab}
-              onClick={() => {
-                stickRef.current = true;
-                setTab(k);
-              }}
-            >
-              {t[k]}
-            </button>
-          ))}
-        </div>
+        <span className={s.spacer} />
         <button type="button" className={s.closeX} onClick={() => setCollapsed(true)} aria-label={t.collapse}>
           ▾
         </button>
@@ -189,11 +166,11 @@ export function ChatDock() {
           stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
         }}
       >
-        {visible.length === 0 ? (
-          <div className={s.empty}>{t.empty[tab]}</div>
+        {lines.length === 0 ? (
+          <div className={s.empty}>{t.empty}</div>
         ) : (
           <ul className={s.messages}>
-            {visible.map((l) => (
+            {lines.map((l) => (
               <li key={l.key} className={`${s.msg} ${l.state === 'pending' ? s.pending : ''}`}>
                 <div className={s.msgMeta}>
                   <span className={s.msgName}>{l.fromName}</span>
@@ -207,11 +184,11 @@ export function ChatDock() {
         )}
       </div>
       <Composer
-        value={drafts[tab]}
-        onChange={(v) => setDrafts((d) => ({ ...d, [tab]: v }))}
+        value={draft}
+        onChange={setDraft}
         onSend={send}
-        placeholder={t.placeholder[tab]}
-        label={t.placeholder[tab]}
+        placeholder={t.placeholder}
+        label={t.placeholder}
         disabled={conn.kind !== 'connected'}
         disabledReason={t.notConnected}
       />

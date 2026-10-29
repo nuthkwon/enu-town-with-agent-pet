@@ -1,4 +1,4 @@
-import { chatMessageRecipients, chatMessages, dmReadState, newId, user, type Db } from '@enu/db';
+import { chatMessages, dmReadState, newId, user, type Db } from '@enu/db';
 import type { DmUnreadMsg } from '@enu/protocol';
 import { LIMITS, graphemeLength, normalizeLine, normalizeText } from '@enu/shared';
 import { and, count, eq, gt, isNull, ne, or, sql } from 'drizzle-orm';
@@ -6,8 +6,8 @@ import { and, count, eq, gt, isNull, ne, or, sql } from 'drizzle-orm';
 export type ChatTextError = 'EMPTY' | 'TOO_LONG';
 
 /**
- * Meaning-preserving hygiene only (NFC, control/invisible characters). Nearby/room chat is a single
- * line; DMs keep their line breaks. Over-long text is rejected, never cut.
+ * Meaning-preserving hygiene only (NFC, control/invisible characters). Room chat is a single line;
+ * DMs keep their line breaks. Over-long text is rejected, never cut.
  */
 export function prepareChatText(
   raw: string,
@@ -37,37 +37,22 @@ export function dmPair(a: string, b: string): { dmLow: string; dmHigh: string } 
 export class ChatService {
   constructor(private readonly db: Db) {}
 
-  /** Stores a room or nearby message; nearby messages also record exactly who heard them. */
-  async storeChannelMessage(input: {
-    kind: 'room' | 'nearby';
-    senderId: string;
-    body: string;
-    clientMsgId: string;
-    zoneId: string | null;
-    recipients?: readonly string[];
-  }): Promise<StoredMessage> {
-    return this.db.transaction(async (tx) => {
-      const [row] = await tx
-        .insert(chatMessages)
-        .values({
-          id: newId(),
-          kind: input.kind,
-          zoneId: input.zoneId,
-          senderId: input.senderId,
-          body: input.body,
-          clientMsgId: input.clientMsgId,
-        })
-        .onConflictDoNothing({ target: [chatMessages.senderId, chatMessages.clientMsgId] })
-        .returning({ id: chatMessages.id, createdAt: chatMessages.createdAt });
-      if (!row) return { ...(await this.existing(tx, input.senderId, input.clientMsgId)), duplicate: true };
-      const recipients = [...new Set(input.recipients ?? [])];
-      if (input.kind === 'nearby' && recipients.length > 0) {
-        await tx
-          .insert(chatMessageRecipients)
-          .values(recipients.map((userId) => ({ messageId: row.id, userId })));
-      }
-      return { id: row.id, createdAt: row.createdAt, duplicate: false };
-    });
+  /** Stores a room message (everyone in the office hears it; nearby chat no longer exists). */
+  async storeRoomMessage(input: { senderId: string; body: string; clientMsgId: string }): Promise<StoredMessage> {
+    const [row] = await this.db
+      .insert(chatMessages)
+      .values({
+        id: newId(),
+        kind: 'room',
+        senderId: input.senderId,
+        body: input.body,
+        clientMsgId: input.clientMsgId,
+      })
+      .onConflictDoNothing({ target: [chatMessages.senderId, chatMessages.clientMsgId] })
+      .returning({ id: chatMessages.id, createdAt: chatMessages.createdAt });
+    if (!row)
+      return { ...(await this.existing(this.db, input.senderId, input.clientMsgId)), duplicate: true };
+    return { id: row.id, createdAt: row.createdAt, duplicate: false };
   }
 
   async storeDm(input: {
@@ -81,7 +66,6 @@ export class ChatService {
       .values({
         id: newId(),
         kind: 'dm',
-        zoneId: null,
         senderId: input.senderId,
         ...dmPair(input.senderId, input.toUserId),
         body: input.body,

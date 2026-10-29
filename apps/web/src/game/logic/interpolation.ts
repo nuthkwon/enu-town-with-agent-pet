@@ -1,6 +1,10 @@
 import { STEP_MS, type Dir } from '@enu/protocol';
 import { dirFromDelta } from './direction';
-import type { Tile } from './movement';
+
+export interface Tile {
+  x: number;
+  y: number;
+}
 
 export interface InterpSample {
   /** Position in tiles (fractional while moving). */

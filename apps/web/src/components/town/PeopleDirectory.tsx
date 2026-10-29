@@ -1,44 +1,90 @@
 'use client';
 
-import { STATUS_LABEL_KO, type Status } from '@enu/protocol';
-import { TEAMS, type PersonDto } from '@enu/shared';
-import { useState } from 'react';
+import { useMemo, useState, type MouseEvent } from 'react';
 import { AvatarSprite } from '@/components/sprites';
 import { teamColor } from '@/game/directory';
 import { ko } from '@/i18n/ko';
+import type { PlayerSnap } from '@/realtime/types';
 import { useRoster } from '@/realtime/useRealtime';
 import { Sheet } from './Chrome';
+import { EffectIcon } from './EffectIcon';
 import { useDirectory } from './hooks';
 import { useTown } from './TownContext';
+import { onlineCount, railGroups, type RailRow } from './townModel';
 import s from './town.module.css';
 
-/** Groups people by team in TEAMS order; people without a team come last. */
-export function groupByTeam(people: readonly PersonDto[]): { teamId: string | null; label: string; people: PersonDto[] }[] {
-  const groups = TEAMS.map((t) => ({ teamId: t.id as string | null, label: t.label as string, people: [] as PersonDto[] }));
-  const none = { teamId: null as string | null, label: ko.townUi.people.noTeam, people: [] as PersonDto[] };
-  for (const p of people) {
-    const g = groups.find((x) => x.teamId === p.team);
-    (g ?? none).people.push(p);
-  }
-  const all = [...groups, none].filter((g) => g.people.length > 0);
-  for (const g of all) g.people.sort((a, b) => a.displayName.localeCompare(b.displayName, 'ko'));
-  return all;
+function Row({ row, onOpen }: { row: RailRow; onOpen: (row: RailRow, e: MouseEvent<HTMLButtonElement>) => void }) {
+  const { bus } = useTown();
+  const t = ko.townUi.people;
+  const p = row.person;
+  const pulse = (on: boolean) => bus.emit('person:pulse', { userId: on ? p.userId : null });
+  return (
+    <li>
+      <button
+        type="button"
+        className={`${s.person} ${row.shown ? '' : s.notShownPerson}`}
+        aria-haspopup="menu"
+        onClick={(e) => onOpen(row, e)}
+        onMouseEnter={() => pulse(true)}
+        onMouseLeave={() => pulse(false)}
+        onFocus={() => pulse(true)}
+        onBlur={() => pulse(false)}
+      >
+        <span className={s.miniAvatar} style={{ width: 32, height: 32 }}>
+          <AvatarSprite preset={p.avatar} scale={1} label={p.displayName} />
+        </span>
+        <span className={s.personMain}>
+          <span className={s.personName}>
+            {p.displayName}
+            {row.isMe ? ` (${t.me})` : ''}
+            {row.online && (
+              <span className={s.onlineDot} role="img" aria-label={t.online} title={t.online} />
+            )}
+          </span>
+          {row.form && (
+            <span className={s.personState}>
+              {row.icon ? <EffectIcon name={row.icon} size={16} /> : <span className={s.stateDot} aria-hidden="true" />}
+              <span>{row.form}</span>
+            </span>
+          )}
+          {row.statusText && <span className={s.personSub}>{row.statusText}</span>}
+        </span>
+      </button>
+    </li>
+  );
 }
 
-/** Everyone in the office grouped by team, online first-class; click opens the same context menu. */
-export function PeopleDirectory() {
-  const { directory, session, ui, me, bus } = useTown();
+/**
+ * The team list: the accessible mirror of the map (same projected state, as text). At >= 1280 px it is
+ * a docked right rail; below that a sheet. Rows follow TEAMS order, then desk order; each row shows the
+ * activity, the display form and an online dot only while that person is connected. Hover pulses the
+ * avatar (or the desk plate); click opens the same menu as the map. No team counts.
+ */
+export function PeopleDirectory({ docked = false, onHide }: { docked?: boolean; onHide?: () => void }) {
+  const { directory, session, ui, me } = useTown();
   const snap = useDirectory(directory);
   const roster = useRoster(session);
   const [q, setQ] = useState('');
-  const online = new Map(roster.map((p) => [p.id, p]));
   const t = ko.townUi.people;
-  const filtered = q.trim()
-    ? snap.people.filter((p) => p.displayName.toLowerCase().includes(q.trim().toLowerCase()))
-    : snap.people;
-  const groups = groupByTeam(filtered);
-  return (
-    <Sheet title={`${t.title} · ${t.count(roster.length, snap.people.length)}`} onClose={ui.closeSheet}>
+  const players = useMemo(() => new Map<string, PlayerSnap>(roster.map((p) => [p.id, p])), [roster]);
+  const online = onlineCount(roster);
+  const query = q.trim().toLowerCase();
+  const filtered = query ? snap.people.filter((p) => p.displayName.toLowerCase().includes(query)) : snap.people;
+  const groups = railGroups(filtered, players, me.userId, me.officeTimeZone);
+
+  const open = (row: RailRow, e: MouseEvent<HTMLButtonElement>) => {
+    const root = e.currentTarget.closest('[data-town-root]');
+    const rr = root?.getBoundingClientRect();
+    const r = e.currentTarget.getBoundingClientRect();
+    if (row.isMe) {
+      ui.openStatus(r.left - (rr?.left ?? 0) - 8, r.top - (rr?.top ?? 0));
+      return;
+    }
+    ui.openMenu(row.person.userId, r.left - (rr?.left ?? 0) - 250, r.top - (rr?.top ?? 0) + 10);
+  };
+
+  const body = (
+    <>
       <input
         className={s.search}
         type="search"
@@ -47,58 +93,47 @@ export function PeopleDirectory() {
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />
+      {groups.length === 0 && <div className={s.empty}>{t.empty}</div>}
       {groups.map((g) => (
         <section key={g.teamId ?? 'none'} className={s.teamGroup} aria-label={g.label}>
           <h3 className={s.teamHeading}>
             <span className={s.teamSwatch} style={{ background: teamColor(g.teamId) }} aria-hidden="true" />
             {g.label}
           </h3>
-          <ul className={s.personList}>
-            {g.people.map((p) => {
-              const live = online.get(p.userId);
-              const isMe = p.userId === me.userId;
-              return (
-                <li key={p.userId}>
-                  <button
-                    type="button"
-                    className={`${s.person} ${live ? '' : s.offlinePerson}`}
-                    aria-haspopup="menu"
-                    onClick={(e) => {
-                      const root = e.currentTarget.closest('[data-town-root]');
-                      const rr = root?.getBoundingClientRect();
-                      const r = e.currentTarget.getBoundingClientRect();
-                      if (live) bus.emit('camera:focus-user', { userId: p.userId });
-                      if (isMe) {
-                        ui.openStatus();
-                        return;
-                      }
-                      ui.openMenu(p.userId, r.left - (rr?.left ?? 0) - 230, r.top - (rr?.top ?? 0) + 10);
-                    }}
-                  >
-                    <span className={s.miniAvatar} style={{ width: 32, height: 32 }}>
-                      <AvatarSprite preset={p.avatar} scale={1} label={p.displayName} />
-                    </span>
-                    <span className={s.personMain}>
-                      <span className={s.personName}>
-                        {p.displayName}
-                        {isMe ? ` (${t.me})` : ''}
-                      </span>
-                      <span className={s.personSub}>
-                        {[p.title, p.roleNote].filter(Boolean).join(' · ')}
-                        {live?.statusText ? ` · ${live.statusText}` : ''}
-                      </span>
-                    </span>
-                    <span className={s.presence}>
-                      <span className={live ? s.onlineDot : s.offlineDot} aria-hidden="true" />
-                      {live ? (STATUS_LABEL_KO[live.status as Status] ?? t.online) : t.offline}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
+          <ul className={s.personList} role="list">
+            {g.rows.map((row) => (
+              <Row key={row.person.userId} row={row} onOpen={open} />
+            ))}
           </ul>
         </section>
       ))}
+    </>
+  );
+
+  if (docked) {
+    return (
+      <section className={s.railPeople} aria-label={t.railLabel}>
+        <header className={s.railHeader}>
+          <h2 className={s.railTitle}>
+            {t.title}
+            <span className={s.railCount}>{t.count(online)}</span>
+          </h2>
+          {onHide && (
+            <button type="button" className={s.closeX} onClick={onHide} aria-label={t.hideRail} title={t.hideRail}>
+              ›
+            </button>
+          )}
+        </header>
+        <div className={s.railBody} aria-live="polite" aria-relevant="text">
+          {body}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <Sheet title={`${t.title} · ${t.count(online)}`} onClose={ui.closeSheet}>
+      {body}
     </Sheet>
   );
 }

@@ -1,16 +1,7 @@
-import { nearestWalkable, type OfficeWorld, type Point, type WalkGrid } from '@enu/map';
-import { DIR_DELTA, Dir, STEP_MS, facingToDir } from '@enu/protocol';
-import { TokenBucket } from '../infra/RateLimiter';
+import type { Point, WalkGrid } from '@enu/map';
+import { DIR_DELTA, Dir } from '@enu/protocol';
 
-/** Minimum average spacing between accepted steps (clients step every STEP_MS). */
-export const STEP_MIN_INTERVAL_MS = Math.round(STEP_MS * 0.75);
-/** How many early steps (network jitter) are tolerated back to back. */
-export const STEP_BURST = 3;
-
-/** Cadence gate for `step`: sustained <= 1 step / 0.75*STEP_MS (~8/s), bursts of STEP_BURST. */
-export function createStepGate(): TokenBucket {
-  return new TokenBucket(STEP_BURST, STEP_MIN_INTERVAL_MS);
-}
+/** Grid helpers for the director's walker and the pet follower (nobody steers an avatar). */
 
 export function stepTarget(p: Point, dir: Dir): Point {
   const d = DIR_DELTA[dir];
@@ -55,50 +46,4 @@ export function adjacentWalkable(grid: WalkGrid, p: Point, facing: Dir): Point |
     if (grid.isWalkable(t.x, t.y)) return t;
   }
   return null;
-}
-
-export interface SpawnPoint extends Point {
-  dir: Dir;
-  source: 'desk' | 'presence' | 'spawn';
-}
-
-export interface SpawnInput {
-  deskId: string | null;
-  lastPresence: { x: number; y: number; dir: number } | null;
-  /** Tiles currently taken by other people (only used to spread out entrance spawns). */
-  occupied?: readonly Point[];
-}
-
-function isDir(n: number): n is Dir {
-  return n === Dir.Down || n === Dir.Left || n === Dir.Right || n === Dir.Up;
-}
-
-/**
- * Spawn rule: own desk seat (facing the desk) > last position within 24h (if still walkable) >
- * a free walkable tile of the entrance spawn area (nearest walkable as a last resort).
- */
-export function chooseSpawn(world: OfficeWorld, input: SpawnInput): SpawnPoint {
-  if (input.deskId) {
-    const desk = world.deskById(input.deskId);
-    if (desk && world.isWalkable(desk.seatX, desk.seatY)) {
-      return { x: desk.seatX, y: desk.seatY, dir: facingToDir(desk.facing), source: 'desk' };
-    }
-  }
-  const last = input.lastPresence;
-  if (last && world.isWalkable(last.x, last.y)) {
-    return { x: last.x, y: last.y, dir: isDir(last.dir) ? last.dir : Dir.Down, source: 'presence' };
-  }
-  const r = world.spawn.tileRect;
-  const occupied = input.occupied ?? [];
-  const free: Point[] = [];
-  const any: Point[] = [];
-  for (let y = r.y; y < r.y + r.h; y++) {
-    for (let x = r.x; x < r.x + r.w; x++) {
-      if (!world.isWalkable(x, y)) continue;
-      any.push({ x, y });
-      if (!occupied.some((o) => o.x === x && o.y === y)) free.push({ x, y });
-    }
-  }
-  const pick = free[0] ?? any[0] ?? nearestWalkable(world, r.x, r.y) ?? { x: r.x, y: r.y };
-  return { x: pick.x, y: pick.y, dir: Dir.Up, source: 'spawn' };
 }

@@ -1,16 +1,18 @@
 import { Callbacks, Client } from '@colyseus/sdk';
 import {
   MSG,
+  PROTOCOL_VERSION,
   type ChatAckMsg,
   type ChatMsg,
   type DmMsg,
   type DmUnreadMsg,
   type EmoteMsg,
   type ErrorMsg,
-  type MoveCorrectMsg,
+  type JoinOptions,
   type NoticeMsg,
   type OfficeState,
   type PingedMsg,
+  type StatusSetMsg,
 } from '@enu/protocol';
 import { OFFICE_ROOM_NAME, type RealtimeTicketDto } from '@enu/shared';
 import { TypedEmitter } from '../game/emitter';
@@ -46,6 +48,7 @@ export interface StateSink {
   petUpsert(p: PetSnap): void;
   petRemove(ownerId: string): void;
   mapHash(hash: string): void;
+  officeOpen(open: boolean): void;
 }
 
 /** Wires a joined room's state callbacks to a sink; returns an unbind function. */
@@ -104,7 +107,9 @@ function createSdkClient(wsUrl: string): ClientLike {
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+const bool = (v: unknown): boolean => v === true;
 
+/** Copies exactly the protocol's Player fields (anything else on the instance is ignored). */
 export function copyPlayer(p: Record<string, unknown>, key: string): PlayerSnap {
   return {
     id: str(p.id) || key,
@@ -115,9 +120,15 @@ export function copyPlayer(p: Record<string, unknown>, key: string): PlayerSnap 
     y: num(p.y),
     dir: num(p.dir),
     anim: num(p.anim),
-    status: num(p.status),
     statusText: str(p.statusText),
-    zoneId: str(p.zoneId),
+    shown: bool(p.shown),
+    online: bool(p.online),
+    activity: num(p.activity),
+    source: num(p.source),
+    until: num(p.until),
+    note: num(p.note),
+    groupId: str(p.groupId),
+    logPulse: num(p.logPulse),
   };
 }
 
@@ -165,6 +176,7 @@ export const bindColyseusState: StateBinder = (room, sink) => {
       if (typeof value === 'string' && value) sink.mapHash(value);
     }),
   );
+  offs.push(cb.listen('officeOpen', (value) => sink.officeOpen(value === true)));
   return () => {
     for (const off of offs.splice(0)) {
       try {
@@ -176,7 +188,20 @@ export const bindColyseusState: StateBinder = (room, sink) => {
   };
 };
 
-const ROSTER_PLAYER_FIELDS = ['name', 'avatar', 'deskId', 'status', 'statusText', 'zoneId'] as const;
+/** Fields that change what lists, menus and counts show (positions and logPulse do not). */
+const ROSTER_PLAYER_FIELDS = [
+  'name',
+  'avatar',
+  'deskId',
+  'statusText',
+  'shown',
+  'online',
+  'activity',
+  'source',
+  'until',
+  'note',
+  'groupId',
+] as const satisfies readonly (keyof PlayerSnap)[];
 const ROSTER_PET_FIELDS = [
   'species',
   'name',
@@ -189,7 +214,10 @@ const ROSTER_PET_FIELDS = [
 ] as const;
 
 const MAP_RELOAD_KEY = 'enu-town:map-reload-at';
-const MAP_RELOAD_GUARD_MS = 60_000;
+const PROTOCOL_RELOAD_KEY = 'enu-town:protocol-reload-at';
+const RELOAD_GUARD_MS = 60_000;
+/** Join error message (onAuth) for a user who has not accepted the current privacy notice yet. */
+export const NOTICE_REQUIRED = 'notice_required';
 
 /**
  * One realtime connection to `office-606` for the signed-in user.
@@ -197,7 +225,9 @@ const MAP_RELOAD_GUARD_MS = 60_000;
  * - ticket (GET /api/realtime-ticket) -> new Client(wsUrl) -> client.auth.token -> joinOrCreate.
  * - Network drops: the SDK re-establishes the same seat by itself (status 'reconnecting').
  * - When the room really ends (expired seat, server restart, errors) we fetch a NEW ticket and
- *   join again with exponential backoff. 4101 / 4103 / 4110 are terminal (see closeCodes.ts).
+ *   join again with exponential backoff. 4101 / 4103 / 4110 / 4111 are terminal (see closeCodes.ts);
+ *   a `notice_required` join error sends the user to /welcome.
+ * - Nothing here ever moves an avatar: the server director places everyone.
  * - start()/stop() can be called repeatedly (React StrictMode): every start bumps a generation and
  *   stale async continuations are dropped.
  *
@@ -227,6 +257,7 @@ export class RealtimeSession extends TypedEmitter<SessionEvents> {
   private dmUnread: DmUnreadMsg = { total: 0, byPeer: {} };
   private activeDmPeer: string | null = null;
   private serverMapHash: string | null = null;
+  private officeOpen: boolean | null = null;
 
   constructor(options: RealtimeSessionOptions) {
     super();
@@ -304,13 +335,17 @@ export class RealtimeSession extends TypedEmitter<SessionEvents> {
       if (gen !== this.generation) return;
       const client = this.opts.createClient(ticket.wsUrl);
       client.auth.token = ticket.token;
-      const options: Record<string, unknown> = {};
+      const options: JoinOptions = { protocol: PROTOCOL_VERSION };
       if (this.expectedMapHash) options.mapHash = this.expectedMapHash;
-      room = await client.joinOrCreate(OFFICE_ROOM_NAME, options);
+      room = await client.joinOrCreate(OFFICE_ROOM_NAME, { ...options });
     } catch (err) {
       if (gen !== this.generation) return;
       if (err instanceof TicketError && (err.reason === 'unauthorized' || err.reason === 'forbidden')) {
         this.goForbidden();
+        return;
+      }
+      if (joinErrorMessage(err) === NOTICE_REQUIRED) {
+        this.goNoticeRequired();
         return;
       }
       const code = joinErrorCode(err);
@@ -334,6 +369,7 @@ export class RealtimeSession extends TypedEmitter<SessionEvents> {
     this.players.clear();
     this.pets.clear();
     this.serverMapHash = null;
+    this.officeOpen = null;
     this.sentPresence = null;
     this.bumpRoster();
     this.emit('reset');
@@ -344,12 +380,12 @@ export class RealtimeSession extends TypedEmitter<SessionEvents> {
       petUpsert: (p) => this.upsertPet(p),
       petRemove: (id) => this.removePet(id),
       mapHash: (h) => this.onMapHash(h),
+      officeOpen: (open) => this.onOfficeOpen(open),
     });
 
     const on = <T>(type: string, fn: (payload: T) => void) => {
       this.offMessages.push(room.onMessage(type, fn as (payload: never) => void));
     };
-    on<MoveCorrectMsg>(MSG.moveCorrect, (m) => this.emit('move:correct', m));
     on<ChatMsg>(MSG.chatMsg, (m) => this.emit('chat:msg', m));
     on<ChatAckMsg>(MSG.chatAck, (m) => this.emit('chat:ack', m));
     on<DmMsg>(MSG.dmMsg, (m) => this.onDm(m));
@@ -420,6 +456,9 @@ export class RealtimeSession extends TypedEmitter<SessionEvents> {
       case 'map_mismatch':
         this.goMapMismatch();
         return;
+      case 'protocol_mismatch':
+        this.goProtocolMismatch();
+        return;
       case 'stopped':
         this.setStatus({ kind: 'stopped' });
         return;
@@ -464,19 +503,37 @@ export class RealtimeSession extends TypedEmitter<SessionEvents> {
     this.opts.navigate('/sign-in');
   }
 
+  private goNoticeRequired(): void {
+    this.running = false;
+    this.generation++;
+    this.clearRetry();
+    this.setStatus({ kind: 'notice_required' });
+    this.opts.navigate('/welcome');
+  }
+
   private goMapMismatch(): void {
+    this.stopForReload({ kind: 'map_mismatch' }, MAP_RELOAD_KEY);
+  }
+
+  /** The server speaks another protocol version (a deploy happened): reload once to get the new client. */
+  private goProtocolMismatch(): void {
+    this.stopForReload({ kind: 'protocol_mismatch' }, PROTOCOL_RELOAD_KEY);
+  }
+
+  /** Terminal state + at most one automatic reload per minute (a reload loop would hide the banner). */
+  private stopForReload(status: ConnectionStatus, guardKey: string): void {
     this.running = false;
     this.generation++;
     this.clearRetry();
     const room = this.room;
     this.detachRoom();
     if (room) room.leave(true).catch(() => undefined);
-    this.setStatus({ kind: 'map_mismatch' });
+    this.setStatus(status);
     let allowed = true;
     try {
-      const last = Number(window.sessionStorage.getItem(MAP_RELOAD_KEY) ?? '0');
-      allowed = !(last > 0 && this.opts.now() - last < MAP_RELOAD_GUARD_MS);
-      if (allowed) window.sessionStorage.setItem(MAP_RELOAD_KEY, String(this.opts.now()));
+      const last = Number(window.sessionStorage.getItem(guardKey) ?? '0');
+      allowed = !(last > 0 && this.opts.now() - last < RELOAD_GUARD_MS);
+      if (allowed) window.sessionStorage.setItem(guardKey, String(this.opts.now()));
     } catch {
       /* storage unavailable: reload once anyway */
     }
@@ -487,6 +544,12 @@ export class RealtimeSession extends TypedEmitter<SessionEvents> {
     this.serverMapHash = hash;
     this.emit('map:hash', hash);
     if (this.expectedMapHash && hash !== this.expectedMapHash) this.goMapMismatch();
+  }
+
+  private onOfficeOpen(open: boolean): void {
+    if (this.officeOpen === open) return;
+    this.officeOpen = open;
+    this.emit('office', open);
   }
 
   /* ------------------------------------------------------------------ state */
@@ -604,6 +667,11 @@ export class RealtimeSession extends TypedEmitter<SessionEvents> {
     return this.serverMapHash;
   }
 
+  /** `OfficeState.officeOpen` (null until the first state arrives, e.g. while connecting). */
+  getOfficeOpen(): boolean | null {
+    return this.officeOpen;
+  }
+
   /* ------------------------------------------------------------------ sending */
 
   private send(type: string, payload: unknown): boolean {
@@ -617,18 +685,10 @@ export class RealtimeSession extends TypedEmitter<SessionEvents> {
     }
   }
 
-  sendStep(seq: number, dir: number): boolean {
-    return this.send(MSG.step, { seq, dir });
-  }
-
-  sendFace(dir: number): boolean {
-    return this.send(MSG.face, { dir });
-  }
-
-  /** Returns the clientMsgId, or null when not connected. */
-  sendChat(channel: 'nearby' | 'room', text: string): string | null {
+  /** Room (전체) chat. Returns the clientMsgId, or null when not connected. */
+  sendChat(text: string): string | null {
     const clientMsgId = this.opts.newId();
-    return this.send(MSG.chatSend, { channel, text, clientMsgId }) ? clientMsgId : null;
+    return this.send(MSG.chatSend, { text, clientMsgId }) ? clientMsgId : null;
   }
 
   sendDm(toUserId: string, text: string): string | null {
@@ -649,16 +709,18 @@ export class RealtimeSession extends TypedEmitter<SessionEvents> {
     this.activeDmPeer = peerUserId;
   }
 
-  wave(): boolean {
-    return this.send(MSG.wave, {});
+  /** A public wave at a colleague (everyone sees the arc; the server checks both are shown). */
+  wave(toUserId: string): boolean {
+    return toUserId ? this.send(MSG.wave, { toUserId }) : false;
   }
 
   ping(toUserId: string): boolean {
     return this.send(MSG.ping, { toUserId });
   }
 
-  setStatusMode(status: number, text?: string): boolean {
-    return this.send(MSG.statusSet, text === undefined ? { status } : { status, text });
+  /** `status:set`: `auto` clears the manual status (상태 문구 stays); `text`, when sent, is written for any status. */
+  sendStatus(msg: StatusSetMsg): boolean {
+    return this.send(MSG.statusSet, msg);
   }
 
   bubbleSeen(bubbleId: string): boolean {
@@ -688,6 +750,15 @@ function joinErrorCode(err: unknown): number | null {
   if (err && typeof err === 'object' && 'code' in err) {
     const c = (err as { code: unknown }).code;
     if (typeof c === 'number') return c;
+  }
+  return null;
+}
+
+/** The reason string the server put into a join failure (`ServerError(code, reason)` in onAuth). */
+function joinErrorMessage(err: unknown): string | null {
+  if (err && typeof err === 'object' && 'message' in err) {
+    const m = (err as { message: unknown }).message;
+    if (typeof m === 'string') return m;
   }
   return null;
 }

@@ -40,8 +40,8 @@ async function insertNudge(
 
 describe('pet bubbles (nudges)', () => {
   it('shows a linked owner their Claude text; others only see the indicator; the DB records the delivery', async () => {
-    const owner = await makeUser(h, { linkState: 'linked', at: { x: 9, y: 10 } });
-    const other = await makeUser(h, { linkState: 'linked', at: { x: 11, y: 10 } });
+    const owner = await makeUser(h, { linkState: 'linked', deskId: 'L1a' });
+    const other = await makeUser(h, { linkState: 'linked', deskId: 'L1b' });
     const text = '오후 2시 SQA 검토 회의 자료를 미리 열어 두면 좋겠어요.';
     const nudgeId = await insertNudge(owner.id, text);
     const jo = await joinAs(h, owner.id);
@@ -92,7 +92,7 @@ describe('pet bubbles (nudges)', () => {
   });
 
   it('never shows anything for a pet that is not linked', async () => {
-    const owner = await makeUser(h, { linkState: 'not_linked', at: { x: 9, y: 10 } });
+    const owner = await makeUser(h, { linkState: 'not_linked', deskId: 'L2a' });
     await insertNudge(owner.id, '연결 안 된 펫은 말하지 않아요');
     const jo = await joinAs(h, owner.id);
     await sleep(1200);
@@ -106,7 +106,7 @@ describe('pet bubbles (nudges)', () => {
 
   it('respects quiet hours (fake clock) and shows the bubble once work hours start', async () => {
     h.clock.set(kst(2026, 10, 28, 21, 0));
-    const owner = await makeUser(h, { linkState: 'linked', at: { x: 9, y: 10 } });
+    const owner = await makeUser(h, { linkState: 'linked', deskId: 'L2b' });
     const text = '내일 아침에 다시 알려 드릴게요';
     await insertNudge(owner.id, text, { expiresAt: kst(2026, 10, 29, 19, 0) });
     const jo = await joinAs(h, owner.id);
@@ -119,7 +119,7 @@ describe('pet bubbles (nudges)', () => {
   });
 
   it('a to-do entering its due window shows the to-do title with the due time outside the text', async () => {
-    const owner = await makeUser(h, { linkState: 'linked', at: { x: 9, y: 10 } });
+    const owner = await makeUser(h, { linkState: 'linked', deskId: 'L3a' });
     const dueAt = new Date(h.clock.now().getTime() + 4 * MIN);
     const todoId = newId();
     await h.db.insert(todos).values({
@@ -148,7 +148,7 @@ describe('pet bubbles (nudges)', () => {
   });
 
   it('a hidden tab postpones the bubble until the tab is visible again', async () => {
-    const owner = await makeUser(h, { linkState: 'linked', at: { x: 9, y: 10 } });
+    const owner = await makeUser(h, { linkState: 'linked', deskId: 'L3b' });
     await insertNudge(owner.id, '탭이 보일 때만 말해요');
     const jo = await joinAs(h, owner.id);
     jo.room.send('presence', { visible: false, uiBusy: false });

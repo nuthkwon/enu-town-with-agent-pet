@@ -6,7 +6,10 @@ import type { Clock } from '../clock';
 import type { Logger } from '../logger';
 import type { Candidate } from './CandidateLoader';
 
-/** The pet fields a bubble touches. `bubble*` are `.view()`-tagged: only the owner receives them. */
+/**
+ * The pet fields a bubble touches. `bubble*` are `.view()`-tagged: only the owner receives them.
+ * `indicator` is shared with everyone, so it shows `…` only while the owner is shown (`indicatorAllowed`).
+ */
 export interface BubblePet {
   bubbleId: string;
   bubbleKind: number;
@@ -83,7 +86,14 @@ export class BubblePresenter {
    */
   async show(
     pet: BubblePet,
-    input: { userId: string; candidate: Candidate; trigger: Trigger; dueKey?: string | null },
+    input: {
+      userId: string;
+      candidate: Candidate;
+      trigger: Trigger;
+      dueKey?: string | null;
+      /** The owner is shown in the shared state (director); otherwise colleagues see no `…`. */
+      indicatorAllowed: boolean;
+    },
     onShown?: (bubble: ShownBubble) => void,
   ): Promise<boolean> {
     const { candidate } = input;
@@ -94,7 +104,7 @@ export class BubblePresenter {
     pet.bubbleText = candidate.text;
     pet.bubbleDueAt = candidate.dueAt ? candidate.dueAt.getTime() : 0;
     pet.bubbleUntil = until;
-    pet.indicator = Indicator.Dots;
+    pet.indicator = input.indicatorAllowed ? Indicator.Dots : Indicator.None;
     onShown?.({ kind: candidate.kind, refId: candidate.refId, until });
     try {
       const ok = await this.deps.store.recordShown({

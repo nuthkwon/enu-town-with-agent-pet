@@ -24,6 +24,9 @@ export function SettingsTab({ me, onSaved }: { me: MeDto; onSaved: (me: MeDto) =
   const [defaultLog, setDefaultLog] = useState<Visibility>(p.defaultLogVisibility);
   const [defaultChat, setDefaultChat] = useState<Visibility>(p.defaultChatSummaryVisibility ?? 'private');
   const [shareDms, setShareDms] = useState(p.shareDmsWithMyClaude);
+  // 활동 공유: null = never chosen (off). Only an actual change is sent (false deletes today's report).
+  const [shareActivity, setShareActivity] = useState(me.shareActivity === true);
+  const [showLive, setShowLive] = useState(me.showLive);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
 
@@ -42,6 +45,8 @@ export function SettingsTab({ me, onSaved }: { me: MeDto; onSaved: (me: MeDto) =
           default_log_visibility: defaultLog,
           default_chat_summary_visibility: defaultChat,
           share_dms_with_my_claude: shareDms,
+          ...(shareActivity !== (me.shareActivity === true) ? { share_activity: shareActivity } : {}),
+          ...(showLive !== me.showLive ? { show_live: showLive } : {}),
         },
       });
       onSaved(next);
@@ -55,6 +60,20 @@ export function SettingsTab({ me, onSaved }: { me: MeDto; onSaved: (me: MeDto) =
 
   return (
     <>
+      <Card title={t.townTitle}>
+        <Toggle
+          id="share-activity"
+          checked={shareActivity}
+          onChange={setShareActivity}
+          label={t.shareActivity}
+          help={t.shareActivityHelp}
+        />
+        {me.shareActivity === null && <p className={s.footNote}>{t.shareActivityUnset}</p>}
+        <div style={{ marginTop: 14 }}>
+          <Toggle id="show-live" checked={showLive} onChange={setShowLive} label={t.showLive} help={t.showLiveHelp} />
+        </div>
+      </Card>
+
       <Card title={t.nudgesTitle}>
         <Toggle
           id="nudges-enabled"

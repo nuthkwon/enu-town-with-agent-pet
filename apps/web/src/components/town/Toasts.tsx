@@ -57,11 +57,19 @@ function ToastView({ toast, onClose }: { toast: ToastItem; onClose: () => void }
   );
 }
 
-/** Notices (work log published, pings, waves, DMs) stacked top-right. */
-export function Toasts({ toasts, onClose }: { toasts: ToastItem[]; onClose: (id: number) => void }) {
+/** Notices (work log published, pings, waves, DMs) stacked top-right (left of the docked team rail). */
+export function Toasts({
+  toasts,
+  onClose,
+  docked = false,
+}: {
+  toasts: ToastItem[];
+  onClose: (id: number) => void;
+  docked?: boolean;
+}) {
   if (toasts.length === 0) return null;
   return (
-    <div className={s.toasts} aria-live="polite">
+    <div className={`${s.toasts} ${docked ? s.toastsDocked : ''}`} aria-live="polite">
       {toasts.map((t) => (
         <ToastView key={t.id} toast={t} onClose={() => onClose(t.id)} />
       ))}

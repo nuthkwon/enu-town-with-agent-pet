@@ -43,8 +43,10 @@ export const PET_COLUMNS = 12;
 export const PET_GROUND_Y = 23;
 export const PET_ORIGIN = { x: 0.5, y: PET_GROUND_Y / PET_FRAME } as const;
 
-/* Effects: effects.png, 16x16 frames, 8 columns x 2 rows. */
+/* Effects: effects.png, 16x16 frames, 8 columns x 3 rows (row 3: activity icons, fixed indices 16-23). */
 export const EFFECT_FRAME = 16;
+export const EFFECT_COLUMNS = 8;
+export const EFFECT_ROWS = 3;
 export const EFFECT_FRAMES = {
   sparkle0: 0,
   sparkle1: 1,
@@ -62,6 +64,22 @@ export const EFFECT_FRAMES = {
   check: 13,
   note: 14,
   question: 15,
+  /** Meeting (회의 중). */
+  headset: 16,
+  /** Focus (집중 모드). */
+  focus: 17,
+  /** Break (휴식). */
+  cup: 18,
+  /** Personal work (개인 업무). */
+  laptop: 19,
+  /** Review (검토 중). */
+  magnifier: 20,
+  /** Collaboration (협업 중). */
+  link: 21,
+  /** Today's work log (오늘 업무 기록). */
+  clipboard: 22,
+  /** DM / work request paper plane (participants only). */
+  plane: 23,
 } as const;
 export type EffectName = keyof typeof EFFECT_FRAMES;
 

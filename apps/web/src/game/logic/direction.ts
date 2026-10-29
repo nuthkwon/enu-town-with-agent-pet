@@ -36,34 +36,6 @@ export function dirFromDelta(dx: number, dy: number): Dir | null {
   return dy > 0 ? Dir.Down : Dir.Up;
 }
 
-/** Keyboard code/key -> direction (WASD + arrows); null for anything else. */
-export function keyToDir(key: string): Dir | null {
-  switch (key) {
-    case 'ArrowUp':
-    case 'KeyW':
-    case 'w':
-    case 'W':
-      return Dir.Up;
-    case 'ArrowDown':
-    case 'KeyS':
-    case 's':
-    case 'S':
-      return Dir.Down;
-    case 'ArrowLeft':
-    case 'KeyA':
-    case 'a':
-    case 'A':
-      return Dir.Left;
-    case 'ArrowRight':
-    case 'KeyD':
-    case 'd':
-    case 'D':
-      return Dir.Right;
-    default:
-      return null;
-  }
-}
-
 /** Animation key for an avatar sheet (one set of anims per sheet key). */
 export function avatarAnimKey(sheetKey: string, dir: number, anim: AvatarAnim): string {
   return `${sheetKey}:${anim}:${avatarDirection(dir)}`;

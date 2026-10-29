@@ -11,13 +11,13 @@ import { useNow, usePaged } from './hooks';
 import { useTown, type PastChatsTab } from './TownContext';
 import s from './town.module.css';
 
-const TABS: PastChatsTab[] = ['dm', 'nearby', 'room', 'summaries'];
+const TABS: PastChatsTab[] = ['dm', 'room', 'summaries'];
 
 function byTimeAsc(a: { createdAt: string }, b: { createdAt: string }): number {
   return a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0;
 }
 
-function ChatHistory({ userId, kind }: { userId: string; kind: 'dm' | 'nearby' | 'room' }) {
+function ChatHistory({ userId, kind }: { userId: string; kind: 'dm' | 'room' }) {
   const { me } = useTown();
   const now = useNow();
   const t = ko.townUi.pastChats;
@@ -64,7 +64,8 @@ function ClaudeSummaries({ userId }: { userId: string }) {
         <article key={sum.logId} className={s.log}>
           <div className={s.logHead}>
             <span className={s.logDate}>{sum.periodKey}</span>
-            <span className={s.timeNote}>{formatAbsolute(sum.updatedAt, now)}</span>
+            {/* Exact times are owner-only: colleagues get null and see only the day. */}
+            {sum.updatedAt && <span className={s.timeNote}>{formatAbsolute(sum.updatedAt, now)}</span>}
           </div>
           <p className={s.prewrap}>{sum.summary}</p>
         </article>
@@ -83,7 +84,7 @@ function ClaudeSummaries({ userId }: { userId: string }) {
   );
 }
 
-/** 지난 대화: 우리 DM / 함께 들은 근처 대화 / 공개 채팅 / Claude 작업 대화 요약. */
+/** 지난 대화: 우리 DM / 공개 채팅 / Claude 작업 대화 요약. */
 export function PastChatsPanel({ userId, initialTab }: { userId: string; initialTab: PastChatsTab }) {
   const { ui, session, directory } = useTown();
   const [tab, setTab] = useState<PastChatsTab>(initialTab);

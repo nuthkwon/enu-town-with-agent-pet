@@ -8,18 +8,25 @@ import type { Candidate, CandidateLoader, OwnerSnapshot } from './CandidateLoade
 /** Room callbacks the scheduler needs (it never touches room state other than the owner's pet). */
 export interface SchedulerHooks {
   pet(userId: string): BubblePet | null;
-  /** Focus/Meeting status or standing in the meeting room. */
+  /** The owner's resolved activity is focus or meeting (the director's `resolved(id).dnd`). */
   doNotDisturb(userId: string): boolean;
+  /** The town's office hours (`state.officeOpen`); while closed every pet is quiet. */
+  officeOpen(): boolean;
+  /** The owner is shown in the shared state, so colleagues may see the `…` indicator. */
+  indicatorAllowed(userId: string): boolean;
 }
 
 export interface OwnerState {
   userId: string;
   joinedAt: Date;
-  lastActivityAt: Date;
   tabVisible: boolean;
   uiBusy: boolean;
+  /** When the tab was last hidden (null while visible). */
+  hiddenSince: Date | null;
+  /** How long the tab was hidden before it last became visible again (0 if never hidden). */
+  lastHiddenMs: number;
   linkState: LinkState;
-  flags: { joinFired: boolean; idleArmed: boolean; firedDueKeys: Set<string> };
+  flags: { joinFired: boolean; glanceArmed: boolean; firedDueKeys: Set<string> };
   active: ShownBubble | null;
   snapshot: OwnerSnapshot | null;
   /** Bumped on every reload so a slow, stale load never overwrites a newer one. */
@@ -60,11 +67,12 @@ export class NudgeScheduler {
     this.owners.set(userId, {
       userId,
       joinedAt: now,
-      lastActivityAt: now,
       tabVisible: true,
       uiBusy: false,
+      hiddenSince: null,
+      lastHiddenMs: 0,
       linkState: init.linkState,
-      flags: { joinFired: false, idleArmed: true, firedDueKeys: new Set() },
+      flags: { joinFired: false, glanceArmed: false, firedDueKeys: new Set() },
       active: null,
       snapshot: null,
       loadSeq: 0,
@@ -77,16 +85,20 @@ export class NudgeScheduler {
     this.owners.delete(userId);
   }
 
-  noteActivity(userId: string): void {
-    const s = this.owners.get(userId);
-    if (!s) return;
-    s.lastActivityAt = this.deps.clock.now();
-    s.flags.idleArmed = true;
-  }
-
+  /**
+   * Tab visibility (owner-only, never shown to anyone). Coming back after being hidden for at least
+   * `glanceHiddenMs` arms one `glance`; a shorter absence disarms it.
+   */
   setPresence(userId: string, visible: boolean, uiBusy: boolean): void {
     const s = this.owners.get(userId);
     if (!s) return;
+    const now = this.deps.clock.now();
+    if (!visible && s.tabVisible) s.hiddenSince = now;
+    if (visible && !s.tabVisible) {
+      s.lastHiddenMs = s.hiddenSince ? Math.max(0, now.getTime() - s.hiddenSince.getTime()) : 0;
+      s.hiddenSince = null;
+      s.flags.glanceArmed = s.lastHiddenMs >= this.deps.timing.glanceHiddenMs;
+    }
     s.tabVisible = visible;
     s.uiBusy = uiBusy;
   }
@@ -143,7 +155,10 @@ export class NudgeScheduler {
     if (this.ticking) return;
     this.ticking = true;
     try {
+      const officeOpen = this.deps.hooks.officeOpen();
       for (const s of [...this.owners.values()]) {
+        // Forced quiet after hours: a bubble left over from before closing goes away too.
+        if (!officeOpen && s.active) this.hide(s.userId);
         try {
           await this.tickOwner(s);
         } catch (err) {
@@ -173,8 +188,9 @@ export class NudgeScheduler {
         tabVisible: s.tabVisible,
         uiBusy: s.uiBusy,
         doNotDisturb: this.deps.hooks.doNotDisturb(s.userId),
+        officeOpen: this.deps.hooks.officeOpen(),
         joinedAt: s.joinedAt,
-        lastActivityAt: s.lastActivityAt,
+        lastHiddenMs: s.lastHiddenMs,
         hasActiveBubble: s.active !== null || s.showing,
       },
       history: { lastShownAt: snap.history.lastShownAt, shownToday },
@@ -196,7 +212,7 @@ export class NudgeScheduler {
     const snap = s.snapshot;
     // Book-keeping first, so the next tick sees the new history even before the DB write lands.
     if (sel.trigger === 'join') s.flags.joinFired = true;
-    if (sel.trigger === 'idle') s.flags.idleArmed = false;
+    if (sel.trigger === 'glance') s.flags.glanceArmed = false;
     if (sel.trigger === 'due' && sel.dueKey) s.flags.firedDueKeys.add(sel.dueKey);
     const dayKey = localDateKey(now, snap.prefs.timeZone);
     snap.history = {
@@ -211,7 +227,13 @@ export class NudgeScheduler {
     try {
       const ok = await this.deps.presenter.show(
         pet,
-        { userId: s.userId, candidate, trigger: sel.trigger, dueKey: sel.dueKey ?? null },
+        {
+          userId: s.userId,
+          candidate,
+          trigger: sel.trigger,
+          dueKey: sel.dueKey ?? null,
+          indicatorAllowed: this.deps.hooks.indicatorAllowed(s.userId),
+        },
         (bubble) => {
           if (this.owners.get(s.userId) === s) s.active = bubble;
         },

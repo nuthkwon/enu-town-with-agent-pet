@@ -5,12 +5,15 @@ import type {
   DmUnreadMsg,
   EmoteMsg,
   ErrorMsg,
-  MoveCorrectMsg,
   NoticeMsg,
   PingedMsg,
 } from '@enu/protocol';
 
-/** Plain copies of the synced schema instances (safe to keep in React state). */
+/**
+ * Plain copy of a synced `Player`: a roster member (every active, onboarded employee), NOT a connected
+ * player. All roster members are always in the state, so "a snapshot exists" means nothing; read
+ * `shown` (avatar drawn), `online` (connected now) and `note` (hidden plate) instead.
+ */
 export interface PlayerSnap {
   id: string;
   name: string;
@@ -20,9 +23,24 @@ export interface PlayerSnap {
   y: number;
   dir: number;
   anim: number;
-  status: number;
+  /** Human-typed 상태 문구 ('' unless shown or the plate note is Away). */
   statusText: string;
-  zoneId: string;
+  /** The avatar is drawn. */
+  shown: boolean;
+  /** Connected now ∧ 접속 표시 on ∧ shown ∧ office open. */
+  online: boolean;
+  /** ActivityCode (also the desk-plate label while hidden). */
+  activity: number;
+  /** SourceCode (None for a 부재 plate). */
+  source: number;
+  /** Epoch ms when the activity ends; 0 = none. */
+  until: number;
+  /** PlateNote of a hidden member. */
+  note: number;
+  /** Opaque group id ('' = none). */
+  groupId: string;
+  /** Wrapping counter bumped per Claude work-log write (the client sparkles on change). */
+  logPulse: number;
 }
 
 export interface PetSnap {
@@ -55,8 +73,12 @@ export type ConnectionStatus =
   | { kind: 'replaced' }
   /** Not allowed in (4103 / ticket 401/403): the app navigates to sign-in. */
   | { kind: 'forbidden' }
+  /** The current privacy notice (or onboarding) is not accepted yet: the app navigates to /welcome. */
+  | { kind: 'notice_required' }
   /** The server runs a different map version (4110): the page reloads. */
   | { kind: 'map_mismatch' }
+  /** The server speaks a different protocol version (4111): the page reloads. */
+  | { kind: 'protocol_mismatch' }
   /** Gave up after repeated failures; the UI offers a manual retry. */
   | { kind: 'failed' }
   | { kind: 'stopped' };
@@ -78,10 +100,11 @@ export interface SessionEvents {
   'pet:add': PetSnap;
   'pet:change': { pet: PetSnap; prev: PetSnap };
   'pet:remove': PetSnap;
-  /** Coarse change signal for React lists (add/remove/name/status/zone, not x/y). */
+  /** Coarse change signal for React lists (add/remove/name/shown/online/activity…, not x/y). */
   roster: void;
+  /** `OfficeState.officeOpen` changed (also fired once after joining). */
+  office: boolean;
   'map:hash': string;
-  'move:correct': MoveCorrectMsg;
   'chat:msg': ChatMsg;
   'chat:ack': ChatAckMsg;
   'dm:msg': DmMsg;

@@ -52,9 +52,10 @@ export class PreloadScene extends Phaser.Scene {
   create(): void {
     const bridge = this.registry.get(BRIDGE_REGISTRY_KEY) as GameBridge;
     const manifest = this.cache.json.get(TEX.manifest) as { avatars?: unknown } | undefined;
-    const staticKeys = new Set<string>(
-      Array.isArray(manifest?.avatars) ? manifest.avatars.filter((k): k is string => typeof k === 'string' && isAvatarKey(k)) : [],
-    );
+    // The generator writes `avatars` as { key: path }; older manifests used a list of keys.
+    const raw = manifest?.avatars;
+    const listed: unknown[] = Array.isArray(raw) ? raw : raw && typeof raw === 'object' ? Object.keys(raw) : [];
+    const staticKeys = new Set<string>(listed.filter((k): k is string => typeof k === 'string' && isAvatarKey(k)));
     this.registry.set(STATIC_AVATARS_REGISTRY_KEY, staticKeys);
 
     const wanted = new Set<string>([bridge.me.avatarKey]);

@@ -51,6 +51,8 @@ export class PetView {
   private readonly phase = Math.random() * Math.PI * 2;
   private readonly onBubbleSeen: (bubbleId: string) => void;
   private ownerFeetX: number | null = null;
+  /** Office time zone (MeDto.officeTimeZone) for the due chip. */
+  timeZone: string = APP_TIMEZONE_DEFAULT;
 
   constructor(
     private readonly stage: Stage,
@@ -115,6 +117,20 @@ export class PetView {
     if (this.bubble) this.syncBubble(now);
   }
 
+  /**
+   * Pets of hidden owners perch at their desk (server); a hidden owner without a desk has nowhere to
+   * perch, so the client hides the pet (spec §5.7).
+   */
+  setHidden(hidden: boolean): void {
+    if (this.root.visible === !hidden) return;
+    this.root.setVisible(!hidden);
+    if (hidden) this.hideBubble(false);
+  }
+
+  get hidden(): boolean {
+    return !this.root.visible;
+  }
+
   /** Where the owner stands (world px), so the bubble can lean away from their name tag. */
   setOwnerFeet(x: number | null): void {
     this.ownerFeetX = x;
@@ -150,12 +166,12 @@ export class PetView {
       this.bubbleShownId = s.bubbleId;
       this.bubbleHideAt = now + duration;
     }
-    if (now >= this.bubbleHideAt) {
+    if (now >= this.bubbleHideAt || !this.root.visible) {
       this.hideBubble(false);
       return;
     }
     this.bubble.show(s.bubbleText);
-    if (s.bubbleDueAt > 0) this.chip.show(formatLocalHm(new Date(s.bubbleDueAt), APP_TIMEZONE_DEFAULT));
+    if (s.bubbleDueAt > 0) this.chip.show(formatLocalHm(new Date(s.bubbleDueAt), this.timeZone));
     else this.chip.hide();
   }
 

@@ -1,6 +1,15 @@
-import { desks, profiles, user, type DbOrTx } from '@enu/db';
-import { DEFAULT_AVATAR, LINK_STATES, avatarSpriteKey, type AvatarPreset, type LinkState } from '@enu/shared';
-import { eq } from 'drizzle-orm';
+import { desks, privacyConsents, profiles, user, type DbOrTx } from '@enu/db';
+import {
+  DEFAULT_AVATAR,
+  LINK_STATES,
+  MANUAL_STATUSES,
+  PRIVACY_NOTICE_VERSION,
+  avatarSpriteKey,
+  type AvatarPreset,
+  type LinkState,
+  type ManualStatus,
+} from '@enu/shared';
+import { and, eq, isNull } from 'drizzle-orm';
 
 /** Profile nudge preferences as stored (the scheduler adds holidays and env overrides). */
 export interface ProfileNudgePrefs {
@@ -26,13 +35,27 @@ export interface UserSnapshot {
   statusText: string;
   deskId: string | null;
   nudgePrefs: ProfileNudgePrefs;
+  /** The owner's own status; null when unset or not one of MANUAL_STATUSES (expiry is checked by readers). */
+  manualStatus: ManualStatus | null;
+  manualStatusUntil: Date | null;
+  /** 활동 공유: null = not chosen = off. */
+  shareActivity: boolean | null;
+  /** 접속 표시. */
+  showLive: boolean;
+  onboardingCompletedAt: Date | null;
+  /** A non-withdrawn `service` consent for the current PRIVACY_NOTICE_VERSION (same rule as MeDto.noticeAccepted). */
+  noticeAccepted: boolean;
 }
 
-function asLinkState(v: string): LinkState {
+export function asLinkState(v: string): LinkState {
   return (LINK_STATES as readonly string[]).includes(v) ? (v as LinkState) : 'not_linked';
 }
 
-function avatarKeyOf(avatar: AvatarPreset | null | undefined): string {
+export function asManualStatus(v: string | null): ManualStatus | null {
+  return v !== null && (MANUAL_STATUSES as readonly string[]).includes(v) ? (v as ManualStatus) : null;
+}
+
+export function avatarKeyOf(avatar: AvatarPreset | null | undefined): string {
   try {
     return avatarSpriteKey({ ...DEFAULT_AVATAR, ...(avatar ?? {}) });
   } catch {
@@ -40,27 +63,37 @@ function avatarKeyOf(avatar: AvatarPreset | null | undefined): string {
   }
 }
 
+/** Columns shared by the single-user snapshot and the roster query. */
+export const personColumns = {
+  userId: user.id,
+  status: user.status,
+  displayName: profiles.displayName,
+  avatar: profiles.avatar,
+  petSpecies: profiles.petSpecies,
+  petName: profiles.petName,
+  linkState: profiles.linkState,
+  statusText: profiles.statusText,
+  shareActivity: profiles.shareActivity,
+  showLive: profiles.showLive,
+  manualStatus: profiles.manualStatus,
+  manualStatusUntil: profiles.manualStatusUntil,
+  onboardingCompletedAt: profiles.onboardingCompletedAt,
+  deskId: desks.deskId,
+};
+
 /** Loads user + profile + assigned desk (null when the user or the profile row is missing). */
 export async function loadUserSnapshot(db: DbOrTx, userId: string): Promise<UserSnapshot | null> {
   const rows = await db
     .select({
-      userId: user.id,
+      ...personColumns,
       email: user.email,
-      status: user.status,
-      displayName: profiles.displayName,
-      avatar: profiles.avatar,
-      petSpecies: profiles.petSpecies,
-      petName: profiles.petName,
-      linkState: profiles.linkState,
       timezone: profiles.timezone,
       team: profiles.team,
-      statusText: profiles.statusText,
       nudgesEnabled: profiles.nudgesEnabled,
       minIntervalMin: profiles.nudgeMinIntervalMin,
       maxPerDay: profiles.maxBubblesPerDay,
       quietStart: profiles.quietStart,
       quietEnd: profiles.quietEnd,
-      deskId: desks.deskId,
     })
     .from(user)
     .innerJoin(profiles, eq(profiles.userId, user.id))
@@ -69,6 +102,19 @@ export async function loadUserSnapshot(db: DbOrTx, userId: string): Promise<User
     .limit(1);
   const r = rows[0];
   if (!r) return null;
+  const [consent] = await db
+    .select({ id: privacyConsents.id })
+    .from(privacyConsents)
+    .where(
+      and(
+        eq(privacyConsents.userId, userId),
+        eq(privacyConsents.noticeVersion, PRIVACY_NOTICE_VERSION),
+        eq(privacyConsents.scope, 'service'),
+        isNull(privacyConsents.withdrawnAt),
+      ),
+    )
+    .limit(1);
+  const manualStatus = asManualStatus(r.manualStatus);
   return {
     userId: r.userId,
     email: r.email,
@@ -89,15 +135,13 @@ export async function loadUserSnapshot(db: DbOrTx, userId: string): Promise<User
       quietStart: r.quietStart,
       quietEnd: r.quietEnd,
     },
+    manualStatus,
+    manualStatusUntil: manualStatus ? r.manualStatusUntil : null,
+    shareActivity: r.shareActivity,
+    showLive: r.showLive,
+    onboardingCompletedAt: r.onboardingCompletedAt,
+    noticeAccepted: Boolean(consent),
   };
-}
-
-/** Current desk assignment for each of the given users (users without a desk are absent). */
-export async function loadDeskAssignments(db: DbOrTx): Promise<Map<string, string>> {
-  const rows = await db.select({ deskId: desks.deskId, userId: desks.userId }).from(desks);
-  const out = new Map<string, string>();
-  for (const r of rows) if (r.userId) out.set(r.userId, r.deskId);
-  return out;
 }
 
 /** True when the e-mail address belongs to the allowed Google Workspace domain. */

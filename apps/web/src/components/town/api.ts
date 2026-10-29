@@ -63,7 +63,7 @@ export const api = {
   card: (id: string) => `/api/v1/users/${encodeURIComponent(id)}/card`,
   workLogs: (id: string, cursor?: string | null) =>
     withQuery(`/api/v1/users/${encodeURIComponent(id)}/work-logs`, { cursor }),
-  chatHistory: (id: string, kind: 'dm' | 'nearby' | 'room', before?: string | null) =>
+  chatHistory: (id: string, kind: 'dm' | 'room', before?: string | null) =>
     withQuery(`/api/v1/users/${encodeURIComponent(id)}/chat-history`, { kind, before }),
   claudeSummaries: (id: string, cursor?: string | null) =>
     withQuery(`/api/v1/users/${encodeURIComponent(id)}/claude-summaries`, { cursor }),
@@ -71,6 +71,7 @@ export const api = {
   dmThreads: () => '/api/v1/dm/threads',
   dmConversation: (peerId: string, before?: string | null) =>
     withQuery(`/api/v1/dm/${encodeURIComponent(peerId)}`, { before }),
+  me: () => '/api/v1/me',
   myPet: () => '/api/v1/me/pet',
   myTodo: (id: string) => `/api/v1/me/todos/${encodeURIComponent(id)}`,
   myWorkLog: (id: string) => `/api/v1/me/work-logs/${encodeURIComponent(id)}`,

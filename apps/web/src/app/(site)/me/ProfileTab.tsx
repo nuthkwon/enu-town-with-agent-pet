@@ -1,12 +1,13 @@
 'use client';
 
-import { LIMITS, PET_SPECIES, type AvatarPreset, type MeDto, type PetSpecies } from '@enu/shared';
+import { LIMITS, type AvatarPreset, type MeDto, type PetSpecies } from '@enu/shared';
 import { useState } from 'react';
 import { AvatarEditor, type AvatarSwatches } from '@/components/AvatarEditor';
+import { asSpecies, isTaken } from '@/components/petChoice';
 import { PetPicker } from '@/components/PetPicker';
 import { Button, Card, Field, Notice, inputClass } from '@/components/ui';
 import { ko } from '@/i18n/ko';
-import { apiFetch, describeError } from '@/lib/api';
+import { ApiRequestError, apiFetch, describeError } from '@/lib/api';
 import s from './me.module.css';
 
 const t = ko.me.profile;
@@ -23,10 +24,10 @@ export function ProfileTab({
   const [displayName, setDisplayName] = useState(me.displayName);
   const [statusText, setStatusText] = useState(me.statusText ?? '');
   const [avatar, setAvatar] = useState<AvatarPreset>(me.avatar);
+  // My current pet stays selectable; species colleagues already have are greyed out.
+  const [taken, setTaken] = useState<readonly string[]>(me.takenPetSpecies);
   const [pet, setPet] = useState<{ species: PetSpecies; name: string }>({
-    species: (PET_SPECIES as readonly string[]).includes(me.pet.species)
-      ? (me.pet.species as PetSpecies)
-      : 'cat',
+    species: asSpecies(me.pet.species),
     name: me.pet.name,
   });
   const [busy, setBusy] = useState(false);
@@ -47,9 +48,15 @@ export function ProfileTab({
         },
       });
       onSaved(next);
+      setTaken(next.takenPetSpecies);
       setMessage({ tone: 'success', text: ko.common.saved });
     } catch (e) {
-      setMessage({ tone: 'error', text: describeError(e) });
+      if (e instanceof ApiRequestError && e.code === 'pet_taken') {
+        setTaken((t) => (t.includes(pet.species) ? t : [...t, pet.species]));
+        setMessage({ tone: 'error', text: ko.errors.petTaken });
+      } else {
+        setMessage({ tone: 'error', text: describeError(e) });
+      }
     } finally {
       setBusy(false);
     }
@@ -68,7 +75,7 @@ export function ProfileTab({
               onChange={(e) => setDisplayName(e.target.value)}
             />
           </Field>
-          <Field label={t.statusText} htmlFor="status-text">
+          <Field label={t.statusText} htmlFor="status-text" help={t.statusTextHelp}>
             <input
               id="status-text"
               className={inputClass}
@@ -97,12 +104,15 @@ export function ProfileTab({
       </Card>
 
       <Card title={t.petTitle}>
-        <PetPicker species={pet.species} name={pet.name} onChange={setPet} />
+        <PetPicker species={pet.species} name={pet.name} taken={taken} onChange={setPet} />
       </Card>
 
       {message && <Notice tone={message.tone}>{message.text}</Notice>}
       <div className={s.saveBar}>
-        <Button onClick={save} disabled={busy || !displayName.trim() || !pet.name.trim()}>
+        <Button
+          onClick={save}
+          disabled={busy || !displayName.trim() || !pet.name.trim() || (isTaken(pet.species, taken) && pet.species !== me.pet.species)}
+        >
           {busy ? ko.common.saving : ko.common.save}
         </Button>
       </div>

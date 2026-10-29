@@ -12,7 +12,9 @@ export type TicketRejectReason =
   | 'expired_ticket'
   | 'unknown_user'
   | 'user_inactive'
-  | 'domain_not_allowed';
+  | 'domain_not_allowed'
+  /** Onboarding not finished or the current privacy notice not accepted: the web client sends them to /welcome. */
+  | 'notice_required';
 
 export class TicketError extends Error {
   constructor(readonly reason: TicketRejectReason) {
@@ -32,6 +34,7 @@ export interface VerifyTicketDeps {
 /**
  * Verifies the short-lived HS256 ticket minted by the web app, then re-reads the user from the DB
  * (active, allowed e-mail domain) so a revoked or deactivated account cannot join with an old ticket.
+ * Only people who finished onboarding and accepted the current privacy notice may open the town.
  */
 export async function verifyTicket(
   token: string | null | undefined,
@@ -63,6 +66,7 @@ export async function verifyTicket(
   if (!snapshot) throw new TicketError('unknown_user');
   if (snapshot.status !== 'active') throw new TicketError('user_inactive');
   if (!emailInDomain(snapshot.email, deps.allowedHd)) throw new TicketError('domain_not_allowed');
+  if (!snapshot.onboardingCompletedAt || !snapshot.noticeAccepted) throw new TicketError('notice_required');
 
   const { status: _status, ...auth } = snapshot;
   return auth;

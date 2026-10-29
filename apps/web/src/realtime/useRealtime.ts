@@ -40,7 +40,10 @@ export function useConnectionStatus(session: RealtimeSession): ConnectionStatus 
   return useSyncExternalStore(subscribe, get, get);
 }
 
-/** Everyone currently in the room (re-renders on joins/leaves/status/name changes, not on moves). */
+/**
+ * Every roster member (all 14 are always in the state): re-renders when someone's name, shown/online
+ * state, activity or plate changes, not on moves. Use `shown`/`online`/`note`, never "is in the list".
+ */
 export function useRoster(session: RealtimeSession): PlayerSnap[] {
   const subscribe = useCallback((cb: () => void) => session.on('roster', cb), [session]);
   const get = useCallback(() => session.getRoster(), [session]);
@@ -57,5 +60,18 @@ export function usePet(session: RealtimeSession, ownerId: string): PetSnap | und
 export function useDmUnread(session: RealtimeSession): DmUnreadMsg {
   const subscribe = useCallback((cb: () => void) => session.on('dm:unread', cb), [session]);
   const get = useCallback(() => session.getDmUnread(), [session]);
+  return useSyncExternalStore(subscribe, get, get);
+}
+
+/** `OfficeState.officeOpen`: null until the first state arrives. */
+export function useOfficeOpen(session: RealtimeSession): boolean | null {
+  const subscribe = useCallback(
+    (cb: () => void) => {
+      const offs = [session.on('office', cb), session.on('reset', cb)];
+      return () => offs.forEach((off) => off());
+    },
+    [session],
+  );
+  const get = useCallback(() => session.getOfficeOpen(), [session]);
   return useSyncExternalStore(subscribe, get, get);
 }

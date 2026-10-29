@@ -9,7 +9,8 @@ import s from './town.module.css';
 
 /**
  * Actionable connection states (transient ones are shown in the canvas by the UI scene):
- * 4101 replaced -> 다시 연결, gave up -> 지금 다시 시도, map changed -> 새로고침, forbidden -> 로그인.
+ * 4101 replaced -> 다시 연결, gave up -> 지금 다시 시도, map or protocol changed -> 새로고침,
+ * forbidden -> 로그인, privacy notice not accepted -> 안내 보기 (/welcome).
  */
 export function ConnectionBanner({ status, session }: { status: ConnectionStatus; session: RealtimeSession }) {
   const router = useRouter();
@@ -22,6 +23,10 @@ export function ConnectionBanner({ status, session }: { status: ConnectionStatus
         return { text: t.failed, label: t.retryNow, onClick: () => session.reconnectNow() };
       case 'map_mismatch':
         return { text: t.mapMismatch, label: t.reload, onClick: () => window.location.reload() };
+      case 'protocol_mismatch':
+        return { text: ko.townUi.protocolMismatch, label: t.reload, onClick: () => window.location.reload() };
+      case 'notice_required':
+        return { text: t.noticeRequired, label: t.openWelcome, onClick: () => router.push('/welcome') };
       case 'forbidden':
         return { text: t.forbidden, label: t.signIn, onClick: () => router.push('/sign-in') };
       default:
@@ -30,13 +35,11 @@ export function ConnectionBanner({ status, session }: { status: ConnectionStatus
   })();
   if (!view) return null;
   return (
-    <div className={s.banners}>
-      <div className={s.banner} role="alert">
-        <span className={s.bannerText}>{view.text}</span>
-        <Button size="sm" onClick={view.onClick}>
-          {view.label}
-        </Button>
-      </div>
+    <div className={s.banner} role="alert">
+      <span className={s.bannerText}>{view.text}</span>
+      <Button size="sm" onClick={view.onClick}>
+        {view.label}
+      </Button>
     </div>
   );
 }

@@ -1,12 +1,17 @@
+import path from 'node:path';
 import { DEFAULT_TIMING, type NudgePrefs } from '@enu/domain';
-import { Indicator } from '@enu/protocol';
+import { Indicator, OfficeState } from '@enu/protocol';
+import { NUDGE_POLICY } from '@enu/shared';
 import { describe, expect, it } from 'vitest';
+import { Director, bubbleHooks, type ActorSnapshot } from '../src/director/Director';
 import { BubblePresenter, type BubblePet, type DeliveryRecord } from '../src/pet/BubblePresenter';
 import { nudgeRowToCandidate, type Candidate, type OwnerSnapshot } from '../src/pet/CandidateLoader';
-import { NudgeScheduler } from '../src/pet/NudgeScheduler';
+import { NudgeScheduler, type SchedulerHooks } from '../src/pet/NudgeScheduler';
+import { loadOfficeMap } from '../src/world/loadMap';
 import { MIN, ManualClock, kst } from './helpers/unit';
 
 const WED_10 = kst(2026, 10, 28, 10, 0);
+const GLANCE = NUDGE_POLICY.glanceHiddenMs;
 
 function prefs(over: Partial<NudgePrefs> = {}): NudgePrefs {
   return {
@@ -41,25 +46,25 @@ function nudge(
   });
 }
 
+function emptyPet(): BubblePet {
+  return { bubbleId: '', bubbleKind: 0, bubbleText: '', bubbleDueAt: 0, bubbleUntil: 0, indicator: 0 };
+}
+
 function setup(
   opts: {
     candidates?: (now: Date) => Candidate[];
     prefs?: Partial<NudgePrefs>;
     dnd?: boolean;
     showable?: boolean;
+    hooks?: (pet: BubblePet) => Partial<SchedulerHooks>;
+    clock?: ManualClock;
   } = {},
 ) {
-  const clock = new ManualClock(WED_10.getTime());
-  const pet: BubblePet = {
-    bubbleId: '',
-    bubbleKind: 0,
-    bubbleText: '',
-    bubbleDueAt: 0,
-    bubbleUntil: 0,
-    indicator: 0,
-  };
+  const clock = opts.clock ?? new ManualClock(WED_10.getTime());
+  const pet = emptyPet();
   const records: DeliveryRecord[] = [];
   let showable = opts.showable ?? true;
+  const flags = { officeOpen: true, shown: true, dnd: opts.dnd ?? false };
   const loader = {
     load: async (): Promise<OwnerSnapshot> => ({
       candidates: (opts.candidates ?? ((n) => [nudge('n1', n)]))(clock.now()),
@@ -82,9 +87,25 @@ function setup(
     presenter,
     clock,
     timing: { ...DEFAULT_TIMING, joinDelayMs: 8000 },
-    hooks: { pet: () => pet, doNotDisturb: () => opts.dnd ?? false },
+    hooks: {
+      pet: () => pet,
+      doNotDisturb: () => flags.dnd,
+      officeOpen: () => flags.officeOpen,
+      indicatorAllowed: () => flags.shown,
+      ...opts.hooks?.(pet),
+    },
   });
-  return { clock, pet, records, scheduler, setShowable: (v: boolean) => (showable = v) };
+  return { clock, pet, records, scheduler, flags, setShowable: (v: boolean) => (showable = v) };
+}
+
+/** Joins, lets the join trigger fire and the bubble expire. */
+async function afterJoinBubble(t: ReturnType<typeof setup>): Promise<void> {
+  await t.scheduler.join('u1', { linkState: 'linked' });
+  t.clock.advance(8000);
+  await t.scheduler.tick();
+  expect(t.records.at(-1)?.trigger).toBe('join');
+  t.clock.advance(16_000);
+  t.scheduler.expire();
 }
 
 describe('NudgeScheduler', () => {
@@ -121,7 +142,7 @@ describe('NudgeScheduler', () => {
     expect(t.scheduler.evaluate('u1')).toEqual({ show: false, reason: 'quiet' });
   });
 
-  it('expires the bubble after its display time and waits for the interval before the next one', async () => {
+  it('expires the bubble after its display time; a fresh nudge waits for the interval (eligible)', async () => {
     const t = setup({ candidates: (n) => [nudge('n1', n), nudge('n2', n)] });
     await t.scheduler.join('u1', { linkState: 'linked' });
     t.clock.advance(8000);
@@ -131,14 +152,14 @@ describe('NudgeScheduler', () => {
     t.scheduler.expire();
     expect(t.pet.bubbleText).toBe('');
     expect(t.pet.indicator).toBe(Indicator.None);
-    // idle trigger only after the interval (25 min)
     t.clock.advance(5 * MIN);
     await t.scheduler.tick();
     expect(t.records).toHaveLength(1);
     t.clock.advance(21 * MIN);
     await t.scheduler.tick();
     expect(t.records).toHaveLength(2);
-    expect(t.records[1]?.trigger).toBe('idle');
+    expect(t.records[1]?.trigger).toBe('eligible');
+    expect(t.records[1]?.candidate.refId).not.toBe(t.records[0]?.candidate.refId);
   });
 
   it('do-not-disturb holds normal nudges back', async () => {
@@ -179,5 +200,132 @@ describe('NudgeScheduler', () => {
     t.scheduler.setPresence('u1', true, false);
     await t.scheduler.tick();
     expect(t.records).toHaveLength(1);
+  });
+
+  it('glance: a return after >= glanceHiddenMs hidden shows the best live nudge again, once per return', async () => {
+    const t = setup();
+    await afterJoinBubble(t);
+    t.clock.advance(30 * MIN);
+    await t.scheduler.tick();
+    expect(t.records).toHaveLength(1); // already shown once, no fresh nudge: nothing without a glance
+
+    // a short absence does not count
+    t.scheduler.setPresence('u1', false, false);
+    t.clock.advance(GLANCE - 1000);
+    t.scheduler.setPresence('u1', true, false);
+    expect(t.scheduler.state('u1')?.flags.glanceArmed).toBe(false);
+    await t.scheduler.tick();
+    expect(t.records).toHaveLength(1);
+
+    // a long one arms exactly one glance
+    t.scheduler.setPresence('u1', false, false);
+    t.clock.advance(GLANCE);
+    t.scheduler.setPresence('u1', true, false);
+    expect(t.scheduler.state('u1')?.lastHiddenMs).toBe(GLANCE);
+    expect(t.scheduler.state('u1')?.flags.glanceArmed).toBe(true);
+    await t.scheduler.tick();
+    expect(t.records).toHaveLength(2);
+    expect(t.records[1]).toMatchObject({ trigger: 'glance', candidate: { refId: 'n1' } });
+    expect(t.scheduler.state('u1')?.flags.glanceArmed).toBe(false);
+    t.clock.advance(16_000);
+    t.scheduler.expire();
+    t.clock.advance(60 * MIN);
+    await t.scheduler.tick();
+    expect(t.records).toHaveLength(2);
+  });
+
+  it('officeOpen=false forces quiet and takes down a bubble left from before closing', async () => {
+    const t = setup();
+    await t.scheduler.join('u1', { linkState: 'linked' });
+    t.clock.advance(8000);
+    await t.scheduler.tick();
+    expect(t.pet.bubbleText).not.toBe('');
+    t.flags.officeOpen = false;
+    await t.scheduler.tick();
+    expect(t.pet.bubbleText).toBe('');
+    expect(t.pet.indicator).toBe(Indicator.None);
+
+    const u = setup();
+    u.flags.officeOpen = false;
+    await u.scheduler.join('u1', { linkState: 'linked' });
+    u.clock.advance(60 * MIN);
+    await u.scheduler.tick();
+    expect(u.records).toHaveLength(0);
+    expect(u.scheduler.evaluate('u1')).toEqual({ show: false, reason: 'quiet' });
+  });
+
+  it('indicatorAllowed=false shows the owner the text but keeps the shared indicator at None', async () => {
+    const t = setup();
+    t.flags.shown = false;
+    await t.scheduler.join('u1', { linkState: 'linked' });
+    t.clock.advance(8000);
+    await t.scheduler.tick();
+    expect(t.pet.bubbleText).toBe('넛지 n1');
+    expect(t.pet.indicator).toBe(Indicator.None);
+  });
+});
+
+describe('NudgeScheduler hooks from the director', () => {
+  const world = loadOfficeMap(path.resolve(import.meta.dirname, '../../web/public/assets/maps')).world;
+
+  function withDirector(manual: ActorSnapshot['manual'], at: Date) {
+    const clock = new ManualClock(at.getTime());
+    const state = new OfficeState();
+    const director = new Director({ world, state, timeZone: 'Asia/Seoul' });
+    director.upsertActor({
+      userId: 'u1',
+      displayName: '가',
+      avatarKey: 'av',
+      deskId: 'L1a',
+      petSpecies: 'cat',
+      petName: '나비',
+      linkState: 'linked',
+      statusText: '',
+      shareActivity: true,
+      showLive: true,
+      manual,
+    });
+    director.setSession('u1', 'open', at);
+    director.evaluate(at, 0, { snap: true });
+    const t = setup({ clock, prefs: { ignoreQuietHours: true }, hooks: () => bubbleHooks(director) });
+    return { t, director, state };
+  }
+
+  it('a shown owner: bubble with `…`; the pet is the director-owned Pet', async () => {
+    const { t, director } = withDirector(null, WED_10);
+    await t.scheduler.join('u1', { linkState: 'linked' });
+    t.clock.advance(8000);
+    await t.scheduler.tick();
+    const pet = director.pet('u1')!;
+    expect(pet.bubbleText).toBe('넛지 n1');
+    expect(pet.indicator).toBe(Indicator.Dots);
+    expect(t.pet.bubbleText).toBe('');
+  });
+
+  it('a manual focus status is do-not-disturb; a manual away owner gets the text without `…`', async () => {
+    const focus = withDirector({ status: 'focus', until: new Date(WED_10.getTime() + 60 * MIN) }, WED_10);
+    await focus.t.scheduler.join('u1', { linkState: 'linked' });
+    focus.t.clock.advance(9000);
+    await focus.t.scheduler.tick();
+    expect(focus.t.records).toHaveLength(0);
+    expect(focus.t.scheduler.evaluate('u1')).toEqual({ show: false, reason: 'do_not_disturb' });
+
+    const away = withDirector({ status: 'away', until: new Date(WED_10.getTime() + 60 * MIN) }, WED_10);
+    await away.t.scheduler.join('u1', { linkState: 'linked' });
+    away.t.clock.advance(9000);
+    await away.t.scheduler.tick();
+    const pet = away.director.pet('u1')!;
+    expect(pet.bubbleText).toBe('넛지 n1');
+    expect(pet.indicator).toBe(Indicator.None);
+  });
+
+  it('after office hours the director closes the office and the scheduler stays quiet', async () => {
+    const { t, state } = withDirector(null, kst(2026, 10, 28, 20, 0));
+    expect(state.officeOpen).toBe(false);
+    await t.scheduler.join('u1', { linkState: 'linked' });
+    t.clock.advance(60 * MIN);
+    await t.scheduler.tick();
+    expect(t.records).toHaveLength(0);
+    expect(t.scheduler.evaluate('u1')).toEqual({ show: false, reason: 'quiet' });
   });
 });

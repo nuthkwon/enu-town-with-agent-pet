@@ -17,6 +17,7 @@ export type LeaveAction =
   | { kind: 'replaced' }
   | { kind: 'forbidden' }
   | { kind: 'map_mismatch' }
+  | { kind: 'protocol_mismatch' }
   | { kind: 'stopped' }
   | { kind: 'rejoin'; delayMs: number; rateLimited: boolean }
   | { kind: 'failed' };
@@ -55,6 +56,8 @@ export function leaveAction(
       return { kind: 'forbidden' };
     case CloseCodes.MapMismatch:
       return { kind: 'map_mismatch' };
+    case CloseCodes.ProtocolMismatch:
+      return { kind: 'protocol_mismatch' };
     default:
       break;
   }

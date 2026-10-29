@@ -55,7 +55,13 @@ export class UIScene extends Phaser.Scene {
 
   override update(): void {
     const k = this.status.kind;
-    const terminal = k === 'replaced' || k === 'failed' || k === 'map_mismatch' || k === 'forbidden';
+    const terminal =
+      k === 'replaced' ||
+      k === 'failed' ||
+      k === 'map_mismatch' ||
+      k === 'protocol_mismatch' ||
+      k === 'forbidden' ||
+      k === 'notice_required';
     if (terminal) this.dim.setSize(this.scale.width, this.scale.height);
     this.dim.setVisible(terminal);
     const text = this.label(Date.now());

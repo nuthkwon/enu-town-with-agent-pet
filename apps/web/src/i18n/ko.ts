@@ -2,17 +2,50 @@
  * Korean UI strings for the web app (pages, API error messages, labels).
  * Claude-authored text is never stored here; these are ENU Town's own words.
  */
+import type { ActivityCode, PlateNote, SourceCode } from '@enu/protocol';
 import type {
   BodyType,
   HairColor,
   HairStyle,
   LinkState,
+  ManualDuration,
+  ManualStatus,
+  NowKind,
   OutfitColor,
+  ScheduleKind,
   SkinTone,
   TaskStatus,
   TodoStatus,
   Visibility,
 } from '@enu/shared';
+
+/** One table of the privacy notice (also copied verbatim into docs/privacy-notice.ko.md). */
+export interface PrivacyTable {
+  caption?: string;
+  columns: readonly string[];
+  rows: readonly (readonly string[])[];
+}
+
+/** One section of the privacy notice: paragraphs, then tables, then bullets (in this order). */
+export interface PrivacySection {
+  heading: string;
+  paragraphs?: readonly string[];
+  tables?: readonly PrivacyTable[];
+  bullets?: readonly string[];
+}
+
+const HANGUL_FIRST = 0xac00;
+const HANGUL_LAST = 0xd7a3;
+const RIEUL_FINAL = 8;
+
+/** Korean particle 로/으로 for `word`: 으로 after a final consonant other than ㄹ, otherwise 로. */
+export function roParticle(word: string): '로' | '으로' {
+  const t = word.trim();
+  const code = t.charCodeAt(t.length - 1);
+  if (!(code >= HANGUL_FIRST && code <= HANGUL_LAST)) return '로';
+  const final = (code - HANGUL_FIRST) % 28;
+  return final === 0 || final === RIEUL_FINAL ? '로' : '으로';
+}
 
 export const ko = {
   app: {
@@ -131,6 +164,7 @@ export const ko = {
     invalid_value: '허용되지 않는 값이에요',
     invalid_format: '형식이 올바르지 않아요',
     unrecognized_keys: '알 수 없는 항목이 있어요',
+    taken: '이미 다른 동료가 쓰고 있어요',
   } as Record<string, string>,
 
   signIn: {
@@ -177,7 +211,12 @@ export const ko = {
     loopbackBody:
       '돌아갈 주소가 localhost(이 컴퓨터)예요. Claude Code처럼 내 컴퓨터에서 직접 실행한 앱에서 연결을 시작한 경우에만 허용하세요.',
     canTitle: '이 연결로 할 수 있는 일',
-    can: ['내 업무 로그·할 일·펫 메시지 쓰기', '내 정보와 할 일 읽기', '(설정한 경우) 나에게 온 DM 읽기'],
+    can: [
+      '내 업무 로그·할 일·펫 메시지 쓰기',
+      '(활동 공유를 켠 경우) 오늘 업무 일정과 지금 하는 일의 종류 보내기',
+      '내 정보와 할 일 읽기',
+      '(설정한 경우) 나에게 온 DM 읽기',
+    ],
     cannotTitle: '할 수 없는 일',
     cannot: ['무엇이든 삭제하기', '다른 사람인 척하기', '다른 사람의 비공개 정보 읽기'],
     privacy:
@@ -195,13 +234,14 @@ export const ko = {
   welcome: {
     title: '환영해요!',
     lead: (name: string) => `${name}님, ENU Town을 시작하기 전에 몇 가지만 정해 볼게요.`,
-    steps: ['개인정보 안내', '내 자리', '아바타', '펫', '대화 요약 공개', 'Claude 연결'],
+    steps: ['개인정보 안내', '내 자리', '아바타', '펫', '대화 요약 공개', '활동 공유', 'Claude 연결'],
     stepOf: (i: number, n: number) => `${i} / ${n}`,
     notice: {
       title: '개인정보 처리 안내 요약',
       points: [
-        '업무 공유를 위한 사내 서비스예요. 성과 평가에 사용하지 않아요.',
+        '업무 공유를 위한 사내 서비스예요. 근태 확인·성과 평가에 사용하지 않아요.',
         'Claude와 나눈 원본 대화는 절대 수집하지 않아요. 내 Claude가 도구로 보낸 요약만 저장해요.',
+        '타운 지도의 아바타는 아무도 조작하지 않아요. 내가 정한 상태, 타운 접속, (활동 공유를 켜면) 내 Claude가 보낸 일정으로 그려지고, 근무 시간에만 보이며 이력을 남기지 않아요.',
         '업무 로그는 기본 전사 공개이고, 로그마다 나만 보기로 바꿀 수 있어요. 관리자도 비공개 로그는 못 봐요.',
         '펫 말풍선은 나에게만 보여요. 동료에게는 "…"만 보여요.',
         '채팅은 30일(DM 90일), 업무 로그는 90일 보관하고 지워요. 언제든 내보내기·수정·삭제·연결 해제를 할 수 있어요.',
@@ -234,6 +274,8 @@ export const ko = {
       help: '펫은 나를 따라다니며 내 Claude가 쓴 할 일 체크인을 말풍선으로 알려 줘요.',
       name: '펫 이름',
       namePlaceholder: '예: 몽실이',
+      takenHint: '모두 서로 다른 펫을 데리고 다녀요. 동료가 이미 고른 펫은 흐리게 보이고 고를 수 없어요.',
+      taken: '사용 중',
     },
     chatSummary: {
       title: 'Claude 작업 대화 요약 공개 범위',
@@ -242,7 +284,18 @@ export const ko = {
       privateBody: '요약은 나만 볼 수 있어요.',
       companyTitle: '전사 공개',
       companyBody: '동료가 내 프로필에서 요약을 볼 수 있어요. 해당 업무 로그가 비공개면 요약도 비공개예요.',
-      later: '나중에 내 정보 > 펫·공개 설정에서 바꿀 수 있어요.',
+      later: '나중에 내 정보 > 설정에서 바꿀 수 있어요.',
+    },
+    activity: {
+      title: '활동 공유',
+      help: '내 Claude가 체크인할 때 오늘 캘린더의 업무 일정(회의·집중·부재)과 지금 하는 일의 종류(개인 업무·문서·검토·협업)를 보내면, 근무 시간에 동료가 타운 지도에서 볼 수 있어요. 일정 제목·참석자·장소·사유는 보내지 않아요.',
+      question: '내 Claude가 보낸 활동을 동료에게 보여 줄까요?',
+      shareTitle: '공유하기',
+      sharePreview: '동료에게 이렇게 보여요: 회의 중 ~11:00 (캘린더 일정)',
+      noShareTitle: '공유하지 않기',
+      noSharePreview: '직접 상태를 정했거나 타운을 열어 두었을 때만 보여요',
+      reciprocity: '타운을 열면 보통 내 아바타도 자리에 보여요(서로 보기). 설정 > 접속 표시를 끄면 타운을 열어도 보이지 않아요.',
+      later: '나중에 내 정보 > 설정 > 활동 공유에서 언제든 바꿀 수 있어요. 끄면 오늘 보고된 활동이 바로 지워져요.',
     },
     link: {
       title: '이제 Claude를 연결해요',
@@ -252,6 +305,8 @@ export const ko = {
     finishing: '저장 중…',
     needNotice: '개인정보 처리 안내에 동의해야 다음으로 넘어갈 수 있어요.',
     needPetName: '펫 이름을 입력해 주세요.',
+    needPet: '동료가 고르지 않은 펫을 하나 골라 주세요.',
+    needActivity: '활동 공유를 할지 골라 주세요.',
   },
 
   avatarEditor: {
@@ -319,7 +374,7 @@ export const ko = {
       link: '내 Claude 연결',
       logs: '업무 로그',
       todos: '할 일',
-      settings: '펫·공개 설정',
+      settings: '설정',
       profile: '프로필',
       export: '내 데이터',
     },
@@ -394,6 +449,14 @@ export const ko = {
       defaultLogHelp: 'Claude는 이보다 넓게 공개할 수 없어요.',
       defaultChat: 'Claude 작업 대화 요약 기본 공개 범위',
       defaultChatHelp: '전사 공개를 고르면 대화 요약 공개에 동의한 것으로 기록돼요. 언제든 끌 수 있어요.',
+      townTitle: '타운 표시',
+      shareActivity: '활동 공유',
+      shareActivityHelp:
+        '켜면 내 Claude가 보낸 오늘 일정(회의·집중·부재)과 지금 하는 일의 종류가 근무 시간에만 동료의 타운 지도에 보여요. 끄면 오늘 보고된 활동이 바로 지워져요.',
+      shareActivityUnset: '아직 고르지 않았어요. 고르기 전에는 꺼진 것으로 처리돼요.',
+      showLive: '접속 표시',
+      showLiveHelp:
+        '켜면 타운을 열어 둔 동안 내 아바타와 접속 표시가 보여요(서로 보기). 끄면 타운을 열어도, 내가 정한 상태나 캘린더 일정이 있을 때만 보여요.',
       dmTitle: 'DM을 내 Claude와 공유',
       dmLabel: '나에게 온 DM을 내 Claude의 체크인에 포함하기',
       dmHelp:
@@ -406,13 +469,14 @@ export const ko = {
       role: '역할',
       readOnly: '조직 정보는 관리자가 관리해요.',
       statusText: '상태 문구',
-      statusPlaceholder: '예: 오후엔 회의실에 있어요',
+      statusPlaceholder: '예: 오후엔 외근이에요',
+      statusTextHelp: "동료에게는 근무 시간에 내가 자리에 보이거나 '자리 비움'일 때만 보여요.",
       avatarTitle: '아바타',
       petTitle: '펫',
     },
     export: {
       title: '내 데이터 내보내기',
-      body: '내 프로필, 업무 로그, 할 일, 펫 말풍선, 내가 보낸 채팅, 동의 기록, Claude 연결 기록을 JSON 파일로 내려받아요. 다른 사람의 비공개 정보는 들어 있지 않아요.',
+      body: '내 프로필, 업무 로그, 할 일, 펫 말풍선, 오늘의 활동 보고, 내 상태, 내가 보낸 채팅, 동의 기록, Claude 연결 기록을 JSON 파일로 내려받아요. 다른 사람의 비공개 정보는 들어 있지 않아요.',
       download: 'JSON 내려받기',
     },
   },
@@ -449,26 +513,89 @@ export const ko = {
     loading: '타운 로딩 중',
   },
 
+  /**
+   * The privacy notice (version = PRIVACY_NOTICE_VERSION, 2026-11). This is the SINGLE source of the
+   * Korean notice text: docs/privacy-notice.ko.md is copied from it verbatim (same sections, same order).
+   */
   privacy: {
     title: '개인정보 처리 안내',
     version: (v: string) => `안내 버전 ${v}`,
-    notEvaluation: '업무 공유 목적이며 성과 평가에 사용하지 않습니다.',
+    notEvaluation: '업무 공유 목적이며 근태 확인·성과 평가·징계 자료로 사용하지 않습니다.',
+    reviewTitle: '시행 전 검토 사항 (이 안내는 초안입니다)',
+    review: [
+      '근로자 감시 설비에 해당하는지 인사·법무와 확인합니다.',
+      '30인 미만이라 노사협의회 의무는 없더라도, 시행 전에 전 직원 설명회를 열고 의견을 모읍니다.',
+      '경영진이 "근태·평가에 사용하지 않음"을 서면으로 확인합니다 (ADR 0004에 기록).',
+    ],
     sections: [
       {
         heading: '1. 목적',
         paragraphs: [
-          'ENU Town은 ENU-Tech 직원이 A동 606호를 온라인으로 함께 쓰고, 각자의 Claude가 정리한 업무 상황을 동료와 나누기 위한 사내 서비스입니다.',
-          '업무 공유 목적이며 성과 평가에 사용하지 않습니다.',
+          'ENU Town은 ENU-Tech 직원이 A동 606호를 온라인으로 함께 쓰면서, 팀이 일하고 협업하는 모습을 지도로 보여 주고 각자의 Claude가 정리한 업무 상황을 동료와 나누기 위한 사내 서비스입니다.',
+          '업무 공유 목적이며 근태 확인·성과 평가·징계 자료로 사용하지 않습니다.',
         ],
       },
       {
         heading: '2. 수집하는 정보',
-        bullets: [
-          'Google 계정 기본 정보: 이름, 회사 이메일, Google 계정 식별자, 소속 도메인',
-          '타운 프로필: 표시 이름, 아바타·펫 설정, 자리, 상태 문구, 알림 설정',
-          '내 Claude가 ENU Town 커넥터로 작성한 내용: 업무 로그(요약·작업·막힌 점), Claude 작업 대화 요약(선택), 할 일, 펫 말풍선 문구',
-          '타운 채팅: 근처 대화, 전체 채팅, DM (보낸 사람, 받은 사람, 시각, 내용)',
-          '보안 기록: 로그인, 연결 동의·해제, 공개 범위 변경 같은 행위와 시각 (내용은 남기지 않음)',
+        tables: [
+          {
+            caption: '기본 정보',
+            columns: ['항목', '출처', '기본 공개 범위'],
+            rows: [
+              ['이름, 회사 이메일, Google 계정 식별자, 소속 도메인', 'Google 로그인', '사내'],
+              ['자리, 팀·직위·역할', '관리자가 등록한 좌석 명단', '사내'],
+              ['표시 이름, 아바타·펫', '본인 입력', '사내'],
+              ['알림·공개 범위·활동 공유·접속 표시 설정', '본인 입력', '본인만'],
+              ['업무 로그(요약·작업·막힌 점)', '본인의 Claude가 작성', '사내(본인이 로그마다 나만 보기로 변경 가능)'],
+              ['Claude 작업 대화 요약', '본인의 Claude가 작성', '본인이 공개를 선택한 경우에만 사내'],
+              ['할 일, 펫 말풍선 문구', '본인의 Claude가 작성', '본인만(동료에게는 "…" 표시만)'],
+              ['타운 채팅(전체·DM)', '직원 입력', '받은 사람'],
+              ['감사 기록(도구 호출 시각, 내용·활동 정보 제외)', '시스템', '관리자(감사)'],
+            ],
+          },
+          {
+            caption: '타운 지도에 쓰이는 정보',
+            columns: ['항목', '출처', '공개 범위', '보존'],
+            rows: [
+              [
+                '지금 상태(회의·집중·부재)와 끝나는 시각(부재는 끝나는 시각 없음)',
+                '본인의 Claude(캘린더), 활동 공유를 켠 경우에만',
+                '사내, 근무 시간(평일 08:30–19:30)에만, 실시간으로만',
+                '당일만(다음 날 새벽 삭제), 이력 없음',
+              ],
+              [
+                '지금 하는 일의 종류(개인 업무·문서·검토·협업)와 끝나는 시각',
+                '본인의 Claude가 최근 업무 흔적(문서·커밋·PR·리뷰)을 보고 판단한 활동, 활동 공유를 켠 경우에만. 이름표에만 붙고 아바타를 나타나게 하지 않음',
+                '사내, 근무 시간에만, 실시간으로만',
+                '당일만, 이력 없음',
+              ],
+              [
+                '오늘 업무 일정의 시각과 종류(제목·참석자·장소·사유 없음)',
+                '본인의 Claude',
+                "목록은 본인만, 동료에게는 '지금 상태'만",
+                '당일만',
+              ],
+              [
+                '업무 항목·일정 식별자(티켓·PR·캘린더 일정 ID)',
+                '본인의 Claude',
+                "표시하지 않음. 식별자를 그대로 저장하지 않고 하루 단위 키로 변환한 값만 저장하며(운영자도 내용 대신 일치 여부만 사용), 각자의 Claude가 같은 항목을 보고했을 때 '함께 하는 일'로 묶는 데만 사용",
+                '당일만',
+              ],
+              ['내 상태(대화 가능·집중·회의 중·휴식·자리 비움)', '본인 입력', '사내, 근무 시간에만', '현재 값만(만료 후 삭제)'],
+              [
+                '상태 문구',
+                '본인 입력',
+                "사내, 근무 시간에 내가 보이거나 '자리 비움'일 때만",
+                '본인이 바꿀 때까지 현재 값만',
+              ],
+              [
+                '타운 접속 여부',
+                '시스템',
+                '사내, 근무 시간에만(설정 > 접속 표시를 끄면 표시 안 함)',
+                '저장하지 않음(서버 로그에도 사용자별 접속 기록을 남기지 않음)',
+              ],
+            ],
+          },
         ],
       },
       {
@@ -485,45 +612,68 @@ export const ko = {
         bullets: [
           '업무 로그는 기본 전사 공개입니다. 로그마다 나만 보기로 바꿀 수 있고, Claude는 공개 범위를 낮출 수만 있습니다. 내가 직접 정한 공개 범위는 Claude가 바꾸지 못합니다.',
           'Claude 작업 대화 요약은 기본 나만 보기입니다. 직접 전사 공개를 고른 경우에만 동료에게 보이며, 업무 로그가 비공개면 요약도 비공개입니다.',
-          '펫 말풍선 문구는 나에게만 보입니다. 동료에게는 "…" 표시만 보입니다.',
+          '활동 공유는 직접 고른 경우에만 켜집니다(고르지 않으면 꺼짐). 켜면 내 Claude가 보낸 일정과 지금 하는 일의 종류가 근무 시간에만 동료에게 보입니다.',
+          '펫 말풍선 문구는 나에게만 보입니다. 동료에게는 내가 화면에 보일 때만 "…" 표시가 보입니다.',
           '관리자도 다른 사람의 비공개 업무 로그를 볼 수 없습니다.',
           'DM은 대화 당사자만 볼 수 있습니다. "DM을 내 Claude와 공유"를 켠 경우에만 나에게 온 DM이 내 Claude의 도구 결과에 포함됩니다.',
         ],
+      },
+      {
+        heading: '5. 보관 기간',
+        tables: [
+          {
+            columns: ['정보', '보관 기간'],
+            rows: [
+              ['DM', '90일'],
+              ['전체 채팅', '30일'],
+              ['업무 로그', '90일 (삭제하면 내용을 즉시 지움)'],
+              ['펫 말풍선', '14일'],
+              ['활동 보고', '당일(다음 날 새벽 삭제)'],
+              ['보안(감사) 기록', '365일'],
+            ],
+          },
+        ],
+        paragraphs: ['계정이 비활성화되면 로그인과 Claude 연결이 즉시 막힙니다.'],
       },
       {
         heading: '6. 정보가 오가는 곳',
         bullets: [
           '모든 정보는 회사가 운영하는 ENU Town 서버에 저장됩니다.',
           '내가 Claude를 연결한 경우에만, 도구 호출 결과(내 프로필, 오늘 업무 로그, 할 일, 대기 중인 말풍선, 설정한 경우 나에게 온 DM)가 내 Claude(Anthropic)로 전달됩니다.',
+          '내가 직접 정한 상태(owner_status)와 오늘 저장된 내 활동·일정은 내 Claude가 다음 체크인 때 읽을 수 있도록 내 Claude에게만 전달됩니다.',
           '다른 사람의 비공개 정보는 어떤 Claude에도 전달되지 않습니다.',
           'ENU Town 서버는 별도의 AI(LLM)를 호출하지 않습니다. 펫 말풍선은 내 Claude가 쓴 문장 그대로입니다.',
         ],
       },
       {
-        heading: '7. 나의 권리',
+        heading: '7. 화면이 뜻하는 것과 뜻하지 않는 것',
+        bullets: [
+          "아바타는 사람이 조작하지 않습니다. 본인이 정한 상태, 타운 접속, 본인 Claude가 보낸 캘린더 일정으로 ENU Town이 자리에 앉히거나 회의 테이블·동료 자리·탕비실로 옮깁니다. 본인 Claude의 '지금 하는 일'과 오늘 업무 기록은 이름표나 자리 표시판에만 붙습니다.",
+          "아바타의 위치와 움직임은 실제 위치가 아니라 업무 상태를 나타냅니다. 자리에 보이는 것은 출근·근무 시간을 뜻하지 않으며, 아바타가 없다는 것은 '지금 알려진 활동이 없다'는 뜻일 뿐입니다.",
+          '함께 있는 모습은 각자의 Claude가 같은 일정(3명 이상)이나 같은 작업을 각각 보고했고 모두 활동 공유를 켠 경우에만 보입니다. 1:1 일정은 묶지 않습니다. 다른 사람의 Claude는 내 아바타를 움직일 수 없습니다.',
+          "ENU Town은 키보드·마우스 사용이나 화면을 보고 있는지를 측정하지 않고, 메일·커밋 시각을 받지 않습니다. 활동 공유를 켜면 본인의 Claude가 최근 업무 흔적을 보고 판단한 '지금 하는 일'의 종류만 받아 'Claude 보고'로 표시합니다.",
+          '타운을 열면 보통 내 아바타도 보입니다(서로 보기). 설정 > 접속 표시를 끄면 타운을 열어도 나와 접속 표시가 보이지 않습니다.',
+          '근무 시간 외·주말·공휴일에는 누구의 상태도 다른 사람에게 보내지 않습니다.',
+          'DM·업무 요청·부르기는 누가 누구에게 보냈는지도 다른 사람에게 표시하지 않습니다.',
+          '근태 확인·성과 평가·징계 자료로 사용하지 않습니다. 접속·위치·상태의 이력은 저장하지 않으므로 관리자도 조회할 수 없습니다. 감사 기록에는 도구 호출 시각만 남고 활동 내용은 남지 않습니다.',
+        ],
+      },
+      {
+        heading: '8. 나의 권리와 처리 정지',
         bullets: [
           '내보내기: 내 정보 > 내 데이터에서 내 데이터를 JSON 파일로 내려받을 수 있습니다.',
           '수정: 업무 로그와 할 일 상태를 직접 고칠 수 있습니다. 고친 로그에는 "본인 수정"이 표시됩니다.',
           '삭제: 업무 로그를 삭제하면 내용이 즉시 지워집니다.',
           '연결 해제: 언제든 Claude 연결을 해제할 수 있고, 해제하면 발급된 토큰이 모두 무효가 됩니다.',
-          '동의 철회: 대화 요약 공개와 DM 공유는 언제든 끌 수 있습니다.',
+          '동의 철회: 대화 요약 공개, 활동 공유, DM 공유는 언제든 끌 수 있습니다.',
+          "처리 정지: /me > 설정 > 활동 공유에서 언제든 끌 수 있고, 끄면 오늘 보고된 활동이 즉시 삭제됩니다. /me > 설정 > 접속 표시를 끄면 타운을 열어도 표시되지 않습니다. '자리 비움'으로 언제든 화면에서 빠질 수 있습니다.",
         ],
       },
       {
-        heading: '8. 문의',
+        heading: '9. 문의',
         paragraphs: ['개인정보 처리에 대한 문의나 요청은 사내 ENU Town 관리자에게 해 주세요.'],
       },
-    ] as { heading: string; paragraphs?: string[]; bullets?: string[] }[],
-    retentionHeading: '5. 보관 기간',
-    retentionColumns: ['정보', '보관 기간'] as const,
-    retention: [
-      ['DM', '90일'],
-      ['전체·근처 채팅', '30일'],
-      ['업무 로그', '90일 (삭제하면 내용을 즉시 지움)'],
-      ['펫 말풍선', '14일'],
-      ['보안(감사) 기록', '365일'],
-    ] as [string, string][],
-    retentionNote: '계정이 비활성화되면 로그인과 Claude 연결이 즉시 막힙니다.',
+    ] as PrivacySection[],
   },
 
   credits: {
@@ -574,8 +724,8 @@ export const ko = {
   townUi: {
     loadingMap: '사무실을 준비하는 중…',
     mapError: '사무실 지도를 불러오지 못했어요.',
-    canvasLabel: 'A동 606호 사무실. 방향키나 WASD로 움직이고, 바닥을 누르면 그곳으로 걸어가요.',
-    unreachable: '거기로는 갈 수 없어요.',
+    canvasLabel: 'A동 606호 사무실 지도. 사람을 누르면 메뉴가 열려요. 오른쪽 목록에서도 똑같이 볼 수 있어요.',
+    protocolMismatch: 'ENU Town이 새 버전으로 바뀌었어요. 새로고침할게요.',
     connection: {
       connecting: '타운에 연결하는 중…',
       reconnecting: '연결이 잠깐 끊겼어요. 다시 연결하는 중…',
@@ -588,26 +738,146 @@ export const ko = {
       reload: '새로고침',
       forbidden: '다시 로그인해 주세요.',
       signIn: '로그인',
+      noticeRequired: '바뀐 개인정보 처리 안내를 확인해 주세요.',
+      openWelcome: '안내 보기',
+    },
+    /** Shown while `officeOpen` is false (the shared state is neutral for everyone). */
+    night: {
+      banner: '근무 시간이 아니에요 · 요정들도 쉬는 중 (평일 08:30–19:30에만 동료 상태가 보여요)',
     },
     topBar: {
       people: '사람들',
       myPet: '내 펫',
       me: '내 정보',
       dm: 'DM',
-      online: (n: number) => `${n}명 접속 중`,
+      online: (n: number) => `접속 ${n}명`,
       zoomIn: '확대',
       zoomOut: '축소',
+      overview: '전체 보기',
+      legend: '보는 법',
       myStatus: '내 상태 바꾸기',
+      statusChip: (label: string) => `내 상태: ${label}`,
       petBadge: (state: string) => `펫 연결 상태: ${state}`,
       unread: (n: number) => `읽지 않은 DM ${n}개`,
     },
+    /** §5.3 label table: `<activity> · <source>` (+ ` · ~HH:MM`). Shared by the canvas, menus, rail and legend. */
+    activity: {
+      None: '',
+      Available: '대화 가능',
+      Focus: '집중 모드',
+      Meeting: '회의 중',
+      Break: '휴식',
+      Work: '개인 업무',
+      Docs: '문서 작성',
+      Review: '검토 중',
+      Collab: '협업 중',
+      Today: '오늘 업무 기록',
+    } satisfies Record<keyof typeof ActivityCode, string>,
+    source: {
+      None: '',
+      Manual: '직접 설정',
+      Calendar: '캘린더 일정',
+      Claude: 'Claude 보고',
+      WorkLog: '업무 로그',
+      Town: '타운 접속',
+    } satisfies Record<keyof typeof SourceCode, string>,
+    note: {
+      None: '',
+      Away: '자리 비움',
+      Absent: '부재',
+    } satisfies Record<keyof typeof PlateNote, string>,
+    until: (hm: string) => `~${hm}`,
+    /** Gathered meeting / same-work chips and the group popover. */
+    group: {
+      meetingChip: (n: number, hm: string | null) => (hm ? `회의 중 · ${n}명 · ~${hm}` : `회의 중 · ${n}명`),
+      workChip: '같은 작업',
+      meetingTitle: '회의 중',
+      workTitle: '같은 작업',
+      members: (n: number) => `${n}명`,
+      help: '각자의 Claude가 같은 일정이나 같은 작업을 보고했고 모두 활동 공유를 켠 사람들이에요.',
+      now: '지금 하는 일',
+      label: (title: string, n: number) => `${title}, ${n}명`,
+    },
+    hover: {
+      online: '● 접속 중',
+    },
+    legend: {
+      title: '이 지도 보는 법',
+      lines: [
+        '아바타는 사람이 조작하지 않아요. 본인이 정한 상태, 타운 접속, 본인 Claude가 보낸 캘린더 일정으로 ENU Town이 자리를 정해요.',
+        "'Claude 보고'는 본인 Claude가 최근 업무 흔적(문서·커밋·PR·리뷰)을 보고 판단한 지금 하는 일의 종류예요. 이름표나 자리 표시판에만 붙고, 이것만으로 아바타가 나타나지는 않아요.",
+        '자리에 보이는 것은 출근·근태를 뜻하지 않아요. 아바타가 없으면 지금 알려진 활동이 없다는 뜻일 뿐이에요.',
+        '타운을 열면 보통 내 아바타도 보여요(서로 보기). 설정 > 접속 표시를 끄면 타운을 열어도 보이지 않아요.',
+        '회의 테이블에 함께 있는 모습은 세 명 이상이 각자의 Claude로 같은 일정을 보고했을 때만, 동료 자리 옆에 선 모습은 두 사람의 Claude가 같은 작업을 보고했을 때만 보여요.',
+        '근무 시간(평일 08:30–19:30) 밖에는 누구의 상태도 보이지 않아요.',
+      ],
+      iconsTitle: '아이콘',
+      sourcesTitle: '출처',
+      controlsTitle: '조작',
+      controls: [
+        '휠 또는 +/− 버튼: 확대·축소',
+        '확대한 뒤 드래그: 화면 옮기기',
+        '0 또는 Esc: 전체 보기',
+        '사람을 누르면 메뉴, 한 번 더 누르면 그 사람 보기',
+      ],
+      close: '닫기',
+    },
     status: {
       title: '내 상태',
+      options: {
+        auto: '자동 (일정·Claude·업무 기록 기준)',
+        available: '대화 가능',
+        focus: '집중 모드',
+        meeting: '회의 중',
+        break: '휴식',
+        away: '자리 비움',
+      } satisfies Record<'auto' | ManualStatus, string>,
+      /** Short form for the top-bar chip (`내 상태: 집중 ~11:00`). */
+      short: {
+        auto: '자동',
+        available: '대화 가능',
+        focus: '집중',
+        meeting: '회의 중',
+        break: '휴식',
+        away: '자리 비움',
+      } satisfies Record<'auto' | ManualStatus, string>,
+      durationLabel: '언제까지',
+      durations: {
+        '30m': '30분',
+        '1h': '1시간',
+        '2h': '2시간',
+        today: '오늘 근무 끝까지',
+      } satisfies Record<ManualDuration, string>,
       textLabel: '상태 문구 (선택)',
-      placeholder: '예: 오후엔 회의실에 있어요',
+      textHelp: "동료에게는 내가 자리에 보이거나 '자리 비움'일 때만 보여요. 자동으로 바꿔도 문구는 남아요.",
+      placeholder: '예: 오후엔 외근이에요',
       apply: '적용',
       clear: '문구 지우기',
       notConnected: '연결되면 바꿀 수 있어요.',
+      current: (label: string) => `지금: ${label}`,
+      hiddenNote: (note: string) => `지금 동료에게 '${note}'${roParticle(note)} 보여요. 상태를 바꾸면 자리에 표시돼요.`,
+      hiddenLabel: (form: string) => `지금 동료에게는 자리 표시판에 '${form}'${roParticle(form)}만 보여요.`,
+      hiddenName: '지금 동료에게는 이름만 보여요. 상태를 정하면 자리에 표시돼요.',
+      todayTitle: '오늘 Claude가 보낸 일정',
+      todayEmpty: '오늘 Claude가 보낸 일정이 없어요.',
+      todaySharingOff: '활동 공유가 꺼져 있어서 Claude가 일정을 보내지 않아요.',
+      todayNow: (kind: string, hm: string) => `지금 하는 일: ${kind} (~${hm})`,
+      scheduleKind: {
+        meeting: '회의',
+        focus: '집중 시간',
+        away: '부재',
+      } satisfies Record<ScheduleKind, string>,
+      nowKind: {
+        work: '개인 업무',
+        docs: '문서 작성',
+        review: '검토 중',
+        collab: '협업 중',
+      } satisfies Record<NowKind, string>,
+      range: (from: string, to: string) => `${from}–${to}`,
+      settingsLink: '활동 공유·접속 표시 설정 →',
+      myPet: '내 펫',
+      myLog: '내 업무 로그',
+      closed: '근무 시간이 아니라 지금은 동료에게 아무 상태도 보이지 않아요. 정한 상태는 저장돼요.',
     },
     menu: {
       label: (name: string) => `${name}님 메뉴`,
@@ -617,25 +887,26 @@ export const ko = {
       workRequest: '업무 요청',
       dm: 'DM 보내기',
       wave: '손 흔들기',
+      waveNote: '모두에게 보여요',
       ping: '부르기',
-      walkTo: '옆으로 가기',
-      offline: '오프라인',
+      view: '이 사람 보기',
       waved: (name: string) => `${name}님에게 손을 흔들었어요`,
       pinged: (name: string) => `${name}님을 불렀어요`,
-      offlineAction: '지금 타운에 없어서 할 수 없어요',
+      offlineAction: '지금 화면에 없어서 할 수 없어요',
+      pingNeedsOnline: '부르기는 지금 접속 중인 사람에게만 할 수 있어요',
     },
     profile: {
       title: '프로필',
       team: '팀',
       jobTitle: '직위',
       role: '역할',
-      status: '상태',
-      zone: '위치',
+      status: '지금',
       desk: '자리',
       link: 'Claude 연결',
-      lastUpdated: '마지막 업데이트',
-      online: '타운에 있어요',
-      offline: '오프라인',
+      lastUpdated: '마지막 업무 로그',
+      online: '접속 중',
+      nothingKnown: '지금 알려진 활동이 없어요',
+      officeClosed: '근무 시간이 아니에요',
       noTeam: '팀 미지정',
       latestLog: '오늘의 업무 로그',
       noLog: '아직 공개된 업무 로그가 없어요',
@@ -644,6 +915,9 @@ export const ko = {
     },
     workLog: {
       title: (name: string) => `${name}님이 지금 하는 일`,
+      nowTitle: '지금',
+      nowHelp: '타운에 보이는 상태예요. 근무 시간에만 보여요.',
+      nowGroup: (title: string, n: number) => `${title} · ${n}명`,
       empty: '공개된 업무 로그가 없어요',
       summary: '요약',
       tasks: '작업',
@@ -658,13 +932,11 @@ export const ko = {
       title: (name: string) => `${name}님과의 지난 대화`,
       tabs: {
         dm: '우리 DM',
-        nearby: '함께 들은 근처 대화',
         room: '공개 채팅',
         summaries: 'Claude 작업 대화 요약',
       },
       empty: {
         dm: '주고받은 DM이 없어요',
-        nearby: '함께 들은 근처 대화가 없어요',
         room: '이 사람이 쓴 공개 채팅이 없어요',
         summaries: '볼 수 있는 Claude 작업 대화 요약이 없어요',
       },
@@ -693,18 +965,10 @@ export const ko = {
       loadOlder: '이전 메시지',
     },
     chat: {
-      title: '채팅',
-      nearby: '근처',
-      room: '전체',
-      placeholder: {
-        nearby: '근처(5칸) 사람들에게 말하기',
-        room: '사무실 전체에 말하기',
-      },
+      title: '전체 채팅',
+      placeholder: '사무실 전체에 말하기',
       send: '보내기',
-      empty: {
-        nearby: '근처 대화가 아직 없어요. 가까이(5칸) 있는 사람과 같은 회의실 사람에게만 보여요.',
-        room: '전체 채팅이 아직 없어요.',
-      },
+      empty: '전체 채팅이 아직 없어요.',
       errors: {
         EMPTY: '내용을 입력해 주세요.',
         TOO_LONG: '너무 길어요.',
@@ -719,11 +983,13 @@ export const ko = {
     people: {
       title: '사람들',
       online: '접속 중',
-      offline: '오프라인',
       noTeam: '팀 미지정',
       search: '이름 검색',
       me: '나',
-      count: (online: number, total: number) => `${online} / ${total}명`,
+      count: (online: number) => `접속 ${online}명`,
+      railLabel: '사람들 목록 (지도와 같은 내용)',
+      hideRail: '목록 접기',
+      empty: '찾는 사람이 없어요',
     },
     pet: {
       title: '내 펫',
@@ -762,11 +1028,13 @@ export const ko = {
       makePrivate: '비공개로 전환',
       madePrivate: '업무 로그를 나만 보기로 바꿨어요',
       pinged: (name: string) => `${name}님이 부르고 있어요`,
-      goTo: '이동',
-      waved: (name: string) => `${name}님이 손을 흔들었어요`,
+      openDm: 'DM 열기',
+      waved: (name: string) => `${name}님이 나에게 손을 흔들었어요`,
       dmFrom: (name: string) => `${name}님의 DM`,
       rateLimited: '조금 천천히 해 주세요.',
-      notOnline: '지금 타운에 없는 사람이에요.',
+      notOnline: '지금 접속 중인 사람에게만 부를 수 있어요.',
+      notShown: '지금 화면에 없는 사람에게는 손을 흔들 수 없어요.',
+      statusFailed: '상태를 바꾸지 못했어요. 잠시 후 다시 시도해 주세요.',
       open: '열기',
       close: '알림 닫기',
     },

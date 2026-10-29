@@ -1,31 +1,23 @@
 'use client';
 
-import {
-  PET_SPECIES,
-  type AvatarPreset,
-  type DeskDto,
-  type MeDto,
-  type PetSpecies,
-  type Visibility,
-} from '@enu/shared';
+import type { AvatarPreset, DeskDto, MeDto, PetSpecies, Visibility } from '@enu/shared';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { AvatarEditor, type AvatarSwatches } from '@/components/AvatarEditor';
 import { LinkGuide } from '@/components/LinkGuide';
+import { isTaken, pickFreeSpecies } from '@/components/petChoice';
 import { PetPicker } from '@/components/PetPicker';
 import { SeatMap } from '@/components/SeatMap';
+import { EffectIcon } from '@/components/town/EffectIcon';
 import { Button, Notice, cx } from '@/components/ui';
 import { ko } from '@/i18n/ko';
-import { apiFetch, describeError } from '@/lib/api';
+import { ApiRequestError, apiFetch, describeError } from '@/lib/api';
 import s from './welcome.module.css';
 
 const w = ko.welcome;
 const STEPS = w.steps;
-
-function asSpecies(v: string): PetSpecies {
-  return (PET_SPECIES as readonly string[]).includes(v) ? (v as PetSpecies) : 'cat';
-}
+const STEP = { notice: 0, desk: 1, avatar: 2, pet: 3, chatSummary: 4, activity: 5, link: 6 } as const;
 
 export function WelcomeWizard({
   me,
@@ -41,18 +33,34 @@ export function WelcomeWizard({
   const [accepted, setAccepted] = useState(me.noticeAccepted);
   const [deskId, setDeskId] = useState<string | null>(me.deskId);
   const [avatar, setAvatar] = useState<AvatarPreset>(me.avatar);
-  const [pet, setPet] = useState<{ species: PetSpecies; name: string }>({
-    species: asSpecies(me.pet.species),
+  const [taken, setTaken] = useState<readonly string[]>(me.takenPetSpecies);
+  const [pet, setPet] = useState<{ species: PetSpecies; name: string }>(() => ({
+    species: pickFreeSpecies(me.pet.species, me.takenPetSpecies),
     name: me.pet.name,
-  });
+  }));
   const [chatVis, setChatVis] = useState<Visibility>(me.prefs.defaultChatSummaryVisibility ?? 'private');
+  // 활동 공유 is an explicit choice: nothing is preselected (null = not chosen yet).
+  const [shareActivity, setShareActivity] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canNext = step === 0 ? accepted : step === 3 ? pet.name.trim().length > 0 : true;
+  const petOk = pet.name.trim().length > 0 && !isTaken(pet.species, taken);
+  const canNext =
+    step === STEP.notice
+      ? accepted
+      : step === STEP.pet
+        ? petOk
+        : step === STEP.activity
+          ? shareActivity !== null
+          : true;
   const last = step === STEPS.length - 1;
 
   async function finish() {
+    if (shareActivity === null) {
+      setStep(STEP.activity);
+      setError(w.needActivity);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -65,19 +73,38 @@ export function WelcomeWizard({
           pet_species: pet.species,
           pet_name: pet.name.trim(),
           default_chat_summary_visibility: chatVis,
+          share_activity: shareActivity,
         },
       });
       router.replace('/town');
     } catch (e) {
-      setError(describeError(e));
       setBusy(false);
+      if (e instanceof ApiRequestError && e.code === 'pet_taken') {
+        // Someone picked this species meanwhile: grey it out and let the user choose again.
+        const nextTaken = [...taken, pet.species];
+        setTaken(nextTaken);
+        setPet((p) => ({ ...p, species: pickFreeSpecies(p.species, nextTaken) }));
+        setStep(STEP.pet);
+        setError(ko.errors.petTaken);
+        return;
+      }
+      if (e instanceof ApiRequestError && e.code === 'desk_taken') setStep(STEP.desk);
+      setError(describeError(e));
     }
   }
 
   function go(delta: number) {
     setError(null);
     if (delta > 0 && !canNext) {
-      setError(step === 0 ? w.needNotice : w.needPetName);
+      setError(
+        step === STEP.notice
+          ? w.needNotice
+          : step === STEP.activity
+            ? w.needActivity
+            : !pet.name.trim()
+              ? w.needPetName
+              : w.needPet,
+      );
       return;
     }
     setStep((v) => Math.min(Math.max(v + delta, 0), STEPS.length - 1));
@@ -105,7 +132,7 @@ export function WelcomeWizard({
       <section className={s.card} aria-live="polite">
         <div className={s.stepCount}>{w.stepOf(step + 1, STEPS.length)}</div>
 
-        {step === 0 && (
+        {step === STEP.notice && (
           <div>
             <h2>{w.notice.title}</h2>
             <ul className={s.points}>
@@ -125,7 +152,7 @@ export function WelcomeWizard({
           </div>
         )}
 
-        {step === 1 && (
+        {step === STEP.desk && (
           <div>
             <h2>{w.desk.title}</h2>
             <p className={s.help}>{w.desk.help}</p>
@@ -141,7 +168,7 @@ export function WelcomeWizard({
           </div>
         )}
 
-        {step === 2 && (
+        {step === STEP.avatar && (
           <div>
             <h2>{w.avatar.title}</h2>
             <p className={s.help}>{w.avatar.help}</p>
@@ -149,15 +176,15 @@ export function WelcomeWizard({
           </div>
         )}
 
-        {step === 3 && (
+        {step === STEP.pet && (
           <div>
             <h2>{w.pet.title}</h2>
             <p className={s.help}>{w.pet.help}</p>
-            <PetPicker species={pet.species} name={pet.name} onChange={setPet} />
+            <PetPicker species={pet.species} name={pet.name} taken={taken} onChange={setPet} />
           </div>
         )}
 
-        {step === 4 && (
+        {step === STEP.chatSummary && (
           <div>
             <h2>{w.chatSummary.title}</h2>
             <p className={s.help}>{w.chatSummary.help}</p>
@@ -185,7 +212,42 @@ export function WelcomeWizard({
           </div>
         )}
 
-        {step === 5 && (
+        {step === STEP.activity && (
+          <div>
+            <h2>{w.activity.title}</h2>
+            <p className={s.help}>{w.activity.help}</p>
+            <p className={s.question}>{w.activity.question}</p>
+            <div className={s.choices} role="radiogroup" aria-label={w.activity.title}>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={shareActivity === true}
+                className={cx(s.choice, shareActivity === true && s.choiceOn)}
+                onClick={() => setShareActivity(true)}
+              >
+                <span className={s.choiceTitle}>{w.activity.shareTitle}</span>
+                <span className={s.choicePreview}>
+                  <EffectIcon name="headset" />
+                  {w.activity.sharePreview}
+                </span>
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={shareActivity === false}
+                className={cx(s.choice, shareActivity === false && s.choiceOn)}
+                onClick={() => setShareActivity(false)}
+              >
+                <span className={s.choiceTitle}>{w.activity.noShareTitle}</span>
+                <span className={s.choicePreview}>{w.activity.noSharePreview}</span>
+              </button>
+            </div>
+            <p className={s.reciprocity}>{w.activity.reciprocity}</p>
+            <p className={s.help}>{w.activity.later}</p>
+          </div>
+        )}
+
+        {step === STEP.link && (
           <div>
             <h2>{w.link.title}</h2>
             <p className={s.help}>{w.link.help}</p>

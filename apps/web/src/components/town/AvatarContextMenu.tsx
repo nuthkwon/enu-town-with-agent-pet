@@ -1,27 +1,35 @@
 'use client';
 
-import { STATUS_LABEL_KO, type Status } from '@enu/protocol';
+import { PlateNote } from '@enu/protocol';
 import { teamLabel } from '@enu/shared';
-import { ko } from '@/i18n/ko';
 import { teamColor } from '@/game/directory';
-import { useRoster } from '@/realtime/useRealtime';
+import { activityIcon } from '@/game/logic/presence';
+import { ko } from '@/i18n/ko';
+import { useOfficeOpen, useRoster } from '@/realtime/useRealtime';
 import { Popover, onMenuKeyDown } from './Chrome';
+import { EffectIcon } from './EffectIcon';
 import { useDirectory } from './hooks';
 import { useTown } from './TownContext';
+import { menuState } from './townModel';
 import s from './town.module.css';
 
 /**
- * Menu for a colleague (clicked avatar, offline desk, or people list):
- * 프로필 · 지금 하는 일 · 지난 대화 · 업무 요청 · DM 보내기 · 손 흔들기 · 부르기.
+ * Menu for a colleague (clicked avatar, desk plate or team-rail row; spec §5.3):
+ * 프로필 · 지금 하는 일 · 지난 대화 · 업무 요청 · DM 보내기 · ─ · 손 흔들기 (모두에게 보여요) · 부르기 · 이 사람 보기.
+ * Every roster member is always in the state: what is enabled depends on `shown`/`online`, never on
+ * "a Player exists".
  */
 export function AvatarContextMenu({ userId, x, y }: { userId: string; x: number; y: number }) {
-  const { session, directory, ui, bus } = useTown();
+  const { session, directory, ui, me } = useTown();
   useDirectory(directory);
   const roster = useRoster(session);
+  const officeOpen = useOfficeOpen(session);
   const person = directory.person(userId);
   const player = roster.find((p) => p.id === userId);
+  const mine = roster.find((p) => p.id === me.userId);
   const name = player?.name || person?.displayName || '';
-  const online = player !== undefined;
+  const state = menuState(player, mine, officeOpen, me.officeTimeZone);
+  const icon = player && player.note === PlateNote.None ? activityIcon(player.activity) : null;
   const t = ko.townUi.menu;
 
   const run = (fn: () => void) => () => {
@@ -34,12 +42,17 @@ export function AvatarContextMenu({ userId, x, y }: { userId: string; x: number;
       <div className={s.popoverHeader}>
         <span className={s.teamSwatch} style={{ background: teamColor(person?.team) }} aria-hidden="true" />
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div className={s.popoverTitle}>{name}</div>
-          <div className={s.popoverSub}>
-            {[teamLabel(person?.team), person?.title].filter(Boolean).join(' · ')}
-            {' · '}
-            {online ? STATUS_LABEL_KO[(player?.status ?? 0) as Status] ?? '' : t.offline}
+          <div className={s.popoverTitle}>
+            {name}
+            {state.online && <span className={s.onlineDot} title={ko.townUi.people.online} aria-label={ko.townUi.people.online} />}
           </div>
+          <div className={s.popoverSub}>{[teamLabel(person?.team), person?.title].filter(Boolean).join(' · ')}</div>
+          {state.form && (
+            <div className={s.popoverState}>
+              {icon && <EffectIcon name={icon} />}
+              <span>{state.form}</span>
+            </div>
+          )}
         </div>
       </div>
       <div className={s.menu} onKeyDown={onMenuKeyDown}>
@@ -84,21 +97,24 @@ export function AvatarContextMenu({ userId, x, y }: { userId: string; x: number;
           type="button"
           role="menuitem"
           className={s.menuItem}
-          disabled={!online}
+          disabled={!state.canWave}
           onClick={run(() => {
-            if (session.wave()) ui.toast({ text: t.waved(name), ttlMs: 2500, tone: 'success' });
+            if (session.wave(userId)) ui.toast({ text: t.waved(name), ttlMs: 2500, tone: 'success' });
           })}
         >
           <span className={s.menuIcon} aria-hidden="true">
             ♡
           </span>
-          {t.wave}
+          <span className={s.menuLabel}>
+            {t.wave}
+            <span className={s.menuNote}>{t.waveNote}</span>
+          </span>
         </button>
         <button
           type="button"
           role="menuitem"
           className={s.menuItem}
-          disabled={!online}
+          disabled={!state.canPing}
           onClick={run(() => {
             if (session.ping(userId)) ui.toast({ text: t.pinged(name), ttlMs: 2500, tone: 'success' });
           })}
@@ -108,15 +124,19 @@ export function AvatarContextMenu({ userId, x, y }: { userId: string; x: number;
           </span>
           {t.ping}
         </button>
-        {online && (
-          <button type="button" role="menuitem" className={s.menuItem} onClick={run(() => bus.emit('move:to-user', { userId }))}>
-            <span className={s.menuIcon} aria-hidden="true">
-              ➜
-            </span>
-            {t.walkTo}
-          </button>
-        )}
-        {!online && <div className={s.menuHint}>{t.offlineAction}</div>}
+        <button
+          type="button"
+          role="menuitem"
+          className={s.menuItem}
+          disabled={!state.canView}
+          onClick={run(() => ui.viewUser(userId))}
+        >
+          <span className={s.menuIcon} aria-hidden="true">
+            ◎
+          </span>
+          {t.view}
+        </button>
+        {state.hint && <div className={s.menuHint}>{state.hint}</div>}
       </div>
     </Popover>
   );
