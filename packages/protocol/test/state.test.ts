@@ -19,8 +19,8 @@ describe('protocol state', () => {
     // Reflection-based decoding mirrors what the browser SDK does (no schema classes on the client).
     const decodeFor = (view: StateView) => {
       const it = { offset: 0 };
-      let buf = encoder.encodeAll(it);
-      buf = encoder.encodeAllView(view, it.offset, it);
+      encoder.encodeAll(it);
+      const buf = encoder.encodeAllView(view, it.offset, it);
       const decoder = Reflection.decode(reflection);
       decoder.decode(buf.slice());
       return decoder.state as unknown as {
