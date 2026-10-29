@@ -26,13 +26,13 @@ interface Decoded {
 function setup() {
   const state = new OfficeState();
   state.players.set('alice', new Player({ id: 'alice', name: 'Alice', avatar: 'av' }));
-  const alicePet = new Pet({ ownerId: 'alice', species: 'cat', name: '나비' });
+  const alicePet = new Pet({ petId: 'pa', ownerId: 'alice', species: 'cat', name: '나비' });
   alicePet.bubbleText = '회의 전에 자료 확인해 볼까요?';
   alicePet.bubbleId = 'b1';
   alicePet.indicator = 1;
-  state.pets.set('alice', alicePet);
-  const bobPet = new Pet({ ownerId: 'bob', species: 'fox', name: '여름' });
-  state.pets.set('bob', bobPet);
+  state.pets.set('pa', alicePet);
+  const bobPet = new Pet({ petId: 'pb', ownerId: 'bob', species: 'fox', name: '여름' });
+  state.pets.set('pb', bobPet);
 
   const encoder = new Encoder(state);
   const reflection = Reflection.encode(encoder);
@@ -57,11 +57,11 @@ describe('protocol state', () => {
     const { decodeFor, aliceView, bobView } = setup();
     const asAlice = decodeFor(aliceView);
     const asBob = decodeFor(bobView);
-    expect(asAlice.pets.get('alice')?.bubbleText).toBe('회의 전에 자료 확인해 볼까요?');
-    expect(asBob.pets.get('alice')?.name).toBe('나비');
-    expect(asBob.pets.get('alice')?.bubbleText).toBeFalsy();
-    expect(asBob.pets.get('alice')?.bubbleId).toBeFalsy();
-    expect(asBob.pets.get('alice')?.indicator).toBe(1);
+    expect(asAlice.pets.get('pa')?.bubbleText).toBe('회의 전에 자료 확인해 볼까요?');
+    expect(asBob.pets.get('pa')?.name).toBe('나비');
+    expect(asBob.pets.get('pa')?.bubbleText).toBeFalsy();
+    expect(asBob.pets.get('pa')?.bubbleId).toBeFalsy();
+    expect(asBob.pets.get('pa')?.indicator).toBe(1);
   });
 
   it('starts neutral: closed office, hidden members, no activity', () => {

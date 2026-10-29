@@ -16,6 +16,7 @@ import {
   startHarness,
   waitFor,
   type Harness,
+  petOf,
 } from './helpers/server';
 
 const PORT = 3312;
@@ -246,14 +247,14 @@ describe('director (real room)', () => {
     const j = await joinAs(h, u.id);
     const room = serverRoom(h, j);
     const pet = room.townDirector.pet(u.id);
-    await waitFor(() => j.room.state.pets.get(u.id)?.bubbleText === text, { message: 'bubble' });
+    await waitFor(() => petOf(j.room.state, u.id)?.bubbleText === text, { message: 'bubble' });
     await h.db.update(desks).set({ userId: null }).where(eq(desks.userId, u.id));
     await h.db.insert(desks).values({ deskId: 'R1', userId: u.id });
     await notifyTown(h.db, { v: 1, type: 'desks_changed' });
     await waitFor(() => j.room.state.players.get(u.id)?.deskId === 'R1', { message: 'moved desk' });
     expect(room.townDirector.pet(u.id)).toBe(pet);
-    expect(room.state.pets.get(u.id)).toBe(pet);
-    expect(j.room.state.pets.get(u.id).bubbleText).toBe(text);
+    expect(petOf(room.state, u.id)).toBe(pet);
+    expect(petOf(j.room.state, u.id).bubbleText).toBe(text);
   });
 
   it('user_deactivated removes the actor of someone who is not connected', async () => {
@@ -264,7 +265,7 @@ describe('director (real room)', () => {
     await h.db.update(user).set({ status: 'deactivated' }).where(eq(user.id, u.id));
     await notifyTown(h.db, { v: 1, type: 'user_deactivated', user_id: u.id });
     await waitFor(() => !w.room.state.players.has(u.id), { message: 'removed' });
-    expect(w.room.state.pets.has(u.id)).toBe(false);
+    expect(petOf(w.room.state, u.id) !== undefined).toBe(false);
   });
 
   it('steering messages are gone: step / face answer UNKNOWN_MESSAGE and move nobody', async () => {

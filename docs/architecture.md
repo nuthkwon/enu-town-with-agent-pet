@@ -45,7 +45,7 @@
 
 ## Town director
 
-Nobody steers an avatar ([ADR 0004](adr/0004-town-is-a-visualization.md)). The room keeps one `Player` and one `Pet` per roster member (active, onboarded), whether or not anyone is connected, and the director in `apps/realtime/src/director` places them:
+Nobody steers an avatar ([ADR 0004](adr/0004-town-is-a-visualization.md)). The room keeps one `Player` and that person's pets (keyed by pet id, the default pet in slot 0; protocol 3) per roster member (active, onboarded), whether or not anyone is connected, and the director in `apps/realtime/src/director` places them. Slot 0 follows its owner; the other pets copy its pose and the client fans them out. Pet changes made while the office is closed reach the town when it opens:
 
 - **Inputs:** the owner's manual status, the town being open (gated by `show_live`), and, when the owner shares activity, today's `activity_reports` row and the colleague-visible log flags. Nothing else: no tab visibility, input events, mail or commit times.
 - **Rules:** every second (and right after a status change or DB event) it runs `resolveActivity` and `projectForColleagues` for each person, `groupPeople` over the projected group keys, and `allocateSpots` (`packages/map/src/spots.ts`) for the target tiles: own desk, meeting chairs, a visitor tile at a colleague's desk, the pantry or the guest area. `Walker` walks a person to a new spot; arrivals and departures are a sparkle in place.

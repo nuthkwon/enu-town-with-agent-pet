@@ -45,8 +45,14 @@ export interface PlayerSnap {
 }
 
 export interface PetSnap {
+  /** The `OfficeState.pets` key. */
+  petId: string;
   ownerId: string;
+  /** 0 = the owner's default pet; the others sit with it (fanned out by the client). */
+  slot: number;
   species: string;
+  /** PetTint ('base' for the default pet). */
+  tint: string;
   name: string;
   x: number;
   y: number;

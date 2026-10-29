@@ -13,6 +13,7 @@ import {
   syncRoster,
   waitFor,
   type Harness,
+  petOf,
 } from './helpers/server';
 
 const PORT = 3315;
@@ -59,7 +60,7 @@ describe(`LISTEN ${TOWN_EVENTS_CHANNEL}`, () => {
   it('link_state_changed wakes the pet (and puts it back to sleep, hiding any bubble)', async () => {
     const u = await makeUser(h, { linkState: 'not_linked', deskId: 'L2b' });
     const j = await joinAs(h, u.id);
-    const pet = () => j.room.state.pets.get(u.id);
+    const pet = () => petOf(j.room.state, u.id);
     expect(pet().linkState).toBe(PetLink.NotLinked);
     expect(pet().anim).toBe(Anim.Sleep);
 
@@ -93,7 +94,7 @@ describe(`LISTEN ${TOWN_EVENTS_CHANNEL}`, () => {
     const j = await joinAs(h, watcher.id);
     await h.db.update(profiles).set({ linkState: 'linked' }).where(eq(profiles.userId, u.id));
     await notifyTown(h.db, { v: 1, type: 'link_state_changed', user_id: u.id, state: 'linked' });
-    await waitFor(() => j.room.state.pets.get(u.id)?.linkState === PetLink.Linked, { message: 'linked' });
+    await waitFor(() => petOf(j.room.state, u.id)?.linkState === PetLink.Linked, { message: 'linked' });
   });
 
   it('user_deactivated disconnects the user with 4103 and removes the actor', async () => {
@@ -106,7 +107,7 @@ describe(`LISTEN ${TOWN_EVENTS_CHANNEL}`, () => {
     await notifyTown(h.db, { v: 1, type: 'user_deactivated', user_id: u.id });
     expect(await j.leaveCode).toBe(CloseCodes.Forbidden);
     await waitFor(() => !jo.room.state.players.has(u.id), { message: 'actor removed' });
-    expect(jo.room.state.pets.has(u.id)).toBe(false);
+    expect(petOf(jo.room.state, u.id) !== undefined).toBe(false);
     await sleep(300);
     expect(room.connectedUserIds).toEqual([other.id]);
   });
@@ -138,7 +139,7 @@ describe(`LISTEN ${TOWN_EVENTS_CHANNEL}`, () => {
     await waitFor(() => jo.inbox.of(MSG.petChanged).length === 2, { message: 'pets_changed' });
     expect(jo.inbox.of(MSG.petChanged)[1]).toEqual({ petId: null });
     // pets_changed also refreshes the pet everyone sees in the town.
-    await waitFor(() => jc.room.state.pets.get(owner.id)?.name === '새펫', { message: 'renamed pet' });
+    await waitFor(() => petOf(jc.room.state, owner.id)?.name === '새펫', { message: 'renamed pet' });
     await sleep(200);
     expect(jc.inbox.of(MSG.petChanged)).toEqual([]);
   });
@@ -148,7 +149,7 @@ describe(`LISTEN ${TOWN_EVENTS_CHANNEL}`, () => {
     const j = await joinAs(h, u.id);
     const room = serverRoom(h, j);
     const player = room.state.players.get(u.id);
-    const pet = room.state.pets.get(u.id);
+    const pet = petOf(room.state, u.id);
     await h.db.update(profiles).set({ displayName: '새이름' }).where(eq(profiles.userId, u.id));
     await h.db
       .update(pets)
@@ -156,8 +157,8 @@ describe(`LISTEN ${TOWN_EVENTS_CHANNEL}`, () => {
       .where(and(eq(pets.userId, u.id), eq(pets.isDefault, true)));
     await notifyTown(h.db, { v: 1, type: 'profile_changed', user_id: u.id });
     await waitFor(() => j.room.state.players.get(u.id).name === '새이름', { message: 'renamed' });
-    expect(j.room.state.pets.get(u.id).name).toBe('모찌');
-    expect(j.room.state.pets.get(u.id).species).toBe('bunny');
+    expect(petOf(j.room.state, u.id).name).toBe('모찌');
+    expect(petOf(j.room.state, u.id).species).toBe('bunny');
 
     await h.db.update(desks).set({ userId: null }).where(eq(desks.userId, u.id));
     await h.db.insert(desks).values({ deskId: 'L3b', userId: u.id });
@@ -169,7 +170,7 @@ describe(`LISTEN ${TOWN_EVENTS_CHANNEL}`, () => {
       message: 'at the new seat',
     });
     expect(room.state.players.get(u.id)).toBe(player);
-    expect(room.state.pets.get(u.id)).toBe(pet);
+    expect(petOf(room.state, u.id)).toBe(pet);
   });
 
   it('reconnects the LISTEN connection after it is killed', async () => {
@@ -191,7 +192,7 @@ describe(`LISTEN ${TOWN_EVENTS_CHANNEL}`, () => {
     );
     await h.db.update(profiles).set({ linkState: 'linked' }).where(eq(profiles.userId, u.id));
     await notifyTown(h.db, { v: 1, type: 'link_state_changed', user_id: u.id, state: 'linked' });
-    await waitFor(() => j.room.state.pets.get(u.id).linkState === PetLink.Linked, {
+    await waitFor(() => petOf(j.room.state, u.id).linkState === PetLink.Linked, {
       message: 'event after reconnect',
     });
   });

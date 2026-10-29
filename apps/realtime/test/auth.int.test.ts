@@ -18,6 +18,7 @@ import {
   startHarness,
   waitFor,
   type Harness,
+  petOf,
 } from './helpers/server';
 
 const PORT = 3311;
@@ -138,7 +139,7 @@ describe('onAuth', () => {
     expect(me.deskId).toBe('L2a');
     expect(me.avatar).toMatch(/^av-/);
     expect(me.online).toBe(true);
-    const pet = j.room.state.pets.get(u.id);
+    const pet = petOf(j.room.state, u.id);
     expect(pet).toBeDefined();
     expect(Math.abs(pet.x - 3) + Math.abs(pet.y - 8)).toBe(1);
     expect(pet.linkState).toBe(0);
@@ -186,7 +187,7 @@ describe('sessions', () => {
     expect(room.clients.length).toBe(1);
     await waitFor(() => back.state.players.get(u.id).online === true, { message: 'online again' });
     // the owner's StateView survived the reconnect
-    expect(back.state.pets.get(u.id).bubbleText).toBe('');
+    expect(petOf(back.state, u.id).bubbleText).toBe('');
   });
 
   it('a consented leave keeps the actor: offline at once, shown through the 60 s grace, then hidden', async () => {

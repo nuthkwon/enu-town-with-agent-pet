@@ -202,6 +202,9 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
       warn: (msg, data) => logger.warn(data, msg),
       // logPulse only has to change; a random step keeps it from counting anyone's log writes.
       pulseStep: () => randomInt(1, 256),
+      // A connected owner's view follows their pets (bubble fields reach only that view).
+      onPetAdded: (ownerId, pet) => this.byUser.get(ownerId)?.client.view?.add(pet),
+      onPetRemoved: (ownerId, pet) => this.byUser.get(ownerId)?.client.view?.remove(pet),
     });
 
     const timing: PolicyTiming = {
@@ -294,8 +297,8 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
       await this.reloadRoster();
       if (!this.director.has(userId)) throw new ServerError(CloseCodes.Forbidden, 'not_on_roster');
     }
-    const pet = this.director.pet(userId);
-    if (!pet) throw new ServerError(CloseCodes.Forbidden, 'not_on_roster');
+    const pets = this.director.petsOf(userId);
+    if (pets.length === 0) throw new ServerError(CloseCodes.Forbidden, 'not_on_roster');
 
     // Everything below up to the replacement is synchronous, so concurrent joins of one user
     // always end with exactly one live session.
@@ -311,8 +314,8 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
     this.sessions.set(client.sessionId, session);
     this.byUser.set(userId, session);
     client.view = new StateView();
-    // The same Pet instance for the actor's whole life: bubble fields reach only this view.
-    client.view.add(pet);
+    // The same Pet instances while the pets exist: bubble fields reach only this view.
+    for (const pet of pets) client.view.add(pet);
     if (previous) this.endSession(previous, CloseCodes.SessionReplaced);
     this.director.setSession(userId, 'open', clock.now());
     this.evaluate();

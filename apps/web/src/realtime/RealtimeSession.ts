@@ -48,7 +48,7 @@ export interface StateSink {
   playerUpsert(p: PlayerSnap): void;
   playerRemove(id: string): void;
   petUpsert(p: PetSnap): void;
-  petRemove(ownerId: string): void;
+  petRemove(petId: string): void;
   mapHash(hash: string): void;
   officeOpen(open: boolean): void;
 }
@@ -136,8 +136,11 @@ export function copyPlayer(p: Record<string, unknown>, key: string): PlayerSnap 
 
 export function copyPet(p: Record<string, unknown>, key: string): PetSnap {
   return {
-    ownerId: str(p.ownerId) || key,
+    petId: str(p.petId) || key,
+    ownerId: str(p.ownerId),
+    slot: num(p.slot),
     species: str(p.species),
+    tint: str(p.tint) || 'base',
     name: str(p.name),
     x: num(p.x),
     y: num(p.y),
@@ -207,6 +210,8 @@ const ROSTER_PLAYER_FIELDS = [
 ] as const satisfies readonly (keyof PlayerSnap)[];
 const ROSTER_PET_FIELDS = [
   'species',
+  'tint',
+  'slot',
   'name',
   'linkState',
   'indicator',
@@ -592,8 +597,8 @@ export class RealtimeSession extends TypedEmitter<SessionEvents> {
   }
 
   private upsertPet(p: PetSnap): void {
-    const prev = this.pets.get(p.ownerId);
-    this.pets.set(p.ownerId, p);
+    const prev = this.pets.get(p.petId);
+    this.pets.set(p.petId, p);
     if (!prev) {
       this.emit('pet:add', p);
       this.bumpRoster();
@@ -603,10 +608,10 @@ export class RealtimeSession extends TypedEmitter<SessionEvents> {
     if (ROSTER_PET_FIELDS.some((k) => prev[k] !== p[k])) this.bumpRoster();
   }
 
-  private removePet(ownerId: string): void {
-    const prev = this.pets.get(ownerId);
+  private removePet(petId: string): void {
+    const prev = this.pets.get(petId);
     if (!prev) return;
-    this.pets.delete(ownerId);
+    this.pets.delete(petId);
     this.emit('pet:remove', prev);
     this.bumpRoster();
   }
@@ -650,8 +655,27 @@ export class RealtimeSession extends TypedEmitter<SessionEvents> {
     return this.players.get(id);
   }
 
+  /**
+   * The owner's pet that matters right now: the one carrying a bubble (only the owner ever decodes one), else
+   * the default pet (slot 0).
+   */
   getPet(ownerId: string): PetSnap | undefined {
-    return this.pets.get(ownerId);
+    let lead: PetSnap | undefined;
+    for (const p of this.pets.values()) {
+      if (p.ownerId !== ownerId) continue;
+      if (p.bubbleId) return p;
+      if (p.slot === 0) lead = p;
+    }
+    return lead;
+  }
+
+  /** Every pet of the owner, by slot. */
+  petsOf(ownerId: string): PetSnap[] {
+    return [...this.pets.values()].filter((p) => p.ownerId === ownerId).sort((a, b) => a.slot - b.slot);
+  }
+
+  getPetById(petId: string): PetSnap | undefined {
+    return this.pets.get(petId);
   }
 
   allPlayers(): IterableIterator<PlayerSnap> {

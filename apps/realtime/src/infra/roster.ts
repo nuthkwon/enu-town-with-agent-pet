@@ -10,9 +10,9 @@ import {
 } from '@enu/db';
 import { hasWorkTask, type NowIn, type ScheduleBlockIn } from '@enu/domain';
 import { NOW_KINDS, SCHEDULE_KINDS, localDateKey, type NowKind, type ScheduleKind } from '@enu/shared';
-import { and, eq, inArray, isNotNull, sql, type SQL } from 'drizzle-orm';
-import type { ActorSignals, ActorSnapshot } from '../director/Director';
-import { asLinkState, asManualStatus, avatarKeyOf, defaultPetOfUser, personColumns } from './profiles';
+import { and, asc, desc, eq, inArray, isNotNull, sql, type SQL } from 'drizzle-orm';
+import type { ActorSignals, ActorSnapshot, TownPetSnap } from '../director/Director';
+import { asLinkState, asManualStatus, avatarKeyOf, personColumns } from './profiles';
 
 /**
  * Loads the town roster (every active, onboarded member with a profile) and each member's signals for
@@ -26,20 +26,35 @@ function selectPeople(db: DbOrTx, where: SQL | undefined) {
     .from(user)
     .innerJoin(profiles, eq(profiles.userId, user.id))
     .leftJoin(desks, eq(desks.userId, user.id))
-    .leftJoin(pets, defaultPetOfUser)
     .where(where);
 }
 type PersonRow = Awaited<ReturnType<typeof selectPeople>>[number];
 
-function toActorSnapshot(r: PersonRow): ActorSnapshot {
+/** Each member's pets, the default first and then in the owner's order (names, looks and ids only). */
+async function loadPets(db: DbOrTx, userIds: string[]): Promise<Map<string, TownPetSnap[]>> {
+  const out = new Map<string, TownPetSnap[]>();
+  if (userIds.length === 0) return out;
+  const rows = await db
+    .select({ userId: pets.userId, petId: pets.id, species: pets.species, name: pets.name, tint: pets.tint })
+    .from(pets)
+    .where(inArray(pets.userId, userIds))
+    .orderBy(asc(pets.userId), desc(pets.isDefault), asc(pets.sortOrder), asc(pets.createdAt), asc(pets.id));
+  for (const r of rows) {
+    const list = out.get(r.userId) ?? [];
+    list.push({ petId: r.petId, species: r.species, name: r.name, tint: r.tint });
+    out.set(r.userId, list);
+  }
+  return out;
+}
+
+function toActorSnapshot(r: PersonRow, petsOf: Map<string, TownPetSnap[]>): ActorSnapshot {
   const status = asManualStatus(r.manualStatus);
   return {
     userId: r.userId,
     displayName: r.displayName,
     avatarKey: avatarKeyOf(r.avatar),
     deskId: r.deskId ?? null,
-    petSpecies: r.petSpecies ?? 'cat',
-    petName: r.petName ?? '펫',
+    pets: petsOf.get(r.userId) ?? [],
     linkState: asLinkState(r.linkState),
     statusText: r.statusText ?? '',
     shareActivity: r.shareActivity,
@@ -54,7 +69,11 @@ export async function loadRoster(db: DbOrTx): Promise<ActorSnapshot[]> {
     db,
     and(eq(user.status, 'active'), isNotNull(profiles.onboardingCompletedAt)),
   );
-  return rows.map(toActorSnapshot);
+  const petsOf = await loadPets(
+    db,
+    rows.map((r) => r.userId),
+  );
+  return rows.map((r) => toActorSnapshot(r, petsOf));
 }
 
 /** One member's snapshot, or null when they are not (or no longer) on the roster. */
@@ -63,7 +82,7 @@ export async function loadRosterMember(db: DbOrTx, userId: string): Promise<Acto
     db,
     and(eq(user.id, userId), eq(user.status, 'active'), isNotNull(profiles.onboardingCompletedAt)),
   ).limit(1);
-  return row ? toActorSnapshot(row) : null;
+  return row ? toActorSnapshot(row, await loadPets(db, [row.userId])) : null;
 }
 
 const isNowKind = (v: string | null): v is NowKind =>

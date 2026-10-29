@@ -72,7 +72,7 @@ export const CloseCodes = {
 } as const;
 
 /** Bumped on every incompatible change of the state schema or messages; sent as the `protocol` join option. */
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
 
 /** Walk cadence per tile (server walker, client interpolation and pet cadence). */
 export const STEP_MS = 160;

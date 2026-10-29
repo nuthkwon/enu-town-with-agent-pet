@@ -1,4 +1,4 @@
-import { desks, pets, privacyConsents, profiles, user, type DbOrTx } from '@enu/db';
+import { desks, privacyConsents, profiles, user, type DbOrTx } from '@enu/db';
 import {
   DEFAULT_AVATAR,
   LINK_STATES,
@@ -27,8 +27,6 @@ export interface UserSnapshot {
   status: string;
   displayName: string;
   avatarKey: string;
-  petSpecies: string;
-  petName: string;
   linkState: LinkState;
   timezone: string;
   team: string | null;
@@ -63,18 +61,12 @@ export function avatarKeyOf(avatar: AvatarPreset | null | undefined): string {
   }
 }
 
-/** Joins a user to their default pet. */
-export const defaultPetOfUser = and(eq(pets.userId, user.id), eq(pets.isDefault, true));
-
 /** Columns shared by the single-user snapshot and the roster query. */
 export const personColumns = {
   userId: user.id,
   status: user.status,
   displayName: profiles.displayName,
   avatar: profiles.avatar,
-  // The default pet (one per profile from provisioning on; ADR 0005 adds more pets per person).
-  petSpecies: pets.species,
-  petName: pets.name,
   linkState: profiles.linkState,
   statusText: profiles.statusText,
   shareActivity: profiles.shareActivity,
@@ -102,7 +94,6 @@ export async function loadUserSnapshot(db: DbOrTx, userId: string): Promise<User
     .from(user)
     .innerJoin(profiles, eq(profiles.userId, user.id))
     .leftJoin(desks, eq(desks.userId, user.id))
-    .leftJoin(pets, defaultPetOfUser)
     .where(eq(user.id, userId))
     .limit(1);
   const r = rows[0];
@@ -126,8 +117,6 @@ export async function loadUserSnapshot(db: DbOrTx, userId: string): Promise<User
     status: r.status,
     displayName: r.displayName,
     avatarKey: avatarKeyOf(r.avatar),
-    petSpecies: r.petSpecies ?? 'cat',
-    petName: r.petName ?? '펫',
     linkState: asLinkState(r.linkState),
     timezone: r.timezone,
     team: r.team,

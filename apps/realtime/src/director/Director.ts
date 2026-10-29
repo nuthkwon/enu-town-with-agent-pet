@@ -32,14 +32,14 @@ import {
   type Dir,
   type OfficeState,
 } from '@enu/protocol';
-import { DESK_IDS, TOWN_TIMING, localDateKey, type LinkState, type ManualStatus } from '@enu/shared';
+import { DESK_IDS, LIMITS, TOWN_TIMING, localDateKey, type LinkState, type ManualStatus } from '@enu/shared';
 import { PetFollower, type PerchTarget } from '../world/PetFollower';
 import { dirBetween } from '../world/Movement';
 import { activityCode, plateNoteCode, sourceCode } from './codes';
 import { Walker } from './Walker';
 
 /**
- * The server director: places every roster member (one `Player` and one `Pet` each, connected or not)
+ * The server director: places every roster member (one `Player` and their pets, connected or not)
  * from their own signals only. Nobody steers an avatar. Every decision is made by the pure domain
  * functions (`resolveActivity`, `projectForColleagues`, `groupPeople`) and the map helpers
  * (`allocateSpots`, `findPath`); this class only binds them to the synced state.
@@ -55,14 +55,23 @@ export interface ManualIn {
   until: Date;
 }
 
+/** One of a member's pets in the town; its index in `ActorSnapshot.pets` is its slot (0 = the default pet). */
+export interface TownPetSnap {
+  petId: string;
+  species: string;
+  name: string;
+  /** PetTint ('base' for the default pet). */
+  tint: string;
+}
+
 /** One roster member as loaded from the DB (`infra/roster.ts`). */
 export interface ActorSnapshot {
   userId: string;
   displayName: string;
   avatarKey: string;
   deskId: string | null;
-  petSpecies: string;
-  petName: string;
+  /** The default pet first, then the others in the owner's order (at most LIMITS.petsPerOwnerMax). */
+  pets: TownPetSnap[];
   linkState: LinkState;
   /** 상태 문구 ('' if none). */
   statusText: string;
@@ -91,10 +100,13 @@ const ACTIVE = { active: true } as const;
 interface Actor {
   readonly userId: string;
   readonly player: Player;
-  readonly pet: Pet;
-  readonly follower: PetFollower;
+  /** By slot: `pets[0]` (the default pet) is moved by `follower`, the others copy its pose. */
+  pets: Pet[];
+  follower: PetFollower;
   readonly walker: Walker;
   snap: ActorSnapshot;
+  /** Pet changes made while the office was closed, applied when it opens (P5: no after-hours tell). */
+  petsPending: boolean;
   signals: ActorSignals;
   session: SessionState | null;
   /** Business-time ms when the session ended (start of the live grace). */
@@ -121,6 +133,9 @@ export interface DirectorOptions {
    * value never counts log writes; injected so the director itself stays deterministic. Default: 1.
    */
   pulseStep?: () => number;
+  /** A pet entered or left the state (the room adds it to, or removes it from, the owner's StateView). */
+  onPetAdded?: (ownerId: string, pet: Pet) => void;
+  onPetRemoved?: (ownerId: string, pet: Pet) => void;
 }
 
 export interface ActorView {
@@ -154,12 +169,14 @@ export interface DirectorSnapshot {
  * would reveal the owner's attention (ADR 0004 D2).
  */
 export function bubbleHooks(director: Director): {
-  pet(userId: string): Pet | null;
+  pet(userId: string, petId?: string | null): Pet | null;
+  pets(userId: string): readonly Pet[];
   doNotDisturb(userId: string): boolean;
   officeOpen(): boolean;
 } {
   return {
-    pet: (userId) => director.pet(userId),
+    pet: (userId, petId) => director.petFor(userId, petId ?? null),
+    pets: (userId) => director.petsOf(userId),
     doNotDisturb: (userId) => director.resolved(userId)?.dnd ?? true,
     officeOpen: () => director.officeOpen,
   };
@@ -223,8 +240,9 @@ export class Director {
   }
 
   /**
-   * Creates the actor when absent; otherwise applies the snapshot to the existing `Player`/`Pet`
-   * **in place** (a connected owner's StateView holds that very `Pet`, so it is never replaced).
+   * Creates the actor when absent; otherwise applies the snapshot to the existing `Player` and pets
+   * **in place** (a connected owner's StateView holds those very `Pet`s, so a kept pet is never replaced).
+   * Pet additions, changes and removals wait while the office is closed.
    */
   upsertActor(snap: ActorSnapshot): { created: boolean; linkChanged: boolean } {
     const existing = this.actors.get(snap.userId);
@@ -233,6 +251,8 @@ export class Director {
       if (existing.snap.deskId !== snap.deskId) this.order = null;
       existing.snap = { ...snap };
       this.applyIdentity(existing);
+      if (this.open) this.reconcilePets(existing);
+      else existing.petsPending = true;
       return { created: false, linkChanged };
     }
     const { world, state } = this.opts;
@@ -242,17 +262,14 @@ export class Director {
       avatar: snap.avatarKey,
       deskId: snap.deskId ?? '',
     });
-    const pet = new Pet({
-      ownerId: snap.userId,
-      species: snap.petSpecies,
-      name: snap.petName,
-      linkState: linkStateToCode(snap.linkState),
-    });
+    const pets = this.petsFor(snap).map((p, slot) => this.newPet(snap, p, slot));
+    const lead = pets[0]!;
     const actor: Actor = {
       userId: snap.userId,
       player,
-      pet,
-      follower: new PetFollower(pet, world, { linked: snap.linkState !== 'not_linked' }),
+      pets,
+      follower: new PetFollower(lead, world, { linked: snap.linkState !== 'not_linked' }),
+      petsPending: false,
       walker: new Walker(world),
       snap: { ...snap },
       signals: NO_SIGNALS,
@@ -266,15 +283,20 @@ export class Director {
     this.actors.set(snap.userId, actor);
     this.order = null;
     state.players.set(snap.userId, player);
-    state.pets.set(snap.userId, pet);
+    for (const pet of pets) state.pets.set(pet.petId, pet);
     return { created: true, linkChanged: false };
   }
 
   removeActor(userId: string): boolean {
-    if (!this.actors.delete(userId)) return false;
+    const a = this.actors.get(userId);
+    if (!a) return false;
+    this.actors.delete(userId);
     this.order = null;
     this.opts.state.players.delete(userId);
-    this.opts.state.pets.delete(userId);
+    for (const pet of a.pets) {
+      this.opts.state.pets.delete(pet.petId);
+      this.opts.onPetRemoved?.(userId, pet);
+    }
     return true;
   }
 
@@ -337,8 +359,21 @@ export class Director {
     return this.actors.get(userId)?.projected ?? null;
   }
 
+  /** The owner's default pet (slot 0). */
   pet(userId: string): Pet | null {
-    return this.actors.get(userId)?.pet ?? null;
+    return this.actors.get(userId)?.pets[0] ?? null;
+  }
+
+  /** Every pet of the owner, by slot. */
+  petsOf(userId: string): readonly Pet[] {
+    return this.actors.get(userId)?.pets ?? [];
+  }
+
+  /** The owner's pet `petId`, or the default pet when it is null or not in the town (yet). */
+  petFor(userId: string, petId: string | null): Pet | null {
+    const pets = this.actors.get(userId)?.pets;
+    if (!pets) return null;
+    return (petId ? pets.find((p) => p.petId === petId) : undefined) ?? pets[0] ?? null;
   }
 
   player(userId: string): Player | null {
@@ -350,7 +385,7 @@ export class Director {
       officeOpen: this.open,
       actors: this.ordered().map((a) => {
         const p = a.player;
-        const pet = a.pet;
+        const pet = a.pets[0]!;
         return {
           userId: a.userId,
           x: p.x,
@@ -439,11 +474,12 @@ export class Director {
 
     let movers = 0;
     for (const a of actors) {
+      if (open && a.petsPending) this.reconcilePets(a);
       const wasShown = a.player.shown;
       this.writeFields(a, groupOf.get(a.userId)?.id ?? '');
       a.follower.setAsleep(!open);
       // Shared with everyone, so never `Dots`: a bubble's onset would reveal the owner's tab visibility.
-      set(a.pet, 'indicator', Indicator.None);
+      for (const pet of a.pets) set(pet, 'indicator', Indicator.None);
 
       const spot = placed.get(a.userId) ?? null;
       if (!a.projected.shown || !spot) {
@@ -478,6 +514,7 @@ export class Director {
         this.placeAt(a, spot, nowMs);
       }
     }
+    for (const a of actors) this.copyLeadPose(a);
   }
 
   /** Advances walkers and pets (the room's 50 ms fast tick). */
@@ -495,6 +532,7 @@ export class Director {
         if (s.arrived) this.settle(a);
       }
       a.follower.update(nowMs, p, p.dir as Dir, this.perchOf(a));
+      this.copyLeadPose(a);
     }
   }
 
@@ -545,14 +583,84 @@ export class Director {
   }
 
   private applyIdentity(a: Actor): void {
-    const { player: p, pet, snap } = a;
+    const { player: p, snap } = a;
     set(p, 'name', snap.displayName);
     set(p, 'avatar', snap.avatarKey);
     set(p, 'deskId', snap.deskId ?? '');
-    set(pet, 'species', snap.petSpecies);
-    set(pet, 'name', snap.petName);
-    set(pet, 'linkState', linkStateToCode(snap.linkState));
+    // Link state is per person: every pet wakes and sleeps together.
+    for (const pet of a.pets) set(pet, 'linkState', linkStateToCode(snap.linkState));
     a.follower.setLinked(snap.linkState !== 'not_linked');
+  }
+
+  /** The snapshot's pets, capped, never empty (a profile always has its default pet; this is a fallback). */
+  private petsFor(snap: ActorSnapshot): TownPetSnap[] {
+    const pets = snap.pets.slice(0, LIMITS.petsPerOwnerMax);
+    return pets.length > 0
+      ? pets
+      : [{ petId: `default:${snap.userId}`, species: 'cat', name: '펫', tint: 'base' }];
+  }
+
+  private newPet(snap: ActorSnapshot, p: TownPetSnap, slot: number): Pet {
+    return new Pet({
+      petId: p.petId,
+      ownerId: snap.userId,
+      slot,
+      species: p.species,
+      tint: p.tint,
+      name: p.name,
+      linkState: linkStateToCode(snap.linkState),
+    });
+  }
+
+  /**
+   * Brings the owner's pets in line with the snapshot: kept pets change in place, new ones appear where the
+   * default pet is, removed ones leave. A new default pet (only after data repair) takes over the follower.
+   */
+  private reconcilePets(a: Actor): void {
+    a.petsPending = false;
+    const { state, world } = this.opts;
+    const lead = a.pets[0]!;
+    const kept = new Map(a.pets.map((p) => [p.petId, p]));
+    const next = this.petsFor(a.snap).map((want, slot) => {
+      const pet = kept.get(want.petId);
+      if (pet) {
+        kept.delete(want.petId);
+        set(pet, 'slot', slot);
+        set(pet, 'species', want.species);
+        set(pet, 'tint', want.tint);
+        set(pet, 'name', want.name);
+        return pet;
+      }
+      const born = this.newPet(a.snap, want, slot);
+      born.x = lead.x;
+      born.y = lead.y;
+      born.dir = lead.dir;
+      born.anim = lead.anim;
+      state.pets.set(born.petId, born);
+      this.opts.onPetAdded?.(a.userId, born);
+      return born;
+    });
+    for (const gone of kept.values()) {
+      state.pets.delete(gone.petId);
+      this.opts.onPetRemoved?.(a.userId, gone);
+    }
+    a.pets = next;
+    if (next[0] !== lead) {
+      a.follower = new PetFollower(next[0]!, world, { linked: a.snap.linkState !== 'not_linked' });
+      a.follower.setAsleep(!this.open);
+    }
+  }
+
+  /** The pets after the default one sit on its tile with its pose; the client fans them out by slot. */
+  private copyLeadPose(a: Actor): void {
+    const lead = a.pets[0]!;
+    for (let i = 1; i < a.pets.length; i++) {
+      const pet = a.pets[i]!;
+      set(pet, 'x', lead.x);
+      set(pet, 'y', lead.y);
+      set(pet, 'dir', lead.dir);
+      set(pet, 'anim', lead.anim);
+    }
   }
 
   /** The perch of a hidden owner's pet (only for a desk on this map; desk-less pets are hidden by the client). */

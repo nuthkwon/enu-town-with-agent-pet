@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { MAP_LAYERS, type DeskInfo, type OfficeWorld } from '@enu/map';
 import { PlateNote, type ChatMsg, type DmMsg, type EmoteMsg } from '@enu/protocol';
 import type { PetSnap, PlayerSnap } from '../../realtime/types';
-import { AvatarSheetLoader, TEX, ensurePetAnims } from '../assets';
+import { AvatarSheetLoader, PetSheetLoader, TEX, ensurePetAnims } from '../assets';
 import { BRIDGE_REGISTRY_KEY, FONT_REGISTRY_KEY, type GameBridge } from '../bridge';
 import { teamColorNumber } from '../directory';
 import { AvatarView } from '../entities/AvatarView';
@@ -28,6 +28,7 @@ import {
   type Insets,
   type Point,
 } from '../logic/camera';
+import { petLook } from '../logic/petCluster';
 import { plateLayout } from '../logic/plates';
 import { activityIcon, groupChipText, groupsOf, hiddenPlate, type GroupView } from '../logic/presence';
 import { TAG_DEFAULT, declutterTags } from '../logic/tags';
@@ -371,8 +372,8 @@ export class WorldScene extends Phaser.Scene {
       session.on('player:change', ({ player, prev }) => this.changeAvatar(player, prev)),
       session.on('player:remove', (p) => this.removeAvatar(p.id)),
       session.on('pet:add', (p) => this.addPet(p)),
-      session.on('pet:change', ({ pet }) => this.pets.get(pet.ownerId)?.apply(pet, this.time.now)),
-      session.on('pet:remove', (p) => this.removePet(p.ownerId)),
+      session.on('pet:change', ({ pet }) => this.changePet(pet)),
+      session.on('pet:remove', (p) => this.removePet(p.petId)),
       session.on('office', (open) => this.setOfficeOpen(open)),
       session.on('chat:msg', (m) => this.onChat(m)),
       session.on('emote', (m) => this.onEmote(m)),
@@ -474,12 +475,39 @@ export class WorldScene extends Phaser.Scene {
     this.dirty = true;
   }
 
-  private addPet(p: PetSnap): void {
-    if (this.pets.has(p.ownerId)) {
-      this.pets.get(p.ownerId)?.apply(p, this.time.now);
+  /** Tinted looks are loaded on demand (base looks are preloaded). */
+  private petSheets: PetSheetLoader | null = null;
+
+  private ensureLook(p: PetSnap, view: PetView): void {
+    const look = petLook(p.species, p.tint);
+    if (look === p.species) {
+      ensurePetAnims(this, look);
       return;
     }
-    ensurePetAnims(this, p.species);
+    this.petSheets ??= new PetSheetLoader(this);
+    this.petSheets.request(look, () => {
+      if (this.pets.get(p.petId) === view && view.currentLook === look) view.setLook(look, true);
+    });
+  }
+
+  private changePet(p: PetSnap): void {
+    const view = this.pets.get(p.petId);
+    if (!view) return;
+    const before = view.currentLook;
+    view.apply(p, this.time.now);
+    if (view.currentLook !== before) this.ensureLook(p, view);
+  }
+
+  /** The owner's pet views, by slot. */
+  private petViewsOf(ownerId: string): PetView[] {
+    return [...this.pets.values()].filter((v) => v.ownerId === ownerId);
+  }
+
+  private addPet(p: PetSnap): void {
+    if (this.pets.has(p.petId)) {
+      this.changePet(p);
+      return;
+    }
     const isMine = p.ownerId === this.bridge.me.userId;
     const view = new PetView(this.stage, p, isMine, {
       onPetClick: (_v, pointer) =>
@@ -494,13 +522,14 @@ export class WorldScene extends Phaser.Scene {
     });
     view.timeZone = this.timeZone;
     view.apply(p, this.time.now);
-    this.pets.set(p.ownerId, view);
+    this.pets.set(p.petId, view);
+    this.ensureLook(p, view);
     this.dirty = true;
   }
 
-  private removePet(ownerId: string): void {
-    this.pets.get(ownerId)?.destroy();
-    this.pets.delete(ownerId);
+  private removePet(petId: string): void {
+    this.pets.get(petId)?.destroy();
+    this.pets.delete(petId);
   }
 
   private onChat(m: ChatMsg): void {
@@ -618,8 +647,8 @@ export class WorldScene extends Phaser.Scene {
         atDesk: this.atOwnSeat(p),
       });
     }
-    for (const [ownerId, pet] of this.pets) {
-      const owner = session.getPlayer(ownerId);
+    for (const pet of this.pets.values()) {
+      const owner = session.getPlayer(pet.ownerId);
       pet.setHidden(!owner || (!owner.shown && !owner.deskId));
     }
     this.applyPulse();
@@ -772,9 +801,9 @@ export class WorldScene extends Phaser.Scene {
   private bindBus(): void {
     const { bus } = this.bridge;
     this.offs.push(
-      bus.on('pet:bubble-hide', ({ bubbleId }) =>
-        this.pets.get(this.bridge.me.userId)?.dismissBubble(bubbleId),
-      ),
+      bus.on('pet:bubble-hide', ({ bubbleId }) => {
+        for (const v of this.petViewsOf(this.bridge.me.userId)) v.dismissBubble(bubbleId);
+      }),
       bus.on('camera:view-user', ({ userId }) => this.viewUser(userId)),
       bus.on('camera:zoom', ({ delta }) => this.zoomBy(delta, null)),
       bus.on('camera:insets', (insets) => {
@@ -848,7 +877,8 @@ export class WorldScene extends Phaser.Scene {
     this.layoutOverlays(now);
 
     const myView = this.avatars.get(this.bridge.me.userId);
-    this.pets.get(this.bridge.me.userId)?.setOwnerFeet(myView?.isShown ? myView.feet.x : null);
+    for (const v of this.petViewsOf(this.bridge.me.userId))
+      v.setOwnerFeet(myView?.isShown ? myView.feet.x : null);
     const tabVisible = typeof document === 'undefined' || document.visibilityState === 'visible';
     for (const v of this.pets.values()) v.update(now, tabVisible);
 
@@ -886,8 +916,10 @@ export class WorldScene extends Phaser.Scene {
         const v = this.avatars.get(userId);
         return v?.isShown ? this.toScreen(v.feet.x, v.feet.y - 14) : null;
       },
+      /** The owner's default pet (slot 0) on screen. */
       petScreen: (ownerId: string) => {
-        const v = this.pets.get(ownerId);
+        const id = this.bridge.session.petsOf(ownerId)[0]?.petId;
+        const v = id ? this.pets.get(id) : undefined;
         return v && !v.hidden ? this.toScreen(v.feet.x, v.feet.y - 6) : null;
       },
       tileScreen: (tx: number, ty: number) => this.toScreen(tileCenterX(tx), ty * TILE_PX + TILE_PX / 2),
@@ -925,7 +957,10 @@ export class WorldScene extends Phaser.Scene {
       officeOpen: () => this.officeOpen,
       avatarCount: () => [...this.avatars.values()].filter((v) => v.isShown).length,
       /** My own pet's bubble as drawn on the canvas (null while none is visible). */
-      petBubble: () => this.pets.get(this.bridge.me.userId)?.activeBubble ?? null,
+      petBubble: () =>
+        this.petViewsOf(this.bridge.me.userId)
+          .map((v) => v.activeBubble)
+          .find((b) => b !== null) ?? null,
       /** Someone's pet as this client decoded it (bubble fields are '' / 0 for everyone but the owner). */
       petState: (ownerId: string) => {
         const p = this.bridge.session.getPet(ownerId);
@@ -933,6 +968,16 @@ export class WorldScene extends Phaser.Scene {
         const { bubbleId, bubbleText, bubbleUntil, indicator } = p;
         return { bubbleId, bubbleText, bubbleUntil, indicator };
       },
+      /** Every pet of the owner as this client decoded it, by slot (looks and slots only, plus owner-only bubbles). */
+      petsOf: (ownerId: string) =>
+        this.bridge.session.petsOf(ownerId).map((p) => ({
+          petId: p.petId,
+          slot: p.slot,
+          species: p.species,
+          tint: p.tint,
+          name: p.name,
+          bubbleText: p.bubbleText,
+        })),
     };
     (window as unknown as { __ENU_DEN_DEBUG__?: typeof hook }).__ENU_DEN_DEBUG__ = hook;
     this.offs.push(() => {

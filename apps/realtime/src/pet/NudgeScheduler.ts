@@ -5,9 +5,11 @@ import type { Logger } from '../logger';
 import type { BubblePet, BubblePresenter, ShownBubble } from './BubblePresenter';
 import type { Candidate, CandidateLoader, OwnerSnapshot } from './CandidateLoader';
 
-/** Room callbacks the scheduler needs (it never touches room state other than the owner's pet). */
+/** Room callbacks the scheduler needs (it never touches room state other than the owner's pets). */
 export interface SchedulerHooks {
-  pet(userId: string): BubblePet | null;
+  /** The owner's pet `petId`, or their default pet when it is null or gone. */
+  pet(userId: string, petId?: string | null): BubblePet | null;
+  pets(userId: string): readonly BubblePet[];
   /** The owner's resolved activity is focus or meeting (the director's `resolved(id).dnd`). */
   doNotDisturb(userId: string): boolean;
   /** The town's office hours (`state.officeOpen`); while closed every pet is quiet. */
@@ -62,10 +64,9 @@ export class NudgeScheduler {
 
   async join(userId: string, init: { linkState: LinkState }): Promise<void> {
     const now = this.deps.clock.now();
-    // The Pet outlives sessions: a replaced (or crashed) session may have left a bubble on it, and a fresh
+    // Pets outlive sessions: a replaced (or crashed) session may have left a bubble on one, and a fresh
     // OwnerState (active = null) would never expire it, so the old text would play again.
-    const pet = this.deps.hooks.pet(userId);
-    if (pet) this.deps.presenter.hide(pet);
+    for (const pet of this.deps.hooks.pets(userId)) this.deps.presenter.hide(pet);
     this.owners.set(userId, {
       userId,
       joinedAt: now,
@@ -135,8 +136,7 @@ export class NudgeScheduler {
     const s = this.owners.get(userId);
     if (!s) return;
     s.active = null;
-    const pet = this.deps.hooks.pet(userId);
-    if (pet) this.deps.presenter.hide(pet);
+    for (const pet of this.deps.hooks.pets(userId)) this.deps.presenter.hide(pet);
   }
 
   /** Takes down bubbles whose display time is over (called from the room's fast loop). */
@@ -209,10 +209,10 @@ export class NudgeScheduler {
     const now = this.deps.clock.now();
     const sel = this.select(s, now);
     if (!sel.show) return;
-    const pet = this.deps.hooks.pet(s.userId);
+    const candidate = sel.candidate as Candidate;
+    const pet = this.deps.hooks.pet(s.userId, candidate.petId);
     if (!pet) return;
 
-    const candidate = sel.candidate as Candidate;
     const snap = s.snapshot;
     // Book-keeping first, so the next tick sees the new history even before the DB write lands.
     if (sel.trigger === 'join') s.flags.joinFired = true;

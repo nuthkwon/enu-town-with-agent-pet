@@ -1,11 +1,11 @@
 import { schema, t, type SchemaType } from '@colyseus/schema';
 
 /**
- * Synced room state. Players and pets are keyed by user id: every roster member has one of each,
- * whether or not anyone is connected. Activity fields come from the colleague projection
+ * Synced room state. Players are keyed by user id and pets by pet id: every roster member has one player and
+ * their pets (the default pet in slot 0, up to five; ADR 0005), whether or not anyone is connected. Activity fields come from the colleague projection
  * (`projectForColleagues`) and positions from the server director, so every client, the owner
  * included, decodes the same values.
- * Pet bubble fields are `.view()`-tagged: only the owner's StateView contains their own pet,
+ * Pet bubble fields are `.view()`-tagged: only the owner's StateView contains their own pets,
  * so nobody else ever receives the Claude-authored text. The shared `indicator` is never set by a bubble.
  */
 
@@ -48,8 +48,14 @@ export type Player = SchemaType<typeof Player>;
 
 export const Pet = schema(
   {
+    /** The pet's id (the `OfficeState.pets` key). */
+    petId: t.string(),
     ownerId: t.string(),
+    /** 0 = the owner's default pet (moved by the server); the others copy its pose and the client fans them out. */
+    slot: t.uint8().default(0),
     species: t.string(),
+    /** PetTint: 'base' for the default pet. */
+    tint: t.string().default('base'),
     name: t.string(),
     x: t.uint16().default(0),
     y: t.uint16().default(0),

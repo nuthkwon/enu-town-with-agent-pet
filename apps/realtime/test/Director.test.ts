@@ -32,8 +32,7 @@ function snap(userId: string, deskId: string | null, over: Partial<ActorSnapshot
     displayName: userId,
     avatarKey: 'av-m-short-black-sky-warm',
     deskId,
-    petSpecies: 'cat',
-    petName: '펫',
+    pets: [{ petId: `pet-${userId}`, species: 'cat', name: '펫', tint: 'base' }],
     linkState: 'linked',
     statusText: '',
     shareActivity: true,
@@ -53,7 +52,7 @@ function make(actors: ActorSnapshot[], opts: { pulseStep?: () => number } = {}) 
     state,
     warnings,
     p: (id: string) => state.players.get(id)!,
-    pet: (id: string) => state.pets.get(id)!,
+    pet: (id: string) => state.pets.get(`pet-${id}`)!,
   };
 }
 
@@ -526,11 +525,15 @@ describe('Director state discipline', () => {
     const player = t.p('a');
     const pet = t.pet('a');
     const r = t.d.upsertActor(
-      snap('a', 'L5a', { displayName: '새이름', petName: '모찌', linkState: 'not_linked' }),
+      snap('a', 'L5a', {
+        displayName: '새이름',
+        pets: [{ petId: 'pet-a', species: 'cat', name: '모찌', tint: 'base' }],
+        linkState: 'not_linked',
+      }),
     );
     expect(r).toEqual({ created: false, linkChanged: true });
     expect(t.state.players.get('a')).toBe(player);
-    expect(t.state.pets.get('a')).toBe(pet);
+    expect(t.state.pets.get('pet-a')).toBe(pet);
     expect(t.d.pet('a')).toBe(pet);
     expect(player).toMatchObject({ name: '새이름', deskId: 'L5a' });
     expect(pet.name).toBe('모찌');
@@ -539,7 +542,7 @@ describe('Director state discipline', () => {
     expect({ x: player.x, y: player.y }).toEqual({ x: seatOf('L5a').x, y: seatOf('L5a').y });
     expect(t.d.removeActor('a')).toBe(true);
     expect(t.state.players.has('a')).toBe(false);
-    expect(t.state.pets.has('a')).toBe(false);
+    expect(t.state.pets.has('pet-a')).toBe(false);
   });
 
   it('unchanged inputs produce zero schema writes', () => {
@@ -584,5 +587,84 @@ describe('Director state discipline', () => {
     const two = build([...actors].reverse());
     expect(two).toEqual(one);
     expect(one.actors.map((a) => a.userId)).toEqual(['a', 'b', 'e', 'c', 'd']);
+  });
+});
+
+describe('several pets per person (protocol 3)', () => {
+  const pets = (...ids: string[]) =>
+    ids.map((id, i) => ({
+      petId: id,
+      species: i === 0 ? 'cat' : 'owl',
+      name: id,
+      tint: i === 0 ? 'base' : 'mint',
+    }));
+
+  function withPets(initial: string[]) {
+    const state = new OfficeState();
+    const added: string[] = [];
+    const removed: string[] = [];
+    const d = new Director({
+      world,
+      state,
+      timeZone: TZ,
+      onPetAdded: (owner, pet) => added.push(`${owner}:${pet.petId}`),
+      onPetRemoved: (owner, pet) => removed.push(`${owner}:${pet.petId}`),
+    });
+    d.upsertActor(snap('a', 'L1a', { pets: pets(...initial) }));
+    return { d, state, added, removed };
+  }
+
+  it('keys pets by id with their slot, and the extra pets keep the default pet company', () => {
+    const t = withPets(['p0', 'p1', 'p2']);
+    t.d.setSession('a', 'open', T10);
+    t.d.evaluate(T10, 0, { snap: true });
+    steps(t.d, 0, 2000);
+    const [lead, one, two] = ['p0', 'p1', 'p2'].map((id) => t.state.pets.get(id)!);
+    expect([lead!.slot, one!.slot, two!.slot]).toEqual([0, 1, 2]);
+    expect(one).toMatchObject({
+      ownerId: 'a',
+      species: 'owl',
+      tint: 'mint',
+      x: lead!.x,
+      y: lead!.y,
+      dir: lead!.dir,
+    });
+    expect(t.d.pet('a')).toBe(lead);
+    expect(t.d.petFor('a', 'p2')).toBe(two);
+    expect(t.d.petFor('a', 'unknown')).toBe(lead);
+    expect(t.d.petsOf('a')).toEqual([lead, one, two]);
+  });
+
+  it('adds, reorders and removes pets in place during office hours', () => {
+    const t = withPets(['p0', 'p1']);
+    t.d.evaluate(T10, 0, { snap: true });
+    const kept = t.state.pets.get('p1');
+    t.d.upsertActor(snap('a', 'L1a', { pets: pets('p0', 'p3', 'p1') }));
+    expect(t.state.pets.get('p1')).toBe(kept);
+    expect(kept!.slot).toBe(2);
+    expect(t.added).toEqual(['a:p3']);
+    t.d.upsertActor(snap('a', 'L1a', { pets: pets('p0', 'p3') }));
+    expect(t.state.pets.has('p1')).toBe(false);
+    expect(t.removed).toEqual(['a:p1']);
+    expect(t.state.pets.size).toBe(2);
+  });
+
+  it('holds pet changes made after hours until the office opens (no after-hours tell)', () => {
+    const t = withPets(['p0']);
+    const night = kst(2026, 10, 28, 21, 0);
+    t.d.evaluate(night, 0, { snap: true });
+    t.d.upsertActor(snap('a', 'L1a', { pets: pets('p0', 'p1') }));
+    t.d.evaluate(night, 1000);
+    expect(t.state.pets.has('p1')).toBe(false);
+    t.d.evaluate(T10, 2000);
+    expect(t.state.pets.has('p1')).toBe(true);
+    expect(t.added).toEqual(['a:p1']);
+  });
+
+  it('removing the person removes every pet', () => {
+    const t = withPets(['p0', 'p1']);
+    t.d.removeActor('a');
+    expect(t.state.pets.size).toBe(0);
+    expect(t.removed.sort()).toEqual(['a:p0', 'a:p1']);
   });
 });

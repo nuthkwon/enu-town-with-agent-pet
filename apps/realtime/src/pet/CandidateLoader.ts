@@ -19,6 +19,8 @@ function claudeAuthored(text: string): ClaudeAuthoredText {
 /** A bubble candidate whose text provably came from the DB rows Claude wrote. */
 export interface Candidate extends BubbleCandidate {
   text: ClaudeAuthoredText;
+  /** The pet that says it (a nudge's `pet_id`); null = the owner's default pet. */
+  petId: string | null;
 }
 
 export interface NudgeRow {
@@ -33,6 +35,8 @@ export interface NudgeRow {
   createdAt: Date;
   /** Due time of the linked to-do, if any (drawn as a chip outside the bubble). */
   dueAt: Date | null;
+  /** The owner's pet chosen by their Claude; null = the default pet. */
+  petId?: string | null;
 }
 
 export interface TodoRow {
@@ -59,6 +63,7 @@ export function nudgeRowToCandidate(row: NudgeRow): Candidate {
     shownCount: row.showCount,
     maxShows: row.maxShows,
     createdAt: row.createdAt,
+    petId: row.petId ?? null,
   };
 }
 
@@ -75,6 +80,7 @@ export function todoRowToCandidate(row: TodoRow, timing: Pick<PolicyTiming, 'due
     shownCount: 0,
     maxShows: timing.dueWindowsMin.length,
     createdAt: row.createdAt,
+    petId: null,
   };
 }
 
@@ -135,6 +141,7 @@ export class CandidateLoader {
         maxShows: petNudges.maxShows,
         createdAt: petNudges.createdAt,
         dueAt: todos.dueAt,
+        petId: petNudges.petId,
       })
       .from(petNudges)
       .leftJoin(todos, eq(todos.id, petNudges.todoId))

@@ -4,6 +4,7 @@ import { APP_TIMEZONE_DEFAULT, formatLocalHm } from '@enu/shared';
 import type { PetSnap } from '../../realtime/types';
 import { TEX } from '../assets';
 import { petAnimKey, petDirection, toDir } from '../logic/direction';
+import { petClusterOffset, petLook } from '../logic/petCluster';
 import { TileInterpolator } from '../logic/interpolation';
 import { EFFECT_FRAMES, PET_ORIGIN, type PetAnim, type PetDirection } from '../spriteSpec';
 import { DEPTH, TILE_PX, tileCenterX, type Stage } from '../stage';
@@ -38,6 +39,7 @@ export interface PetBubbleClick {
  */
 export class PetView {
   readonly ownerId: string;
+  readonly petId: string;
   readonly isMine: boolean;
   readonly interp: TileInterpolator;
   private readonly root: Phaser.GameObjects.Container;
@@ -46,7 +48,9 @@ export class PetView {
   private readonly icon: Phaser.GameObjects.Image;
   private readonly bubble: PetSpeechBubble | null;
   private readonly chip: DueChip | null;
-  private species = '';
+  /** Texture look (`petLook`): the species, plus the tint when it is not base. */
+  private look = '';
+  private offset = { dx: 0, dy: 0 };
   private lastHorizontal: PetDirection = 'right';
   private snap: PetSnap;
   private bubbleShownId = '';
@@ -72,7 +76,9 @@ export class PetView {
   ) {
     const scene = stage.scene;
     this.ownerId = snap.ownerId;
+    this.petId = snap.petId;
     this.isMine = isMine;
+    this.offset = petClusterOffset(snap.slot);
     this.snap = snap;
     this.onBubbleSeen = handlers.onBubbleSeen;
     this.interp = new TileInterpolator(snap.x, snap.y, toDir(snap.dir), PET_STEP_MS);
@@ -101,24 +107,31 @@ export class PetView {
       this.bubble = null;
       this.chip = null;
     }
-    this.setSpecies(snap.species);
+    this.setLook(petLook(snap.species, snap.tint));
   }
 
-  setSpecies(species: string): void {
-    if (species === this.species) return;
-    this.species = species;
-    const tex = TEX.pet(species);
+  /** Switches to a look's sheet; `force` re-applies it once a sheet loaded on demand is ready. */
+  setLook(look: string, force = false): void {
+    if (look === this.look && !force) return;
+    this.look = look;
+    const tex = TEX.pet(look);
     if (this.stage.scene.textures.exists(tex)) {
       this.sprite.setTexture(tex, 0).setVisible(true);
       this.sprite.anims.stop();
     }
   }
 
+  get currentLook(): string {
+    return this.look;
+  }
+
   /** Latest synced snapshot of this pet. */
   apply(snap: PetSnap, now: number): void {
     const prev = this.snap;
     this.snap = snap;
-    if (snap.species !== prev.species) this.setSpecies(snap.species);
+    if (snap.species !== prev.species || snap.tint !== prev.tint)
+      this.setLook(petLook(snap.species, snap.tint));
+    if (snap.slot !== prev.slot) this.offset = petClusterOffset(snap.slot);
     if (snap.x !== prev.x || snap.y !== prev.y) this.interp.push(snap.x, snap.y);
     if (this.bubble) this.syncBubble(now);
   }
@@ -209,8 +222,9 @@ export class PetView {
 
     const sleeping = anim === 'sleep';
     const bob = anim === 'idle' ? Math.round(Math.sin(now / 420 + this.phase) * 1.5) : 0;
-    this.feetX = Math.round(tileCenterX(s.x));
-    this.feetY = Math.round(s.y * TILE_PX + (sleeping ? SLEEP_FEET_IN_TILE : HOVER_FEET_IN_TILE));
+    this.feetX = Math.round(tileCenterX(s.x)) + this.offset.dx;
+    this.feetY =
+      Math.round(s.y * TILE_PX + (sleeping ? SLEEP_FEET_IN_TILE : HOVER_FEET_IN_TILE)) + this.offset.dy;
     this.root.setPosition(this.feetX, this.feetY + 4);
     // depth: pets fly, so they sit in front of everything on their own row, monitors included (a pet
     // perched on its hidden owner's desk is drawn in front of the monitor, not behind it)
@@ -220,7 +234,7 @@ export class PetView {
     this.shadow.setScale(1 + (bob < 0 ? 0.08 * bob : 0), 1);
 
     if (this.sprite.visible) {
-      const key = petAnimKey(this.species, dir, anim);
+      const key = petAnimKey(this.look, dir, anim);
       if (this.sprite.anims.currentAnim?.key !== key && this.stage.scene.anims.exists(key)) {
         this.sprite.play(key, true);
       }

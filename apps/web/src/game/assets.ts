@@ -58,6 +58,43 @@ export function loadPetSheet(load: Phaser.Loader.LoaderPlugin, species: string):
   });
 }
 
+/**
+ * Tinted pet sheets (`pt-<species>-<tint>` from the sprite API), loaded once on demand; base looks are preloaded.
+ * `onReady` runs when the texture and its animations exist.
+ */
+export class PetSheetLoader {
+  private readonly pending = new Map<string, Array<() => void>>();
+
+  constructor(private readonly scene: Phaser.Scene) {}
+
+  request(look: string, onReady: () => void): void {
+    const tex = TEX.pet(look);
+    if (this.scene.textures.exists(tex)) {
+      ensurePetAnims(this.scene, look);
+      onReady();
+      return;
+    }
+    if (!/^[a-z]{2,16}-[a-z]{2,16}$/.test(look)) return;
+    const waiting = this.pending.get(look);
+    if (waiting) {
+      waiting.push(onReady);
+      return;
+    }
+    this.pending.set(look, [onReady]);
+    this.scene.load.once(`filecomplete-spritesheet-${tex}`, () => {
+      ensurePetAnims(this.scene, look);
+      const cbs = this.pending.get(look) ?? [];
+      this.pending.delete(look);
+      for (const cb of cbs) cb();
+    });
+    this.scene.load.spritesheet(tex, SPRITE_PATHS.petApi(`pt-${look}`), {
+      frameWidth: PET_FRAME,
+      frameHeight: PET_FRAME,
+    });
+    if (!this.scene.load.isLoading()) this.scene.load.start();
+  }
+}
+
 export function loadEffects(load: Phaser.Loader.LoaderPlugin): void {
   load.spritesheet(TEX.effects, SPRITE_PATHS.effects, {
     frameWidth: EFFECT_FRAME,

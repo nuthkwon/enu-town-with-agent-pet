@@ -11,6 +11,7 @@ import {
   startHarness,
   waitFor,
   type Harness,
+  petOf,
 } from './helpers/server';
 
 const PORT = 3314;
@@ -56,7 +57,7 @@ describe('pet bubbles (nudges)', () => {
     const jo = await joinAs(h, owner.id);
     const jx = await joinAs(h, other.id);
 
-    const ownPet = () => jo.room.state.pets.get(owner.id);
+    const ownPet = () => petOf(jo.room.state, owner.id);
     await waitFor(() => ownPet()?.bubbleText === text, { message: 'owner bubble' });
     expect(ownPet().bubbleId).toBe(nudgeId);
     expect(ownPet().bubbleKind).toBe(BubbleKind.Nudge);
@@ -65,14 +66,14 @@ describe('pet bubbles (nudges)', () => {
     expect(ownPet().bubbleUntil).toBeGreaterThan(h.clock.now().getTime());
 
     // StateView isolation: the other client gets neither the text nor any sign that a bubble is up.
-    const seenByOther = () => jx.room.state.pets.get(owner.id);
+    const seenByOther = () => petOf(jx.room.state, owner.id);
     await sleep(300);
     expect(seenByOther().indicator).toBe(Indicator.None);
     expect(seenByOther().bubbleText ?? '').toBe('');
     expect(seenByOther().bubbleId ?? '').toBe('');
     expect(seenByOther().bubbleText).toBeUndefined();
     // ...and the owner does not see the other's (empty) private fields either way
-    expect(jo.room.state.pets.get(other.id).bubbleText).toBeUndefined();
+    expect(petOf(jo.room.state, other.id).bubbleText).toBeUndefined();
 
     await waitFor(
       async () => {
@@ -106,7 +107,7 @@ describe('pet bubbles (nudges)', () => {
     await insertNudge(owner.id, '연결 안 된 펫은 말하지 않아요');
     const jo = await joinAs(h, owner.id);
     await sleep(1200);
-    const pet = jo.room.state.pets.get(owner.id);
+    const pet = petOf(jo.room.state, owner.id);
     expect(pet.bubbleText).toBe('');
     expect(pet.indicator).toBe(Indicator.None);
     expect(
@@ -121,9 +122,9 @@ describe('pet bubbles (nudges)', () => {
     await insertNudge(owner.id, text, { expiresAt: kst(2026, 10, 29, 19, 0) });
     const jo = await joinAs(h, owner.id);
     await sleep(1200);
-    expect(jo.room.state.pets.get(owner.id).bubbleText).toBe('');
+    expect(petOf(jo.room.state, owner.id).bubbleText).toBe('');
     h.clock.set(kst(2026, 10, 29, 9, 0));
-    await waitFor(() => jo.room.state.pets.get(owner.id).bubbleText === text, {
+    await waitFor(() => petOf(jo.room.state, owner.id).bubbleText === text, {
       message: 'bubble after quiet hours',
     });
   });
@@ -141,7 +142,7 @@ describe('pet bubbles (nudges)', () => {
       priority: 1,
     });
     const jo = await joinAs(h, owner.id);
-    const pet = () => jo.room.state.pets.get(owner.id);
+    const pet = () => petOf(jo.room.state, owner.id);
     await waitFor(() => pet().bubbleText === 'V&V 보고서 제출', { message: 'due bubble' });
     expect(pet().bubbleKind).toBe(BubbleKind.TodoDue);
     expect(pet().bubbleDueAt).toBe(dueAt.getTime());
@@ -163,9 +164,9 @@ describe('pet bubbles (nudges)', () => {
     const jo = await joinAs(h, owner.id);
     jo.room.send('presence', { visible: false, uiBusy: false });
     await sleep(900);
-    expect(jo.room.state.pets.get(owner.id).bubbleText).toBe('');
+    expect(petOf(jo.room.state, owner.id).bubbleText).toBe('');
     jo.room.send('presence', { visible: true, uiBusy: false });
-    await waitFor(() => jo.room.state.pets.get(owner.id).bubbleText === '탭이 보일 때만 말해요');
+    await waitFor(() => petOf(jo.room.state, owner.id).bubbleText === '탭이 보일 때만 말해요');
   });
   for (const how of ['leave', 'second tab'] as const) {
     it(`a bubble on screen when the owner's session ends (${how}) is taken down, also after an ack`, async () => {
@@ -180,7 +181,7 @@ describe('pet bubbles (nudges)', () => {
       const nudgeId = await insertNudge(owner.id, text);
       const jx = await joinAs(h, other.id);
       const jo = await joinAs(h, owner.id);
-      await waitFor(() => jo.room.state.pets.get(owner.id)?.bubbleText === text, { message: 'owner bubble' });
+      await waitFor(() => petOf(jo.room.state, owner.id)?.bubbleText === text, { message: 'owner bubble' });
       const room = serverRoom(h, jo);
       const serverPet = () => room.townDirector.pet(owner.id)!;
       expect(serverPet().bubbleId).toBe(nudgeId);
@@ -208,10 +209,10 @@ describe('pet bubbles (nudges)', () => {
       await notifyTown(h.db, { v: 1, type: 'nudges_changed', user_id: owner.id });
       await sleep(400);
       expect(serverPet()).toMatchObject({ bubbleId: '', bubbleText: '', indicator: Indicator.None });
-      expect(jx.room.state.pets.get(owner.id).indicator).toBe(Indicator.None);
+      expect(petOf(jx.room.state, owner.id).indicator).toBe(Indicator.None);
       if (rejoined) {
         // (c) the new tab never got the old (now acked) text
-        const pet = rejoined.room.state.pets.get(owner.id);
+        const pet = petOf(rejoined.room.state, owner.id);
         expect(pet.bubbleText).toBe('');
         expect(pet.bubbleId).toBe('');
       }

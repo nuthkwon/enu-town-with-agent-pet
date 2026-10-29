@@ -89,6 +89,7 @@ function setup(
     timing: { ...DEFAULT_TIMING, joinDelayMs: 8000 },
     hooks: {
       pet: () => pet,
+      pets: () => [pet],
       doNotDisturb: () => flags.dnd,
       officeOpen: () => flags.officeOpen,
       ...opts.hooks?.(pet),
@@ -299,8 +300,7 @@ describe('NudgeScheduler hooks from the director', () => {
       displayName: '가',
       avatarKey: 'av',
       deskId: 'L1a',
-      petSpecies: 'cat',
-      petName: '나비',
+      pets: [{ petId: 'pet-u1', species: 'cat', name: '나비', tint: 'base' }],
       linkState: 'linked',
       statusText: '',
       shareActivity: true,
@@ -331,7 +331,7 @@ describe('NudgeScheduler hooks from the director', () => {
     /** Every synced field except the owner-only `.view()` bubble fields. */
     const shared = () => {
       const p = state.players.get('u1')!;
-      const pet = state.pets.get('u1')!;
+      const pet = state.pets.get('pet-u1')!;
       return {
         player: {
           x: p.x,

@@ -1,4 +1,4 @@
-import { newId, petNudges, profiles, todos } from '@enu/db';
+import { newId, newOpaqueId, notifyTown, petNudges, pets, profiles, todos } from '@enu/db';
 import { Indicator, PlateNote, SourceCode, type ErrorMsg } from '@enu/protocol';
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -14,6 +14,7 @@ import {
   waitFor,
   type Harness,
   type Joined,
+  petOf,
 } from './helpers/server';
 
 const PORT = 3316;
@@ -45,9 +46,11 @@ async function nudgeFor(userId: string, text: string): Promise<void> {
 /** Records every decoded value of `pets[ownerId].indicator` after each state patch. */
 function watchIndicator(j: Joined, ownerId: string): number[] {
   const seen: number[] = [];
-  j.room.onStateChange((state: { pets?: Map<string, { indicator?: number }> }) => {
-    const v = state.pets?.get(ownerId)?.indicator;
-    if (v !== undefined) seen.push(v);
+  j.room.onStateChange((state: { pets: Map<string, { ownerId?: string; indicator?: number }> }) => {
+    // Every pet of the owner (keyed by pet id since protocol 3).
+    state.pets.forEach((pet) => {
+      if (pet.ownerId === ownerId && pet.indicator !== undefined) seen.push(pet.indicator);
+    });
   });
   return seen;
 }
@@ -82,9 +85,9 @@ describe('pet bubbles stay owner-only', () => {
     const jb = await joinAs(h, b.id, { frames: bFrames });
     const seen = watchIndicator(jb, a.id);
     const ja = await joinAs(h, a.id, { frames: aFrames });
-    await waitFor(() => ja.room.state.pets.get(a.id)?.bubbleText === text, { message: 'owner bubble' });
+    await waitFor(() => petOf(ja.room.state, a.id)?.bubbleText === text, { message: 'owner bubble' });
     await sleep(400);
-    const otherPet = jb.room.state.pets.get(a.id);
+    const otherPet = petOf(jb.room.state, a.id);
     expect(otherPet.bubbleText ?? '').toBe('');
     expect(otherPet.bubbleId ?? '').toBe('');
     expect(otherPet.bubbleUntil ?? 0).toBe(0);
@@ -109,7 +112,7 @@ describe('pet bubbles stay owner-only', () => {
     const jb = await joinAs(h, b.id);
     const seen = watchIndicator(jb, a.id);
     const ja = await joinAs(h, a.id);
-    await waitFor(() => ja.room.state.pets.get(a.id)?.bubbleText === text, { message: 'owner bubble' });
+    await waitFor(() => petOf(ja.room.state, a.id)?.bubbleText === text, { message: 'owner bubble' });
     await sleep(600);
     expect(jb.room.state.players.get(a.id)).toMatchObject({ shown: true, online: false });
     expect(seen.length).toBeGreaterThan(0);
@@ -127,7 +130,7 @@ describe('pet bubbles stay owner-only', () => {
     await nudgeFor(a.id, text);
     const jb = await joinAs(h, b.id);
     const ja = await joinAs(h, a.id);
-    await waitFor(() => ja.room.state.pets.get(a.id)?.bubbleText === text, { message: 'owner bubble' });
+    await waitFor(() => petOf(ja.room.state, a.id)?.bubbleText === text, { message: 'owner bubble' });
     const seen = watchIndicator(jb, a.id);
     const room = serverRoom(h, jb);
     await ja.room.leave();
@@ -146,7 +149,7 @@ describe('pet bubbles stay owner-only', () => {
     room.evaluateNow();
     const again = await joinAs(h, a.id);
     await sleep(400);
-    const pet = again.room.state.pets.get(a.id);
+    const pet = petOf(again.room.state, a.id);
     expect(pet.bubbleText).toBe('');
     expect(pet.bubbleId).toBe('');
     expect(pet.bubbleUntil).toBe(0);
@@ -188,12 +191,12 @@ describe('pet bubbles stay owner-only', () => {
       const jb = await joinAs(h, b.id);
       const seen = watchIndicator(jb, a.id);
       const ja = await joinAs(h, a.id);
-      await waitFor(() => ja.room.state.pets.get(a.id)?.bubbleText === text, { message: 'owner bubble' });
+      await waitFor(() => petOf(ja.room.state, a.id)?.bubbleText === text, { message: 'owner bubble' });
       expect(ja.room.state.players.get(a.id).shown).toBe(false);
       await sleep(600);
       expect(seen.length).toBeGreaterThan(0);
       expect(seen).not.toContain(Indicator.Dots);
-      expect(jb.room.state.pets.get(a.id).indicator).toBe(Indicator.None);
+      expect(petOf(jb.room.state, a.id).indicator).toBe(Indicator.None);
       expect(jb.room.state.players.get(a.id)).toMatchObject({ shown: false, online: false });
     });
   }
@@ -227,7 +230,7 @@ describe('pet bubbles stay owner-only', () => {
       expect(j.room.state.officeOpen).toBe(false);
       for (const id of [a.id, b.id]) expect(j.room.state.players.get(id)).toMatchObject(NEUTRAL);
     }
-    expect(ja.room.state.pets.get(a.id).bubbleText).toBe('');
+    expect(petOf(ja.room.state, a.id).bubbleText).toBe('');
     expect(seen).not.toContain(Indicator.Dots);
     // waves need the office open; pings need someone online
     ja.room.send('social:wave', { toUserId: b.id });
@@ -337,5 +340,74 @@ describe('interactions never leak who is connected or who talks to whom', () => 
     await sleep(300);
     expect(jc.inbox.of('dm:msg')).toHaveLength(0);
     expect(jc.inbox.all.filter((m) => m.type !== 'dm:unread')).toHaveLength(0);
+  });
+});
+
+describe('several pets per person', () => {
+  /** Every pet of `ownerId` in a decoded or server state, by slot. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const petsOf = (state: any, ownerId: string): any[] => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const out: any[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    state.pets.forEach((p: any) => p.ownerId === ownerId && out.push(p));
+    return out.sort((x, y) => x.slot - y.slot);
+  };
+
+  it('shows a nudge on the pet it names, only to the owner, and pets added later reach both views', async () => {
+    const a = await makeUser(h, { deskId: 'L3a', linkState: 'linked' });
+    const b = await makeUser(h, { deskId: 'L3b' });
+    const second = newOpaqueId();
+    await h.db.insert(pets).values({
+      id: second,
+      userId: a.id,
+      name: '리뷰봇',
+      species: 'owl',
+      tint: 'mint',
+      isDefault: false,
+      sortOrder: 1,
+    });
+    const text = '리뷰봇이 알려 주는 넛지';
+    const now = h.clock.now();
+    await h.db.insert(petNudges).values({
+      id: newId(),
+      userId: a.id,
+      petId: second,
+      text,
+      priority: 2,
+      showAfter: new Date(now.getTime() - MIN),
+      expiresAt: new Date(now.getTime() + 2 * 60 * MIN),
+    });
+    const bFrames: Uint8Array[] = [];
+    const jb = await joinAs(h, b.id, { frames: bFrames });
+    const ja = await joinAs(h, a.id);
+    await waitFor(() => petsOf(ja.room.state, a.id)[1]?.bubbleText === text, {
+      message: 'bubble on the second pet',
+    });
+    const [lead, owl] = petsOf(ja.room.state, a.id);
+    expect(lead.bubbleText ?? '').toBe('');
+    expect(owl).toMatchObject({ petId: second, slot: 1, species: 'owl', tint: 'mint', name: '리뷰봇' });
+    const seenByB = petsOf(jb.room.state, a.id);
+    expect(seenByB.map((p) => p.petId)).toEqual([lead.petId, second]);
+    for (const p of seenByB) expect(p.bubbleText ?? '').toBe('');
+    expect(bFrames.some((f) => contains(f, new TextEncoder().encode(text)))).toBe(false);
+
+    const third = newOpaqueId();
+    await h.db.insert(pets).values({
+      id: third,
+      userId: a.id,
+      name: '셋째',
+      species: 'frog',
+      tint: 'sky',
+      isDefault: false,
+      sortOrder: 2,
+    });
+    await notifyTown(h.db, { v: 1, type: 'pets_changed', user_id: a.id });
+    await waitFor(() => petsOf(jb.room.state, a.id).length === 3, { message: 'colleague sees the new pet' });
+    await waitFor(() => petsOf(ja.room.state, a.id).length === 3, { message: 'owner sees the new pet' });
+    await h.db.delete(pets).where(eq(pets.id, second));
+    await notifyTown(h.db, { v: 1, type: 'pets_changed', user_id: a.id });
+    await waitFor(() => petsOf(jb.room.state, a.id).length === 2, { message: 'removed pet leaves' });
+    expect(petsOf(jb.room.state, a.id).map((p) => p.slot)).toEqual([0, 1]);
   });
 });

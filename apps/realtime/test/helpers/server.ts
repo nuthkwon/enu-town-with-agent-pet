@@ -312,3 +312,17 @@ export async function setWorkLog(
   });
   return id;
 }
+
+/**
+ * The owner's default pet (slot 0) in a server or decoded client state: since protocol 3 pets are keyed by
+ * pet id, not by owner.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function petOf(state: { pets: { forEach(cb: (pet: any) => void): void } }, ownerId: string): any {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let found: any;
+  state.pets.forEach((pet) => {
+    if (pet.ownerId === ownerId && pet.slot === 0) found = pet;
+  });
+  return found;
+}

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { REJOIN_MAX_ATTEMPTS, backoffMs, leaveAction, sdkWillAutoReconnect } from './closeCodes';
 import {
   RealtimeSession,
+  copyPet,
   TicketError,
   copyPlayer,
   type ClientLike,
@@ -529,6 +530,30 @@ describe('RealtimeSession', () => {
     h.session.markDmRead('a', 'd2');
     expect(room.sent).toContainEqual([MSG.dmRead, { peerUserId: 'a', lastMessageId: 'd2' }]);
     expect(h.session.getDmUnread()).toEqual({ total: 1, byPeer: { b: 1 } });
+  });
+
+  it('keys pets by pet id and finds the pet that matters for an owner', async () => {
+    const h = harness();
+    h.session.start();
+    await flush();
+    const sink = h.sinks[0] as StateSink;
+    const pet = (petId: string, slot: number, over: Record<string, unknown> = {}) =>
+      copyPet(
+        { petId, ownerId: 'u-me', slot, species: 'cat', tint: slot ? 'mint' : 'base', name: petId, ...over },
+        petId,
+      );
+    sink.petUpsert(pet('p1', 1));
+    sink.petUpsert(pet('p0', 0));
+    sink.petUpsert(copyPet({ petId: 'q0', ownerId: 'u-other', slot: 0, species: 'fox', name: 'q' }, 'q0'));
+    expect(h.session.petsOf('u-me').map((p) => p.petId)).toEqual(['p0', 'p1']);
+    expect(h.session.getPet('u-me')?.petId).toBe('p0');
+    expect(h.session.getPet('u-other')?.tint).toBe('base');
+    // The pet carrying my bubble wins (only the owner ever decodes bubble fields).
+    sink.petUpsert(pet('p1', 1, { bubbleId: 'b1', bubbleText: '리뷰 하나만 먼저!' }));
+    expect(h.session.getPet('u-me')?.petId).toBe('p1');
+    sink.petRemove('p1');
+    expect(h.session.petsOf('u-me').map((p) => p.petId)).toEqual(['p0']);
+    expect(h.session.getPetById('q0')?.ownerId).toBe('u-other');
   });
 
   it('passes the owner-only pet refetch signal on with ids only', async () => {
