@@ -1,16 +1,24 @@
 import { provisionProfile } from '@enu/auth';
-import { desks, privacyConsents, profiles, type Db, type DbOrTx } from '@enu/db';
+import { activityReports, desks, privacyConsents, profiles, takenPetSpecies, type Db, type DbOrTx } from '@enu/db';
 import {
+  MANUAL_STATUSES,
   PRIVACY_NOTICE_VERSION,
+  SCHEDULE_KINDS,
   VISIBILITIES,
   avatarSpriteKey,
+  localDateKey,
   teamLabel,
+  type ActivityTodayDto,
+  type ManualStatus,
+  type ManualStatusDto,
   type MeDto,
+  type PetSpecies,
   type Visibility,
 } from '@enu/shared';
 import { and, eq, isNull } from 'drizzle-orm';
 import { mcpResource } from '../auth';
 import { asLinkState, asTeamId, normalizeAvatar, type ProfileRow } from '../dto';
+import { getEnv } from '../env';
 import type { Viewer } from '../session';
 
 export async function loadProfile(db: DbOrTx, userId: string): Promise<ProfileRow | undefined> {
@@ -57,12 +65,47 @@ export async function hasAcceptedNotice(
 const asVisibility = (v: string | null): Visibility | null =>
   v && (VISIBILITIES as readonly string[]).includes(v) ? (v as Visibility) : null;
 
-export function toMeDto(
-  p: ProfileRow,
-  viewer: Viewer,
-  deskId: string | null,
-  noticeAccepted: boolean,
-): MeDto {
+/** The owner's hand-set status while it lasts (expired values are never returned). */
+export function activeManualStatus(p: ProfileRow, now: Date): ManualStatusDto | null {
+  if (!p.manualStatus || !p.manualStatusUntil || p.manualStatusUntil <= now) return null;
+  if (!(MANUAL_STATUSES as readonly string[]).includes(p.manualStatus)) return null;
+  return { status: p.manualStatus as ManualStatus, until: p.manualStatusUntil.toISOString() };
+}
+
+/**
+ * The owner's own activity report for today's office day (APP_TIMEZONE): a `now` past its until is not
+ * current any more. Refs are never returned, only whether a block had one.
+ */
+export async function loadActivityToday(
+  db: DbOrTx,
+  userId: string,
+  now: Date,
+  officeTimeZone: string,
+): Promise<ActivityTodayDto | null> {
+  const [row] = await db
+    .select({ nowKind: activityReports.nowKind, nowUntil: activityReports.nowUntil, schedule: activityReports.schedule })
+    .from(activityReports)
+    .where(and(eq(activityReports.userId, userId), eq(activityReports.periodKey, localDateKey(now, officeTimeZone))))
+    .limit(1);
+  if (!row) return null;
+  return {
+    now: row.nowKind && row.nowUntil && row.nowUntil > now ? { kind: row.nowKind, until: row.nowUntil.toISOString() } : null,
+    schedule: row.schedule
+      .filter((b) => (SCHEDULE_KINDS as readonly string[]).includes(b.kind))
+      .map((b) => ({ startAt: b.start_at, endAt: b.end_at, kind: b.kind, hasRef: b.ref_hash !== null })),
+  };
+}
+
+export interface MeContext {
+  deskId: string | null;
+  noticeAccepted: boolean;
+  /** APP_TIMEZONE. */
+  officeTimeZone: string;
+  activityToday: ActivityTodayDto | null;
+  takenPetSpecies: PetSpecies[];
+}
+
+export function toMeDto(p: ProfileRow, viewer: Viewer, ctx: MeContext, now: Date): MeDto {
   const avatar = normalizeAvatar(p.avatar);
   const team = asTeamId(p.team);
   return {
@@ -72,7 +115,7 @@ export function toMeDto(
     avatar,
     avatarKey: avatarSpriteKey(avatar),
     pet: { species: p.petSpecies, name: p.petName },
-    deskId,
+    deskId: ctx.deskId,
     team,
     teamLabel: teamLabel(team),
     title: p.title ?? null,
@@ -93,17 +136,26 @@ export function toMeDto(
       quietStart: p.quietStart,
       quietEnd: p.quietEnd,
     },
+    shareActivity: p.shareActivity,
+    showLive: p.showLive,
+    officeTimeZone: ctx.officeTimeZone,
+    manualStatus: activeManualStatus(p, now),
+    activityToday: ctx.activityToday,
+    takenPetSpecies: ctx.takenPetSpecies,
     noticeVersion: PRIVACY_NOTICE_VERSION,
-    noticeAccepted,
+    noticeAccepted: ctx.noticeAccepted,
     mcpUrl: mcpResource(),
   };
 }
 
-export async function buildMeDto(db: Db, viewer: Viewer): Promise<MeDto> {
+export async function buildMeDto(db: Db, viewer: Viewer, now = new Date()): Promise<MeDto> {
   const p = await ensureProfile(db, viewer);
-  const [deskId, accepted] = await Promise.all([
+  const officeTimeZone = getEnv().APP_TIMEZONE;
+  const [deskId, noticeAccepted, activityToday, taken] = await Promise.all([
     deskOf(db, viewer.userId),
     hasAcceptedNotice(db, viewer.userId),
+    loadActivityToday(db, viewer.userId, now, officeTimeZone),
+    takenPetSpecies(db, viewer.userId),
   ]);
-  return toMeDto(p, viewer, deskId, accepted);
+  return toMeDto(p, viewer, { deskId, noticeAccepted, officeTimeZone, activityToday, takenPetSpecies: taken }, now);
 }

@@ -1,4 +1,5 @@
 import {
+  activityReports,
   chatMessages,
   claudeLinks,
   desks,
@@ -15,8 +16,9 @@ import { asc, eq, isNull, and } from 'drizzle-orm';
 
 /**
  * Everything ENU Town stores about the viewer that they authored or that is about them:
- * profile, logs, to-dos, pet bubbles, the chat messages they SENT, consents and Claude links.
- * Messages other people sent (including DMs to the viewer) are not included.
+ * profile (incl. 활동 공유, 접속 표시 and the hand-set status), logs, today's activity report (refs only
+ * as has_ref: the keyed hashes are never handed out), to-dos, pet bubbles, the chat messages they SENT,
+ * consents and Claude links. Messages other people sent (including DMs to the viewer) are not included.
  */
 export async function buildExport(db: DbOrTx, userId: string, now = new Date()) {
   const [account] = await db
@@ -47,7 +49,6 @@ export async function buildExport(db: DbOrTx, userId: string, now = new Date()) 
     .select({
       id: chatMessages.id,
       kind: chatMessages.kind,
-      zoneId: chatMessages.zoneId,
       dmLow: chatMessages.dmLow,
       dmHigh: chatMessages.dmHigh,
       body: chatMessages.body,
@@ -56,6 +57,11 @@ export async function buildExport(db: DbOrTx, userId: string, now = new Date()) 
     .from(chatMessages)
     .where(and(eq(chatMessages.senderId, userId), isNull(chatMessages.deletedAt)))
     .orderBy(asc(chatMessages.createdAt));
+  const reports = await db
+    .select()
+    .from(activityReports)
+    .where(eq(activityReports.userId, userId))
+    .orderBy(asc(activityReports.periodKey));
   const consents = await db.select().from(privacyConsents).where(eq(privacyConsents.userId, userId));
   const links = await db.select().from(claudeLinks).where(eq(claudeLinks.userId, userId));
 
@@ -86,12 +92,24 @@ export async function buildExport(db: DbOrTx, userId: string, now = new Date()) 
       createdAt: l.createdAt,
       updatedAt: l.updatedAt,
     })),
+    activityReports: reports.map((r) => ({
+      periodKey: r.periodKey,
+      now: r.nowKind && r.nowUntil ? { kind: r.nowKind, hasRef: r.nowRefHash !== null, until: r.nowUntil } : null,
+      schedule: r.schedule.map((b) => ({
+        startAt: b.start_at,
+        endAt: b.end_at,
+        kind: b.kind,
+        hasRef: b.ref_hash !== null,
+      })),
+      source: r.source,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+    })),
     todos: myTodos,
     petNudges: nudges,
     sentChatMessages: sent.map((m) => ({
       id: m.id,
       kind: m.kind,
-      zoneId: m.zoneId,
       toUserId: m.kind === 'dm' ? (m.dmLow === userId ? m.dmHigh : m.dmLow) : null,
       text: m.body,
       createdAt: m.createdAt,

@@ -33,7 +33,8 @@ export const JOBS: readonly JobDefinition[] = [
   {
     name: 'retention.purge',
     cron: '17 3 * * *',
-    description: 'Delete chat, work logs, nudges, audit events and closed to-dos past retention.',
+    description:
+      "Delete chat, work logs, nudges, audit events and closed to-dos past retention, earlier days' activity reports and expired manual statuses.",
     expireInSeconds: 60 * 60,
     retryLimit: 2,
     missed: 'once',

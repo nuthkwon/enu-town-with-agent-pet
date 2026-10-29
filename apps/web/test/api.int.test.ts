@@ -1,5 +1,5 @@
 import {
-  chatMessageRecipients,
+  activityReports,
   chatMessages,
   claudeLinks,
   desks,
@@ -13,12 +13,17 @@ import {
 } from '@enu/db';
 import { createTestUser } from '@enu/testing';
 import {
+  PET_SPECIES,
   PRIVACY_NOTICE_VERSION,
   REALTIME_TICKET_AUDIENCE,
+  localDateKey,
   type ChatItemDto,
   type MeDto,
   type Paginated,
+  type PersonDto,
+  type PetSpecies,
   type ProfileCardDto,
+  type TownEvent,
   type WorkLogDto,
 } from '@enu/shared';
 import { and, eq } from 'drizzle-orm';
@@ -95,6 +100,47 @@ async function insertLog(userId: string, over: Partial<typeof workLogs.$inferIns
   return id;
 }
 
+/** Collects town events (NOTIFY) until `stop()`; events arrive on commit. */
+async function listenEvents() {
+  const conn = await h.pool.connect();
+  const events: TownEvent[] = [];
+  conn.on('notification', (m) => events.push(JSON.parse(m.payload ?? 'null') as TownEvent));
+  await conn.query('listen enu_town_events');
+  return {
+    events,
+    stop: async () => {
+      await new Promise((r) => setTimeout(r, 200));
+      await conn.query('unlisten *');
+      conn.release();
+    },
+  };
+}
+
+/** Today's (APP_TIMEZONE office day) activity report row for `userId`. */
+async function insertReport(userId: string, periodKey = localDateKey(new Date(), 'Asia/Seoul')) {
+  await h.db.insert(activityReports).values({
+    userId,
+    periodKey,
+    nowKind: 'review',
+    nowRefHash: 'f'.repeat(32),
+    nowUntil: new Date(Date.now() + 3600_000),
+    schedule: [
+      {
+        start_at: new Date(Date.now() - 3600_000).toISOString(),
+        end_at: new Date(Date.now() + 1800_000).toISOString(),
+        kind: 'meeting',
+        ref_hash: 'e'.repeat(32),
+      },
+    ],
+    source: 'cowork_scheduled',
+  });
+  return periodKey;
+}
+
+async function setPet(userId: string, species: PetSpecies) {
+  await h.db.update(profiles).set({ petSpecies: species }).where(eq(profiles.userId, userId));
+}
+
 describe('authentication and authorization', () => {
   it('returns 401 JSON without a session', async () => {
     const id = newId();
@@ -152,7 +198,41 @@ describe('authentication and authorization', () => {
       noticeAccepted: false,
       mcpUrl: 'http://localhost:3000/api/mcp',
       avatarKey: 'av-m-short-black-sky-warm',
+      shareActivity: null,
+      showLive: true,
+      officeTimeZone: 'Asia/Seoul',
+      manualStatus: null,
+      activityToday: null,
+      takenPetSpecies: [],
     });
+  });
+
+  it('serves my own status, today’s activity (no refs) and my own log timestamps on /me', async () => {
+    const me = await userWithSession({ shareActivity: true });
+    const until = new Date(Date.now() + 1800_000);
+    await h.db
+      .update(profiles)
+      .set({ manualStatus: 'focus', manualStatusUntil: until, statusText: '집중해서 문서 작성 중' })
+      .where(eq(profiles.userId, me.id));
+    await insertReport(me.id);
+    // Yesterday's report is never served.
+    await insertReport(me.id, '2020-01-01');
+    const body = await jsonOf<MeDto>(await call(meRoute.GET, '/api/v1/me', { cookie: me.cookie }));
+    expect(body).toMatchObject({
+      shareActivity: true,
+      statusText: '집중해서 문서 작성 중',
+      manualStatus: { status: 'focus', until: until.toISOString() },
+      activityToday: { now: { kind: 'review' }, schedule: [{ kind: 'meeting', hasRef: true }] },
+    });
+    expect(JSON.stringify(body)).not.toContain('e'.repeat(32));
+    expect(JSON.stringify(body)).not.toContain('f'.repeat(32));
+
+    // An expired status is never served.
+    await h.db
+      .update(profiles)
+      .set({ manualStatusUntil: new Date(Date.now() - 1000) })
+      .where(eq(profiles.userId, me.id));
+    expect((await jsonOf<MeDto>(await call(meRoute.GET, '/api/v1/me', { cookie: me.cookie }))).manualStatus).toBeNull();
   });
 
   it('keeps admin routes for admins (role or ADMIN_EMAILS)', async () => {
@@ -388,6 +468,7 @@ describe('work logs and visibility', () => {
       log_id: id,
       visibility: 'private',
       created: false,
+      by: 'user',
     });
   });
 
@@ -435,12 +516,24 @@ describe('work logs and visibility', () => {
     const owner = await userWithSession();
     const viewer = await userWithSession();
     const id = await insertLog(owner.id);
+    const listener = await listenEvents();
     const res = await call(myLogRoute.DELETE, `/api/v1/me/work-logs/${id}`, {
       method: 'DELETE',
       cookie: owner.cookie,
       params: { id },
     });
     expect(res.status).toBe(204);
+    await listener.stop();
+    // The owner's own edit never sparkles in the town (only Claude writes do).
+    expect(listener.events).toContainEqual({
+      v: 1,
+      type: 'work_log_changed',
+      user_id: owner.id,
+      log_id: id,
+      visibility: 'company',
+      created: false,
+      by: 'user',
+    });
     const [row] = await h.db.select().from(workLogs).where(eq(workLogs.id, id));
     expect(row?.deletedAt).toBeTruthy();
     expect(row).toMatchObject({ summary: null, tasks: [], blockers: [], claudeChatSummary: null });

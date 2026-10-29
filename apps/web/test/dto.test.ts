@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   normalizeAvatar,
   provenanceLabel,
+  toChatItemDto,
   toClaudeSummaryDto,
   toDeskDto,
   toPersonDto,
@@ -75,10 +76,37 @@ describe('toWorkLogDto', () => {
     ).toBe('대화 요약');
   });
 
-  it('labels owner edits', () => {
-    const dto = toWorkLogDto(log({ editedByUser: true, userEditedAt: now }), author, { userId: 'other' })!;
+  it('labels owner edits for everyone but keeps the exact times for the owner', () => {
+    const row = log({ editedByUser: true, userEditedAt: now });
+    const dto = toWorkLogDto(row, author, { userId: 'other' })!;
     expect(dto.provenanceLabel).toBe('김요정님의 Claude가 작성 · 본인 수정');
-    expect(dto.userEditedAt).toBe(now.toISOString());
+    expect(dto.editedByUser).toBe(true);
+    expect(dto).toMatchObject({ claudeWrittenAt: null, updatedAt: null, userEditedAt: null });
+    expect(dto.periodKey).toBe('2026-10-29');
+    const own = toWorkLogDto(row, author, { userId: OWNER })!;
+    expect(own).toMatchObject({
+      claudeWrittenAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      userEditedAt: now.toISOString(),
+      editedByUser: true,
+    });
+  });
+});
+
+describe('toChatItemDto', () => {
+  it('maps room and DM messages without any location', () => {
+    const item = toChatItemDto(
+      { id: 'm1', kind: 'room', senderId: 'u1', body: '안녕하세요', createdAt: now },
+      '김요정',
+    );
+    expect(item).toEqual({
+      id: 'm1',
+      kind: 'room',
+      senderId: 'u1',
+      senderName: '김요정',
+      text: '안녕하세요',
+      createdAt: now.toISOString(),
+    });
   });
 });
 
@@ -92,7 +120,11 @@ describe('people and desks', () => {
     title: '과장',
     team: 'qa',
     roleNote: 'SQA',
-    statusText: null,
+    statusText: '외근 중',
+    shareActivity: true,
+    showLive: true,
+    manualStatus: 'away',
+    manualStatusUntil: now,
     timezone: 'Asia/Seoul',
     defaultLogVisibility: 'company',
     defaultChatSummaryVisibility: null,
@@ -116,7 +148,14 @@ describe('people and desks', () => {
     expect(p.teamLabel).toBe('품질보증팀');
     expect(p.team).toBe('qa');
     expect(p.deskId).toBe('L4a');
-    expect(p.lastWorkLogAt).toBe(now.toISOString());
+  });
+
+  it('gives colleagues no status text, status or timestamps (realtime state only, office hours)', () => {
+    const p = toPersonDto(profile, 'L4a');
+    for (const key of ['statusText', 'lastWorkLogAt', 'manualStatus', 'manualStatusUntil', 'shareActivity', 'showLive']) {
+      expect(p).not.toHaveProperty(key);
+    }
+    expect(JSON.stringify(p)).not.toContain('외근');
   });
 
   it('falls back for unknown teams and malformed avatars', () => {

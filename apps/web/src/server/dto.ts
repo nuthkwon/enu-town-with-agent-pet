@@ -1,5 +1,5 @@
 import type { chatMessages, claudeLinks, petNudges, profiles, todos, workLogs } from '@enu/db';
-import { canViewChatSummary, canViewLog } from '@enu/domain';
+import { canViewChatSummary, canViewLog, canViewLogTimestamps } from '@enu/domain';
 import {
   DEFAULT_AVATAR,
   LINK_STATES,
@@ -14,7 +14,6 @@ import {
   teamLabel,
   type AvatarPreset,
   type ChatItemDto,
-  type ChatKind,
   type ClaudeLinkDto,
   type ClaudeSummaryDto,
   type DeskDto,
@@ -26,6 +25,7 @@ import {
   type Visibility,
   type WorkLogDto,
   type WorkLogSource,
+  type WritableChatKind,
 } from '@enu/shared';
 import { ko } from '@/i18n/ko';
 
@@ -63,6 +63,10 @@ export function provenanceLabel(authorName: string, editedByUser: boolean): stri
   return ko.provenance.byClaude(authorName) + (editedByUser ? ko.provenance.edited : '');
 }
 
+/**
+ * A colleague as any member sees them. No 상태 문구 and no timestamps: status and activity reach
+ * colleagues only through the realtime state during office hours.
+ */
 export function toPersonDto(p: ProfileRow, deskId: string | null): PersonDto {
   const avatar = normalizeAvatar(p.avatar);
   const team = asTeamId(p.team);
@@ -77,9 +81,7 @@ export function toPersonDto(p: ProfileRow, deskId: string | null): PersonDto {
     teamLabel: teamLabel(team),
     title: p.title ?? null,
     roleNote: p.roleNote ?? null,
-    statusText: p.statusText ?? null,
     linkState: asLinkState(p.linkState),
-    lastWorkLogAt: iso(p.lastWorkLogAt),
   };
 }
 
@@ -105,7 +107,7 @@ export function viewerCanSeeLog(viewer: { userId: string }, row: WorkLogRow, aut
 /**
  * Maps a log the viewer may see. Returns null when canViewLog says no, so callers can never
  * leak a private log by forgetting a check. The chat summary is included only if
- * canViewChatSummary allows it.
+ * canViewChatSummary allows it, and the exact write/edit times only if canViewLogTimestamps does.
  */
 export function toWorkLogDto(
   row: WorkLogRow,
@@ -115,6 +117,7 @@ export function toWorkLogDto(
   const fields = logFields(row);
   if (!canViewLog(viewer, fields, { active: author.active })) return null;
   const showChat = canViewChatSummary(viewer, fields, { active: author.active });
+  const showTimes = canViewLogTimestamps(viewer, row.userId);
   return {
     id: row.id,
     userId: row.userId,
@@ -131,10 +134,10 @@ export function toWorkLogDto(
     visibility: oneOf(VISIBILITIES, row.visibility, 'private'),
     chatSummaryVisibility: oneOf(VISIBILITIES, row.chatSummaryVisibility, 'private'),
     source: oneOf<WorkLogSource>(WORK_LOG_SOURCES, row.source, 'claude_interactive'),
-    claudeWrittenAt: isoReq(row.claudeWrittenAt),
-    updatedAt: isoReq(row.updatedAt),
+    claudeWrittenAt: showTimes ? isoReq(row.claudeWrittenAt) : null,
+    updatedAt: showTimes ? isoReq(row.updatedAt) : null,
     editedByUser: row.editedByUser,
-    userEditedAt: iso(row.userEditedAt),
+    userEditedAt: showTimes ? iso(row.userEditedAt) : null,
     provenanceLabel: provenanceLabel(author.name, row.editedByUser),
   };
 }
@@ -199,18 +202,18 @@ export function toClaudeLinkDto(l: ClaudeLinkRow): ClaudeLinkDto {
   };
 }
 
+/** Only DMs and room messages exist (a CHECK blocks the legacy 'nearby' enum value). */
 export function toChatItemDto(
-  m: Pick<ChatRow, 'id' | 'kind' | 'senderId' | 'body' | 'createdAt' | 'zoneId'>,
+  m: Pick<ChatRow, 'id' | 'kind' | 'senderId' | 'body' | 'createdAt'>,
   senderName: string,
 ): ChatItemDto {
   return {
     id: m.id,
-    kind: m.kind as ChatKind,
+    kind: m.kind as WritableChatKind,
     senderId: m.senderId,
     senderName,
     text: m.body,
     createdAt: isoReq(m.createdAt),
-    zoneId: m.zoneId ?? null,
   };
 }
 

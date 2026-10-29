@@ -1,9 +1,11 @@
 import {
+  activityReports,
   audit,
   auditEvents,
   chatMessages,
   nudgeDeliveries,
   petNudges,
+  profiles,
   todos,
   workLogs,
   type DbOrTx,
@@ -34,6 +36,10 @@ export interface RetentionSummary {
   nudgeDeliveries: number;
   auditEvents: number;
   todos: number;
+  /** Activity reports of earlier office days (activity is current-day only). */
+  activityReports: number;
+  /** Expired hand-set statuses cleared (상태 문구 is never touched). */
+  clearedManual: number;
 }
 
 export interface RetentionOptions {
@@ -64,12 +70,16 @@ export function retentionDaysFromEnv(env: RetentionEnv): RetentionDays {
  * retention.purge (daily 03:17 local). Every cutoff is strict ("older than"): a row stamped
  * exactly at the cutoff is kept. Deletes run in batches of `batchSize` rows per statement.
  *
- * - chat: DMs older than the DM cutoff; room/nearby older than the room cutoff (recipients cascade).
+ * - chat: DMs older than the DM cutoff; room messages older than the room cutoff.
  * - work logs: `period_key` (owner's local date, keyed in APP_TIMEZONE) before the cutoff's local date.
  * - soft-deleted work logs: content columns emptied immediately; rows deleted 30 days after `deleted_at`.
  * - nudges: terminal ones created and expired before the nudge cutoff (active ones belong to nudges.expire);
  *   deliveries shown before the nudge cutoff.
  * - audit events older than the audit cutoff; done/dismissed to-dos untouched for 30 days.
+ * - activity reports of any office day (APP_TIMEZONE) before today: the town keeps no activity history.
+ *   Writers and readers key reports by the same day, so a live row is never deleted.
+ * - expired manual statuses (`manual_status_until < now`) are cleared; readers already ignore them, so no
+ *   NOTIFY is sent. 상태 문구 is not touched. No presence or attendance data exists to purge (ADR 0004).
  */
 export async function purgeRetention(
   db: DbOrTx,
@@ -95,9 +105,7 @@ export async function purgeRetention(
     );
 
   const dmMessages = await deleteChat(and(eq(chatMessages.kind, 'dm'), lt(chatMessages.createdAt, cut.dm)));
-  const roomMessages = await deleteChat(
-    and(inArray(chatMessages.kind, ['room', 'nearby']), lt(chatMessages.createdAt, cut.roomChat)),
-  );
+  const roomMessages = await deleteChat(and(eq(chatMessages.kind, 'room'), lt(chatMessages.createdAt, cut.roomChat)));
 
   const deleteWorkLogs = (where: SQL | undefined) =>
     inBatches(batch, async (limit) =>
@@ -213,6 +221,30 @@ export async function purgeRetention(
     ),
   );
 
+  // At most one row per member and office day, so a single statement is enough.
+  const activityReportCount = affected(
+    await db.delete(activityReports).where(lt(activityReports.periodKey, localDateKey(now, env.APP_TIMEZONE))),
+  );
+
+  const clearedManual = await inBatches(batch, async (limit) =>
+    affected(
+      await db
+        .update(profiles)
+        // Keep updated_at: clearing an expired value is not a profile edit.
+        .set({ manualStatus: null, manualStatusUntil: null, updatedAt: sql`${profiles.updatedAt}` })
+        .where(
+          inArray(
+            profiles.userId,
+            db
+              .select({ userId: profiles.userId })
+              .from(profiles)
+              .where(lt(profiles.manualStatusUntil, now))
+              .limit(limit),
+          ),
+        ),
+    ),
+  );
+
   const summary: RetentionSummary = {
     dmMessages,
     roomMessages,
@@ -223,6 +255,8 @@ export async function purgeRetention(
     nudgeDeliveries: nudgeDeliveryCount,
     auditEvents: auditCount,
     todos: todoCount,
+    activityReports: activityReportCount,
+    clearedManual,
   };
   // Counts only (no content): proof that retention ran, kept like any other audit event.
   await audit(db, { actorType: 'system', action: 'retention.purge', metadata: { ...summary } });

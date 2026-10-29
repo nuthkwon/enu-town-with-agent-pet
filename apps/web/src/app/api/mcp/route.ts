@@ -1,3 +1,4 @@
+import { hkdfSync } from 'node:crypto';
 import { requireMcpAuth } from '@better-auth/mcp';
 import { invalidTokenChallenge, protectedResourceMetadataUrl, resolveMcpCaller } from '@enu/auth';
 import { buildEnuTownMcpServer, callerFromAuthInfo } from '@enu/mcp-tools';
@@ -5,7 +6,7 @@ import { LIMITS } from '@enu/shared';
 import { createMcpHandler, type McpHttpHandler } from '@modelcontextprotocol/server';
 import { authPolicy, getAuth, mcpResource } from '@/server/auth';
 import { getDb } from '@/server/db';
-import { internalBaseUrl, publicUrl } from '@/server/env';
+import { getEnv, internalBaseUrl, publicUrl } from '@/server/env';
 
 /**
  * The ENU Town MCP connector (Streamable HTTP, stateless). Token checks happen in order:
@@ -19,10 +20,24 @@ export const dynamic = 'force-dynamic';
 let mcp: McpHttpHandler | undefined;
 let protectedPost: ((req: Request) => Promise<Response>) | undefined;
 
+/**
+ * Key of post_activity's daily ref hash, derived once from BETTER_AUTH_SECRET (no extra secret to manage).
+ * It keeps refs unlinkable across days, but anyone holding BETTER_AUTH_SECRET could test guesses.
+ */
+function activityRefKey(secret: string): Uint8Array {
+  return new Uint8Array(hkdfSync('sha256', secret, 'enu-town', 'activity-ref/v1', 32));
+}
+
 function mcpHandler(): McpHttpHandler {
-  mcp ??= createMcpHandler(
+  if (mcp) return mcp;
+  const env = getEnv();
+  const refKey = activityRefKey(env.BETTER_AUTH_SECRET);
+  mcp = createMcpHandler(
     ({ authInfo }) =>
-      buildEnuTownMcpServer({ db: getDb(), publicUrl: publicUrl() }, callerFromAuthInfo(authInfo)),
+      buildEnuTownMcpServer(
+        { db: getDb(), publicUrl: publicUrl(), activityRefKey: refKey, officeTimeZone: env.APP_TIMEZONE },
+        callerFromAuthInfo(authInfo),
+      ),
     { legacy: 'stateless', responseMode: 'json', maxRequestBodySize: LIMITS.mcpBodyMaxBytes },
   );
   return mcp;

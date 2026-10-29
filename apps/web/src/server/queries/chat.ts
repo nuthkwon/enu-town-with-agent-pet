@@ -1,6 +1,6 @@
-import { chatMessageRecipients, chatMessages, dmReadState, profiles, user, type DbOrTx } from '@enu/db';
-import type { ChatItemDto, DmThreadDto } from '@enu/shared';
-import { and, desc, eq, exists, inArray, isNull, or, sql, type SQL } from 'drizzle-orm';
+import { chatMessages, dmReadState, profiles, user, type DbOrTx } from '@enu/db';
+import type { ChatItemDto, DmThreadDto, WritableChatKind } from '@enu/shared';
+import { and, desc, eq, inArray, isNull, or, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { toChatItemDto } from '../dto';
 import { paginate, type Cursor, type Page } from '../http';
@@ -12,7 +12,7 @@ import { beforeMicros, epochMicros } from './sql';
  * can render them top to bottom and prepend older pages.
  */
 
-export type HistoryKind = 'dm' | 'nearby' | 'room';
+export type HistoryKind = WritableChatKind;
 
 const sender = alias(profiles, 'sender_profile');
 const senderUser = alias(user, 'sender_user');
@@ -34,7 +34,6 @@ async function fetchPage(
       senderId: chatMessages.senderId,
       body: chatMessages.body,
       createdAt: chatMessages.createdAt,
-      zoneId: chatMessages.zoneId,
       micros: epochMicros(chatMessages.createdAt),
       senderName: sender.displayName,
       senderFallback: senderUser.name,
@@ -60,9 +59,8 @@ async function fetchPage(
 
 /**
  * History between the viewer and `peerId`:
- *   dm     — DMs between the two (dm_low/dm_high pair)
- *   nearby — nearby messages sent by one of the two that the other one received (both directions)
- *   room   — public room messages sent by `peerId`
+ *   dm   — DMs between the two (dm_low/dm_high pair)
+ *   room — public room messages sent by `peerId`
  */
 export async function chatHistory(
   db: DbOrTx,
@@ -77,29 +75,6 @@ export async function chatHistory(
     return fetchPage(
       db,
       and(eq(chatMessages.kind, 'dm'), eq(chatMessages.dmLow, low), eq(chatMessages.dmHigh, high)),
-      cursor,
-      limit,
-    );
-  }
-  if (kind === 'nearby') {
-    const heardBy = (uid: string) =>
-      exists(
-        db
-          .select({ one: sql`1` })
-          .from(chatMessageRecipients)
-          .where(
-            and(eq(chatMessageRecipients.messageId, chatMessages.id), eq(chatMessageRecipients.userId, uid)),
-          ),
-      );
-    return fetchPage(
-      db,
-      and(
-        eq(chatMessages.kind, 'nearby'),
-        or(
-          and(eq(chatMessages.senderId, viewerId), heardBy(peerId)),
-          and(eq(chatMessages.senderId, peerId), heardBy(viewerId)),
-        ),
-      ),
       cursor,
       limit,
     );

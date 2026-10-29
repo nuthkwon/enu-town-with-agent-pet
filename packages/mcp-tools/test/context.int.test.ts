@@ -1,4 +1,15 @@
-import { desks, dmReadState, krHolidays, petNudges, profiles, todos, workLogs, newId, type DbHandle } from '@enu/db';
+import {
+  activityReports,
+  desks,
+  dmReadState,
+  krHolidays,
+  petNudges,
+  profiles,
+  todos,
+  workLogs,
+  newId,
+  type DbHandle,
+} from '@enu/db';
 import { eq } from 'drizzle-orm';
 import { INSTRUCTIONS_VERSION, MCP_TOOL_NAMES, getMyContextOutput, type GetMyContextOutput } from '@enu/shared';
 import { createTestUser, setupTestDb, truncateAll } from '@enu/testing';
@@ -164,6 +175,7 @@ describe.each(MODES)('get_my_context (%s)', (mode) => {
     expect(ctx.me).toBeUndefined();
     expect(ctx.today_log).toBeUndefined();
     expect(ctx.town_messages).toBeUndefined();
+    expect(ctx.activity).toBeUndefined();
     expect(ctx.link).toEqual({ state: 'linked', last_work_log_at: null });
   });
 
@@ -182,6 +194,7 @@ describe.each(MODES)('get_my_context (%s)', (mode) => {
       expect(ctx.open_todos).toBeUndefined();
       expect(ctx.today_log).toBeUndefined();
       expect(ctx.town_messages).toBeUndefined();
+      expect(ctx.activity).toBeUndefined();
     }
     await handle.db.insert(krHolidays).values({ date: '2026-10-29', name: '테스트 휴일' });
     h.clock.set(THU_14);
@@ -226,5 +239,75 @@ describe.each(MODES)('get_my_context (%s)', (mode) => {
     const client = await h.client(sharer.id);
     const out = await callTool(client, MCP_TOOL_NAMES.getMyContext, { include: ['town_messages'] });
     expect(out.texts[0]).toContain('신뢰할 수 없는 데이터');
+  });
+
+  it('returns today’s activity report (has_ref only), the owner status and a Korean summary line', async () => {
+    const db = handle.db;
+    const me = await createTestUser(db, { shareActivity: true });
+    await db
+      .update(profiles)
+      .set({ manualStatus: 'meeting', manualStatusUntil: at('2026-10-29T05:30:00Z') })
+      .where(eq(profiles.userId, me.id));
+    const block = (start: string, end: string, kind: 'meeting' | 'focus' | 'away', refHash: string | null) => ({
+      start_at: start,
+      end_at: end,
+      kind,
+      ref_hash: refHash,
+    });
+    await db.insert(activityReports).values([
+      {
+        userId: me.id,
+        periodKey: '2026-10-29',
+        nowKind: 'review',
+        nowRefHash: 'a'.repeat(32),
+        nowUntil: at('2026-10-29T06:00:00Z'),
+        schedule: [
+          block('2026-10-29T01:00:00.000Z', '2026-10-29T02:00:00.000Z', 'meeting', 'b'.repeat(32)),
+          block('2026-10-29T06:00:00.000Z', '2026-10-29T07:00:00.000Z', 'focus', null),
+        ],
+        source: 'cowork_scheduled',
+      },
+      // Yesterday's report is never read.
+      { userId: me.id, periodKey: '2026-10-28', nowKind: 'docs', nowUntil: at('2026-10-29T08:00:00Z'), source: 'cowork_scheduled' },
+    ]);
+
+    const ctx = await context(me.id);
+    expect(ctx.activity).toEqual({
+      sharing: true,
+      now: { kind: 'review', has_ref: true, until: '2026-10-29T06:00:00.000Z' },
+      schedule: [
+        { start_at: '2026-10-29T01:00:00.000Z', end_at: '2026-10-29T02:00:00.000Z', kind: 'meeting', has_ref: true },
+        { start_at: '2026-10-29T06:00:00.000Z', end_at: '2026-10-29T07:00:00.000Z', kind: 'focus', has_ref: false },
+      ],
+      owner_status: { status: 'meeting', until: '2026-10-29T05:30:00.000Z' },
+    });
+    expect(JSON.stringify(ctx)).not.toContain('a'.repeat(32));
+    const client = await h.client(me.id);
+    const out = await callTool(client, MCP_TOOL_NAMES.getMyContext, { include: ['activity'] });
+    expect(out.texts[0]).toContain(
+      "활동 공유 켜짐: 오늘 일정 블록 2개, 지금 활동 '검토 중'(15:00까지). 주인이 직접 '회의 중'(~14:30)로 설정해 두어 그동안은 주인 설정이 보여요.",
+    );
+
+    // A now report past its until is not current any more; neither is an expired owner status.
+    h.clock.set('2026-10-29T06:00:00Z');
+    const later = await context(me.id, { include: ['activity'] });
+    expect(later.activity).toMatchObject({ now: null, owner_status: null });
+    expect(later.activity?.schedule).toHaveLength(2);
+  });
+
+  it('tells Claude not to call post_activity while sharing is off', async () => {
+    const me = await createTestUser(handle.db, { shareActivity: false });
+    await handle.db.insert(activityReports).values({
+      userId: me.id,
+      periodKey: '2026-10-29',
+      nowKind: 'work',
+      nowUntil: at('2026-10-29T06:00:00Z'),
+      source: 'cowork_scheduled',
+    });
+    const ctx = await context(me.id, { include: ['activity'] });
+    expect(ctx.activity).toEqual({ sharing: false, now: null, schedule: [], owner_status: null });
+    const client = await h.client(me.id);
+    const out = await callTool(client, MCP_TOOL_NAMES.getMyContext, {});
+    expect(out.texts[0]).toContain('활동 공유 꺼짐: post_activity를 호출하지 마세요.');
   });
 });

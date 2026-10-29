@@ -1,10 +1,11 @@
 import {
+  activityReports,
   auditEvents,
-  chatMessageRecipients,
   chatMessages,
   newId,
   nudgeDeliveries,
   petNudges,
+  profiles,
   todos,
   workLogs,
   type DbHandle,
@@ -39,7 +40,7 @@ async function users() {
   return { a: a.id, b: b.id, low: a.id < b.id ? a.id : b.id, high: a.id < b.id ? b.id : a.id };
 }
 
-async function chat(kind: 'dm' | 'room' | 'nearby', senderId: string, createdAt: Date, dm?: { low: string; high: string }) {
+async function chat(kind: 'dm' | 'room', senderId: string, createdAt: Date, dm?: { low: string; high: string }) {
   const id = newId();
   await h.db.insert(chatMessages).values({
     id,
@@ -57,7 +58,7 @@ async function chat(kind: 'dm' | 'room' | 'nearby', senderId: string, createdAt:
 const remaining = <T extends { id: unknown }>(rows: T[]) => rows.map((r) => r.id);
 
 describe('retention.purge', () => {
-  it('deletes chat strictly older than the DM / room cutoffs (recipients cascade)', async () => {
+  it('deletes chat strictly older than the DM / room cutoffs', async () => {
     const u = await users();
     const dm = { low: u.low, high: u.high };
     const dmOld = await chat('dm', u.a, before(90, -SEC), dm);
@@ -66,23 +67,15 @@ describe('retention.purge', () => {
     const dm60 = await chat('dm', u.a, before(60), dm); // older than the room cutoff but a DM
     const roomOld = await chat('room', u.a, before(30, -SEC));
     const roomNew = await chat('room', u.a, before(30, SEC));
-    const nearbyOld = await chat('nearby', u.b, before(30, -SEC));
-    const nearbyNew = await chat('nearby', u.b, before(30, SEC));
-    await h.db.insert(chatMessageRecipients).values([
-      { messageId: nearbyOld, userId: u.a },
-      { messageId: nearbyNew, userId: u.a },
-    ]);
+    const roomOldB = await chat('room', u.b, before(31));
 
     const s = await purgeRetention(h.db, NOW, env);
     expect(s.dmMessages).toBe(1);
     expect(s.roomMessages).toBe(2);
 
     const left = remaining(await h.db.select({ id: chatMessages.id }).from(chatMessages));
-    expect(left.sort()).toEqual([dmAtCutoff, dmNew, dm60, roomNew, nearbyNew].sort());
-    expect(left).not.toContain(dmOld);
-    expect(left).not.toContain(roomOld);
-    const recipients = await h.db.select().from(chatMessageRecipients);
-    expect(recipients.map((r) => r.messageId)).toEqual([nearbyNew]);
+    expect(left.sort()).toEqual([dmAtCutoff, dmNew, dm60, roomNew].sort());
+    for (const gone of [dmOld, roomOld, roomOldB]) expect(left).not.toContain(gone);
   });
 
   it('deletes in batches until nothing is left', async () => {
@@ -246,5 +239,55 @@ describe('retention.purge', () => {
     const s = await purgeRetention(h.db, NOW, testEnv({ RETENTION_DM_DAYS: '7' }));
     expect(s.dmMessages).toBe(1);
     expect(await h.db.select().from(chatMessages).where(eq(chatMessages.id, m))).toHaveLength(0);
+  });
+
+  it("deletes earlier office days' activity reports and keeps today's, at any hour of the day", async () => {
+    const u = await users();
+    const report = (userId: string, periodKey: string) => ({
+      userId,
+      periodKey,
+      nowKind: 'work' as const,
+      nowUntil: plus(NOW, HOUR),
+      schedule: [],
+      source: 'cowork_scheduled',
+    });
+    // 00:30 KST is still 2026-10-28 in UTC, 23:30 KST is the same office day: today's rows stay in both.
+    for (const now of [kst(2026, 10, 29, 0, 30), kst(2026, 10, 29, 23, 30)]) {
+      await h.db.delete(activityReports);
+      await h.db
+        .insert(activityReports)
+        .values([report(u.a, '2026-10-29'), report(u.a, '2026-10-28'), report(u.b, '2026-10-20'), report(u.b, '2026-10-29')]);
+      const s = await purgeRetention(h.db, now, env);
+      expect(s.activityReports).toBe(2);
+      const left = await h.db.select({ userId: activityReports.userId, periodKey: activityReports.periodKey }).from(activityReports);
+      expect(left.map((r) => r.periodKey)).toEqual(['2026-10-29', '2026-10-29']);
+      expect(left.map((r) => r.userId).sort()).toEqual([u.a, u.b].sort());
+    }
+  });
+
+  it('clears expired manual statuses and leaves 상태 문구 and live statuses alone', async () => {
+    const u = await users();
+    const c = (await createTestUser(h.db)).id;
+    const updatedAt = before(3);
+    await h.db
+      .update(profiles)
+      .set({ manualStatus: 'away', manualStatusUntil: before(0, -SEC), statusText: '오후 반차', updatedAt })
+      .where(eq(profiles.userId, u.a));
+    await h.db
+      .update(profiles)
+      .set({ manualStatus: 'focus', manualStatusUntil: before(0, HOUR), statusText: '집중 중' })
+      .where(eq(profiles.userId, u.b));
+    await h.db.update(profiles).set({ statusText: '재택' }).where(eq(profiles.userId, c));
+
+    const s = await purgeRetention(h.db, NOW, env);
+    expect(s.clearedManual).toBe(1);
+    const rows = await h.db.select().from(profiles);
+    const byId = new Map(rows.map((r) => [r.userId, r]));
+    expect(byId.get(u.a)).toMatchObject({ manualStatus: null, manualStatusUntil: null, statusText: '오후 반차' });
+    expect(byId.get(u.a)?.updatedAt.toISOString()).toBe(updatedAt.toISOString());
+    expect(byId.get(u.b)).toMatchObject({ manualStatus: 'focus', statusText: '집중 중' });
+    expect(byId.get(c)).toMatchObject({ manualStatus: null, statusText: '재택' });
+    const run = (await h.db.select().from(auditEvents)).find((a) => a.action === 'retention.purge');
+    expect(run?.metadata).toMatchObject({ clearedManual: 1, activityReports: 0 });
   });
 });

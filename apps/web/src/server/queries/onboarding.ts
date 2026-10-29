@@ -5,12 +5,14 @@ import { ko } from '@/i18n/ko';
 import { HttpError } from '../http';
 import type { Viewer } from '../session';
 import { deskOf, ensureProfile } from './me';
-import { grantConsent, withdrawConsent } from './profile';
+import { claimPetSpecies, grantConsent, recordShareActivity, withdrawConsent } from './profile';
 
 /**
  * Finishes the /welcome wizard in one transaction: consent(s) for the current notice version,
- * seat (assign a free one, keep the current one, or 409 when taken), avatar/pet/chat-summary
- * default, onboarding timestamp, and NOTIFY profile_changed (+ desks_changed when the seat moved).
+ * pet (409 pet_taken when another active member has that species), seat (assign a free one, keep the
+ * current one, or 409 when taken), avatar/chat-summary default, the explicit 활동 공유 choice,
+ * onboarding timestamp, and NOTIFY profile_changed (+ desks_changed when the seat moved,
+ * + activity_changed when sharing changed).
  */
 export async function submitOnboarding(
   db: Db,
@@ -29,6 +31,7 @@ export async function submitOnboarding(
   const profile = await ensureProfile(db, viewer);
 
   await db.transaction(async (tx) => {
+    await claimPetSpecies(tx, viewer.userId, body.pet_species);
     await grantConsent(tx, viewer.userId, 'service', now);
     if (body.default_chat_summary_visibility === 'company')
       await grantConsent(tx, viewer.userId, 'claude_chat_summary', now);
@@ -74,9 +77,11 @@ export async function submitOnboarding(
         petSpecies: body.pet_species,
         petName,
         defaultChatSummaryVisibility: body.default_chat_summary_visibility,
+        shareActivity: body.share_activity,
         onboardingCompletedAt: profile.onboardingCompletedAt ?? now,
       })
       .where(eq(profiles.userId, viewer.userId));
+    await recordShareActivity(tx, viewer.userId, profile.shareActivity, body.share_activity, now);
     await audit(tx, {
       actorType: 'user',
       actorUserId: viewer.userId,
@@ -84,6 +89,7 @@ export async function submitOnboarding(
       metadata: {
         noticeVersion: PRIVACY_NOTICE_VERSION,
         chatSummaryVisibility: body.default_chat_summary_visibility,
+        shareActivity: body.share_activity,
       },
     });
     await notifyTown(tx, { v: 1, type: 'profile_changed', user_id: viewer.userId });

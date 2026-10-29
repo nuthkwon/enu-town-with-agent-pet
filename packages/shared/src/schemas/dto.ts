@@ -5,6 +5,7 @@ import type {
   NowKind,
   NudgeKind,
   NudgeStatus,
+  PetSpecies,
   ScheduleKind,
   TeamId,
   TodoStatus,
@@ -117,6 +118,11 @@ export interface MeDto {
   officeTimeZone: string;
   manualStatus: ManualStatusDto | null;
   activityToday: ActivityTodayDto | null;
+  /**
+   * Species other active members already have, in PET_SPECIES order: every member has a different pet,
+   * so pickers grey these out (onboarding and PATCH /me/profile answer 409 pet_taken for them).
+   */
+  takenPetSpecies: PetSpecies[];
   /** Current privacy notice version the user must accept (onboarding). */
   noticeVersion: string;
   noticeAccepted: boolean;

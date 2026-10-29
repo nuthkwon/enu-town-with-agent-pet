@@ -108,6 +108,7 @@ export const ko = {
     workLogPost: '업무 로그는 각자의 Claude만 작성해요. 웹에서는 수정·삭제·공개 범위 변경만 할 수 있어요.',
     noticeRequired: '최신 개인정보 처리 안내에 동의해 주세요.',
     deskTaken: '이미 다른 분이 쓰고 있는 자리예요. 다른 자리를 골라 주세요.',
+    petTaken: '이미 다른 동료가 고른 펫이에요. 다른 펫을 골라 주세요.',
     unknownDesk: '없는 자리예요.',
     unknownUser: '없는 사용자예요.',
     userInactive: '비활성화된 사용자예요.',

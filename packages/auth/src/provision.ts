@@ -1,10 +1,22 @@
-import { audit, desks, notifyTown, profiles, user, type Db } from '@enu/db';
+import { audit, desks, lockPetSpecies, notifyTown, profiles, takenPetSpecies, user, type Db } from '@enu/db';
 import { DEFAULT_AVATAR, PET_SPECIES, type AvatarPreset, type PetSpecies } from '@enu/shared';
 import { and, eq, isNull } from 'drizzle-orm';
 
 /**
+ * The pet a new member starts with. Every active member has a different pet: the seat preset when it is
+ * still free, otherwise the first free species in PET_SPECIES order; only when every species is taken
+ * does the preset (or the first species) repeat.
+ */
+export function choosePetSpecies(preset: PetSpecies | null, taken: readonly PetSpecies[]): PetSpecies {
+  const used = new Set(taken);
+  if (preset && !used.has(preset)) return preset;
+  return PET_SPECIES.find((s) => !used.has(s)) ?? preset ?? PET_SPECIES[0];
+}
+
+/**
  * Creates the ENU Town profile for a new user and, when the Google display name matches an
- * unassigned seat label from the roster, assigns that seat and its avatar/pet presets.
+ * unassigned seat label from the roster, assigns that seat and its avatar/pet presets (the pet
+ * species only while no other active member has it, see choosePetSpecies).
  * Idempotent: an existing profile is left untouched.
  */
 export async function provisionProfile(db: Db, u: { id: string; name: string; email: string }): Promise<void> {
@@ -22,9 +34,12 @@ export async function provisionProfile(db: Db, u: { id: string; name: string; em
       : [];
 
     const avatar: AvatarPreset = seat?.avatar ?? DEFAULT_AVATAR;
-    const species: PetSpecies = (PET_SPECIES as readonly string[]).includes(seat?.petSpecies ?? '')
+    const preset = (PET_SPECIES as readonly string[]).includes(seat?.petSpecies ?? '')
       ? (seat?.petSpecies as PetSpecies)
-      : 'cat';
+      : null;
+    // Same lock as onboarding and profile edits: two sign-ups can never both take one species.
+    await lockPetSpecies(tx);
+    const species = choosePetSpecies(preset, await takenPetSpecies(tx, u.id));
     await tx.insert(profiles).values({
       userId: u.id,
       displayName: (name || u.email.split('@')[0] || '새 직원').slice(0, 40),

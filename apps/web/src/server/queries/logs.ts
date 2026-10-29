@@ -240,6 +240,7 @@ export async function patchOwnLog(
       log_id: row.id,
       visibility: after.visibility as Visibility,
       created: false,
+      by: 'user',
     });
     return after;
   });
@@ -272,6 +273,7 @@ export async function deleteOwnLog(db: Db, viewer: Viewer, id: string, now = new
       log_id: row.id,
       visibility: row.visibility as Visibility,
       created: false,
+      by: 'user',
     });
   });
 }

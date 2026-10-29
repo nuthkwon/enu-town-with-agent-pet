@@ -1,3 +1,4 @@
+import { WRITABLE_CHAT_KINDS } from '@enu/shared';
 import { ko } from '@/i18n/ko';
 import { getDb } from '@/server/db';
 import { HttpError, decodeCursor, json, parseLimit } from '@/server/http';
@@ -9,10 +10,11 @@ import { requireViewer } from '@/server/session';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const KINDS: readonly HistoryKind[] = ['dm', 'nearby', 'room'];
+const KINDS: readonly HistoryKind[] = WRITABLE_CHAT_KINDS;
 
 /**
- * GET /api/v1/users/:id/chat-history?kind=dm|nearby|room&before -> Paginated<ChatItemDto>
+ * GET /api/v1/users/:id/chat-history?kind=dm|room&before -> Paginated<ChatItemDto> (anything else, nearby
+ * included, is a 400: nearby chat no longer exists)
  * Items are chronological within a page; nextCursor (pass as ?before=) loads older messages.
  */
 export const GET = route<{ id: string }>(async (req, { id }) => {

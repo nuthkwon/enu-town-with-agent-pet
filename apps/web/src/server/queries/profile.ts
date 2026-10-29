@@ -1,5 +1,16 @@
-import { audit, newId, notifyTown, privacyConsents, profiles, type Db, type DbOrTx } from '@enu/db';
-import { PRIVACY_NOTICE_VERSION, normalizeLine, type ProfilePatch, type Visibility } from '@enu/shared';
+import {
+  activityReports,
+  audit,
+  lockPetSpecies,
+  newId,
+  notifyTown,
+  privacyConsents,
+  profiles,
+  takenPetSpecies,
+  type Db,
+  type DbOrTx,
+} from '@enu/db';
+import { PRIVACY_NOTICE_VERSION, normalizeLine, type PetSpecies, type ProfilePatch, type Visibility } from '@enu/shared';
 import { and, eq, isNull } from 'drizzle-orm';
 import { ko } from '@/i18n/ko';
 import { HttpError, type FieldIssue } from '../http';
@@ -10,7 +21,7 @@ import { ensureProfile } from './me';
 export async function grantConsent(
   tx: DbOrTx,
   userId: string,
-  scope: 'service' | 'claude_chat_summary',
+  scope: 'service' | 'claude_chat_summary' | 'activity_sharing',
   now: Date,
 ): Promise<void> {
   await tx
@@ -25,7 +36,7 @@ export async function grantConsent(
 export async function withdrawConsent(
   tx: DbOrTx,
   userId: string,
-  scope: 'claude_chat_summary',
+  scope: 'claude_chat_summary' | 'activity_sharing',
   now: Date,
 ): Promise<void> {
   await tx
@@ -38,6 +49,39 @@ export async function withdrawConsent(
         isNull(privacyConsents.withdrawnAt),
       ),
     );
+}
+
+/**
+ * Every active member has a different pet: refuses (409 pet_taken) a species another active member has.
+ * Call inside the transaction that writes the species; the lock makes check-and-write atomic.
+ */
+export async function claimPetSpecies(tx: DbOrTx, userId: string, species: PetSpecies): Promise<void> {
+  await lockPetSpecies(tx);
+  const taken = await takenPetSpecies(tx, userId);
+  if (taken.includes(species)) {
+    throw new HttpError(409, 'pet_taken', ko.errors.petTaken, [{ field: 'pet_species', reason: 'taken' }]);
+  }
+}
+
+/**
+ * Records a 활동 공유 choice in the transaction that already updated `profiles.share_activity` (that row
+ * lock is what post_activity's FOR UPDATE waits on). On: the activity_sharing consent. Off: the consent
+ * is withdrawn and the owner's activity reports are deleted at once. NOTIFY activity_changed on a change.
+ */
+export async function recordShareActivity(
+  tx: DbOrTx,
+  userId: string,
+  before: boolean | null,
+  after: boolean,
+  now: Date,
+): Promise<void> {
+  if (after) {
+    await grantConsent(tx, userId, 'activity_sharing', now);
+  } else {
+    await withdrawConsent(tx, userId, 'activity_sharing', now);
+    await tx.delete(activityReports).where(eq(activityReports.userId, userId));
+  }
+  if (before !== after) await notifyTown(tx, { v: 1, type: 'activity_changed', user_id: userId });
 }
 
 const line = (v: string) => normalizeLine(v);
@@ -90,6 +134,8 @@ export async function patchProfile(
   if (patch.default_chat_summary_visibility !== undefined)
     set.defaultChatSummaryVisibility = patch.default_chat_summary_visibility;
   if (patch.share_dms_with_my_claude !== undefined) set.shareDmsWithMyClaude = patch.share_dms_with_my_claude;
+  if (patch.share_activity !== undefined) set.shareActivity = patch.share_activity;
+  if (patch.show_live !== undefined) set.showLive = patch.show_live;
   if (patch.nudges_enabled !== undefined) set.nudgesEnabled = patch.nudges_enabled;
   if (patch.nudge_min_interval_min !== undefined) set.nudgeMinIntervalMin = patch.nudge_min_interval_min;
   if (patch.max_bubbles_per_day !== undefined) set.maxBubblesPerDay = patch.max_bubbles_per_day;
@@ -98,7 +144,11 @@ export async function patchProfile(
   if (problems.length) throw new HttpError(400, 'invalid_body', ko.errors.invalidBody, problems);
 
   await db.transaction(async (tx) => {
+    if (patch.pet_species !== undefined) await claimPetSpecies(tx, viewer.userId, patch.pet_species);
     await tx.update(profiles).set(set).where(eq(profiles.userId, viewer.userId));
+    if (patch.share_activity !== undefined) {
+      await recordShareActivity(tx, viewer.userId, current.shareActivity, patch.share_activity, now);
+    }
 
     const chatBefore = (current.defaultChatSummaryVisibility ?? null) as Visibility | null;
     const chatAfter = patch.default_chat_summary_visibility;
@@ -140,6 +190,16 @@ export async function patchProfile(
         metadata: { enabled: patch.share_dms_with_my_claude },
       });
     }
+    if (patch.share_activity !== undefined && patch.share_activity !== current.shareActivity) {
+      await audit(tx, {
+        actorType: 'user',
+        actorUserId: viewer.userId,
+        action: 'profile.share_activity',
+        targetType: 'user',
+        targetId: viewer.userId,
+        metadata: { enabled: patch.share_activity },
+      });
+    }
     if (set.title !== undefined || set.team !== undefined || set.roleNote !== undefined) {
       await audit(tx, {
         actorType: 'admin',
@@ -149,6 +209,7 @@ export async function patchProfile(
         targetId: viewer.userId,
       });
     }
+    // Also covers 접속 표시 (show_live) and 활동 공유: realtime reloads the snapshot.
     await notifyTown(tx, { v: 1, type: 'profile_changed', user_id: viewer.userId });
   });
 }
