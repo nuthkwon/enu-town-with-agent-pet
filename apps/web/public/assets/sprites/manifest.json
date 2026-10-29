@@ -1,0 +1,208 @@
+{
+  "generator": "@enu/sprites",
+  "spec": {
+    "avatar": {
+      "frameWidth": 32,
+      "frameHeight": 32,
+      "columns": 10,
+      "rows": [
+        "down",
+        "left",
+        "right",
+        "up"
+      ],
+      "anims": {
+        "idle": {
+          "start": 0,
+          "frames": 4,
+          "frameRate": 6,
+          "repeat": -1
+        },
+        "walk": {
+          "start": 4,
+          "frames": 6,
+          "frameRate": 12,
+          "repeat": -1
+        }
+      },
+      "feetY": 31,
+      "origin": {
+        "x": 0.5,
+        "y": 0.96875
+      },
+      "idleLift": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "walkLift": [
+        0,
+        0,
+        4,
+        0,
+        0,
+        4
+      ]
+    },
+    "pet": {
+      "frameWidth": 24,
+      "frameHeight": 24,
+      "columns": 12,
+      "rows": [
+        "left",
+        "right"
+      ],
+      "anims": {
+        "idle": {
+          "start": 0,
+          "frames": 4,
+          "frameRate": 6,
+          "repeat": -1
+        },
+        "hop": {
+          "start": 4,
+          "frames": 6,
+          "frameRate": 12,
+          "repeat": -1
+        },
+        "sleep": {
+          "start": 10,
+          "frames": 2,
+          "frameRate": 2,
+          "repeat": -1
+        }
+      },
+      "groundY": 23,
+      "origin": {
+        "x": 0.5,
+        "y": 0.9583333333333334
+      }
+    },
+    "effects": {
+      "frameWidth": 16,
+      "frameHeight": 16,
+      "columns": 8,
+      "frames": {
+        "sparkle0": 0,
+        "sparkle1": 1,
+        "sparkle2": 2,
+        "sparkle3": 3,
+        "star": 4,
+        "heart": 5,
+        "shadow": 6,
+        "shadowSmall": 7,
+        "zzz": 8,
+        "clock": 9,
+        "dots": 10,
+        "alarm": 11,
+        "exclaim": 12,
+        "check": 13,
+        "note": 14,
+        "question": 15
+      },
+      "anims": {
+        "sparkle": {
+          "start": 0,
+          "frames": 4,
+          "frameRate": 8,
+          "repeat": -1
+        }
+      }
+    },
+    "tileset": {
+      "tileWidth": 32,
+      "tileHeight": 32,
+      "columns": 8,
+      "tileCount": 36,
+      "names": [
+        "void",
+        "floor_carpet",
+        "floor_runner",
+        "floor_wood",
+        "floor_tile",
+        "floor_meeting",
+        "floor_server",
+        "wall",
+        "window",
+        "door_glass",
+        "door_entrance",
+        "railing",
+        "desk_left",
+        "desk_mid",
+        "desk_right",
+        "desk_block",
+        "chair_up",
+        "chair_down",
+        "chair_left",
+        "chair_right",
+        "partition_v",
+        "partition_h",
+        "partition_corner",
+        "meeting_table",
+        "meeting_chair",
+        "fridge",
+        "microwave",
+        "counter",
+        "server_rack",
+        "server_door",
+        "cabinet",
+        "plant",
+        "whiteboard",
+        "monitor_back",
+        "monitor_front",
+        "monitor_side"
+      ]
+    }
+  },
+  "pets": {
+    "cat": "/assets/sprites/pets/cat.png",
+    "bunny": "/assets/sprites/pets/bunny.png",
+    "fox": "/assets/sprites/pets/fox.png",
+    "chick": "/assets/sprites/pets/chick.png",
+    "hamster": "/assets/sprites/pets/hamster.png",
+    "dragon": "/assets/sprites/pets/dragon.png"
+  },
+  "effects": "/assets/sprites/effects.png",
+  "tileset": "/assets/maps/office-606/office-tiles.png",
+  "avatars": {
+    "av-f-bun-brown-lemon-warm": "/assets/sprites/avatars/av-f-bun-brown-lemon-warm.png",
+    "av-f-long-black-lilac-light": "/assets/sprites/avatars/av-f-long-black-lilac-light.png",
+    "av-f-ponytail-chestnut-rose-light": "/assets/sprites/avatars/av-f-ponytail-chestnut-rose-light.png",
+    "av-m-buzz-black-lemon-tan": "/assets/sprites/avatars/av-m-buzz-black-lemon-tan.png",
+    "av-m-buzz-brown-sky-tan": "/assets/sprites/avatars/av-m-buzz-brown-sky-tan.png",
+    "av-m-curly-black-coral-tan": "/assets/sprites/avatars/av-m-curly-black-coral-tan.png",
+    "av-m-curly-chestnut-mint-warm": "/assets/sprites/avatars/av-m-curly-chestnut-mint-warm.png",
+    "av-m-short-black-peach-warm": "/assets/sprites/avatars/av-m-short-black-peach-warm.png",
+    "av-m-short-black-sky-warm": "/assets/sprites/avatars/av-m-short-black-sky-warm.png",
+    "av-m-short-brown-coral-light": "/assets/sprites/avatars/av-m-short-brown-coral-light.png",
+    "av-m-short-chestnut-lilac-warm": "/assets/sprites/avatars/av-m-short-chestnut-lilac-warm.png",
+    "av-m-swept-black-mint-warm": "/assets/sprites/avatars/av-m-swept-black-mint-warm.png",
+    "av-m-swept-black-navy-light": "/assets/sprites/avatars/av-m-swept-black-navy-light.png",
+    "av-m-swept-brown-navy-warm": "/assets/sprites/avatars/av-m-swept-brown-navy-warm.png"
+  },
+  "files": [
+    "/assets/maps/office-606/office-tiles.png",
+    "/assets/sprites/avatars/av-f-bun-brown-lemon-warm.png",
+    "/assets/sprites/avatars/av-f-long-black-lilac-light.png",
+    "/assets/sprites/avatars/av-f-ponytail-chestnut-rose-light.png",
+    "/assets/sprites/avatars/av-m-buzz-black-lemon-tan.png",
+    "/assets/sprites/avatars/av-m-buzz-brown-sky-tan.png",
+    "/assets/sprites/avatars/av-m-curly-black-coral-tan.png",
+    "/assets/sprites/avatars/av-m-curly-chestnut-mint-warm.png",
+    "/assets/sprites/avatars/av-m-short-black-peach-warm.png",
+    "/assets/sprites/avatars/av-m-short-black-sky-warm.png",
+    "/assets/sprites/avatars/av-m-short-brown-coral-light.png",
+    "/assets/sprites/avatars/av-m-short-chestnut-lilac-warm.png",
+    "/assets/sprites/avatars/av-m-swept-black-mint-warm.png",
+    "/assets/sprites/avatars/av-m-swept-black-navy-light.png",
+    "/assets/sprites/avatars/av-m-swept-brown-navy-warm.png",
+    "/assets/sprites/effects.png",
+    "/assets/sprites/pets/bunny.png",
+    "/assets/sprites/pets/cat.png",
+    "/assets/sprites/pets/chick.png",
+    "/assets/sprites/pets/dragon.png",
+    "/assets/sprites/pets/fox.png",
+    "/assets/sprites/pets/hamster.png"
+  ]
+}
