@@ -30,7 +30,8 @@ details are in [ADR 0006](0006-claude-code-pet-channel.md).
 
 ## Decision
 
-1. **Name.** ENU Town becomes ENU Den in the UI, the docs and every brand identifier; "town / 타운" stays the name
+1. **Name.** The product is ENU Den in the UI, the docs and every brand identifier (the previous name is listed only
+   in the cutover runbook); "town / 타운" stays the name
    of the map view. Connector auth cannot be edited after registration, so the connector is registered again and
    everyone reconnects (see the [cutover runbook](../runbooks/rename-enu-den.ko.md)).
 2. **Messenger-first.** The left list holds the owner's pets (the default pet first), 전체, DMs and people; the
