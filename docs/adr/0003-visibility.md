@@ -8,7 +8,10 @@ Status: accepted (2026-10-29)
   (`visibility_set_by = 'user'`) is never overwritten by Claude.
 - Logs the owner edited or deleted are never overwritten or resurrected by Claude.
 - Decided in exactly one place: `packages/domain/src/visibility.ts`. Invisible = 404. Admins cannot read private logs.
-- No raw Claude conversations, no Compliance API.
+- ENU Den never collects conversations held in claude.ai, Cowork or Claude Code (no transcripts, no history search,
+  no Compliance API). A pet conversation ([ADR 0005](0005-enu-den-messenger-and-pets.md)) is not such a transcript: it
+  holds only what the owner types into ENU Den and the replies the owner's Claude chooses to send back through ENU
+  Den's tools.
 
 ## Addendum (2026-10-29): activity and the colleague projection ([ADR 0004](0004-town-is-a-visualization.md))
 
@@ -29,3 +32,17 @@ Status: accepted (2026-10-29)
 - Everyone, the owner included, sees the same projection. Claude can only send less (skip `post_activity`, `now:
 null`); it can never turn sharing on. Only the owner can, explicitly.
 - Admins see exactly what colleagues see; there is no admin view of activity or presence.
+
+## Addendum (2026-10-29): pet conversations ([ADR 0005](0005-enu-den-messenger-and-pets.md))
+
+- Same two levels. `canViewPet`, `canChatWithPet`, `canViewPetPrivateFields`, `canViewPetMessage`,
+  `petMessageVisibility` and `petReplyVisibility` live in `packages/domain/src/visibility.ts`.
+- A new owner message gets the requested visibility, else the pet's default, else the profile default
+  (`company` unless the owner lowers it). The owner may raise or lower any message and hide a pet's history at once.
+- Claude only lowers: a reply gets the lowest of the requested visibility, the pet's default and the visibility of
+  the message it answers. When reading, a reply is visible only while its question is visible.
+- Colleagues see the date only, never times; ids are UUIDv4. No live push and no typing, read, pending, answered or
+  reply-path signal. Invisible messages are absent (404 for direct reads). Authors must be active.
+- Owner-only: role instructions, reply routes, exact times, to-dos, nudges, the channel state. Pet names and looks
+  are company-wide.
+- Admins see exactly what colleagues see; they cannot read private pet messages.

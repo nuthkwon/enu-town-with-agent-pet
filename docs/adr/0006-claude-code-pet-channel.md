@@ -1,0 +1,73 @@
+# ADR 0006 — The Claude Code pet channel
+
+Status: proposed (2026-10-29). The items under "To verify" must be checked on the pinned Claude Code version
+(spike S0) before the plugin is offered to employees.
+
+## Context
+
+[ADR 0005](0005-enu-den-messenger-and-pets.md) lets an employee chat with their pets, answered by their own Claude.
+ENU Den cannot call a model, and its remote MCP connector is stateless: it can never push anything to Claude.
+Claude Code channels (research preview) are the documented way to bring outside messages into a running session:
+
+- a channel is an MCP server that Claude Code spawns **locally over stdio**; it declares the capability
+  `experimental['claude/channel']` and sends `notifications/claude/channel` `{content, meta}`;
+- a two-way channel also exposes an ordinary MCP tool for replies;
+- it is enabled per session with `claude --channels plugin:<name>@<marketplace>`; on organization plans an Owner
+  enables channels and allow-lists custom channel plugins in managed settings (`channelsEnabled`,
+  `allowedChannelPlugins`);
+- events arrive only while the session is open; permission prompts pause the session unless relayed or
+  pre-approved.
+
+## Decision
+
+1. **A local relay plugin.** `enu-den-channel` (marketplace `enu-tech`, source `packages/pet-channel`, bundled into
+   `claude/plugins/enu-den-channel/server/den-channel.mjs`) is a stdio MCP server named `den`. It long-polls
+   `POST /api/v1/pet-channel/poll` (25 s), pushes each claimed owner message into the session, and posts the
+   replies with `POST /api/v1/pet-channel/replies`. It makes no model call and depends on no LLM SDK.
+2. **Only when asked.** The server does nothing unless the session was started for the pet (`ENU_DEN_PET=1`,
+   set by the `enu-pet` launcher): otherwise it exposes no tools and reads no credentials.
+3. **Pairing by a person, never by a tool.** The owner creates a single-use code (10 minutes) in ENU Den settings
+   and runs `enu-pet pair <code>` in a terminal. There is no MCP pairing tool, so text in a repository or web page
+   can never pair someone's Claude Code to another account. The command prints the linked account's name and never
+   overwrites another account's credentials.
+4. **A narrow token.** Pairing returns `edc_` + 32 random bytes; only its sha256 is stored, in
+   `pet_channel_tokens`, tied to a `claude_links` row of kind `claude_code_channel`. It is accepted only by the
+   channel routes (never by `/api/mcp` or cookie routes), expires after 90 days, is listed and revocable with the
+   other Claude links, and is revoked when the account is deactivated. At most 3 machines per person.
+5. **No permission relay.** The plugin never declares `claude/channel/permission`; ENU Den can never approve tool
+   use on an employee's computer. Managed settings pre-approve only the plugin's `reply` and `status` tools and deny
+   reading or editing the credentials directory.
+6. **Instructions.** A message is the owner's request relayed from their ENU Den account. Before shell commands,
+   file edits outside the reply, or other connectors, Claude asks the owner in the terminal. Replies are written as
+   if colleagues read them. Pet sessions may run in any folder, project folders included (owner decision D12).
+7. **Liveness stays private.** Whether a channel is listening is kept in the web process memory for 60 s after a
+   poll and shown only to the owner. It is never stored, sent over NOTIFY, logged per user, audited or used by the
+   town. Caddy does not log poll requests.
+8. **One answer per message.** A poll claims messages for 10 minutes; the connector cannot answer a message held by
+   a live channel, and the first answer wins.
+
+## Threat model
+
+- **Prompt injection in a coding session** cannot pair the plugin (no tool) and cannot read the token (managed deny
+  rule; inactive mode reads nothing).
+- **A stolen ENU Den session or XSS** can post messages to the owner's pets. The instructions make Claude ask in the
+  terminal before acting beyond a reply; no permission is relayed.
+- **A stolen token** can read and answer the owner's own pet messages only, until revoked (the next poll fails within
+  25 s) or expired.
+- **A colleague** cannot write into anyone's pet room, so no colleague text reaches the channel. Colleague DMs reach
+  Claude only through the connector's `town_messages.untrusted_text`, as before.
+
+## To verify (spike S0)
+
+- SDK version negotiation and that `--channels plugin:enu-den-channel@enu-tech` registers the server.
+- The tool permission ids shown by `/mcp` for the managed allow list.
+- `${VAR:-default}` expansion in the plugin `.mcp.json` env.
+- The managed `allowedChannelPlugins` format and the Owner switch for channels.
+- That a plain `claude` session also starts the server (why inactive mode exists).
+
+## Not chosen
+
+- Better Auth device authorization: it issues a session-equivalent token for the whole account.
+- An OAuth public client on the MCP authorization server: its tokens would carry the `/api/mcp` audience and could
+  call every connector tool; the token endpoint is also restricted to Claude's egress.
+- Server-sent events instead of long polling: heartbeats, resume ids and buffering for no gain at 14 people.

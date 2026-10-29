@@ -26,3 +26,19 @@ candidates loaded from Claude-authored rows; unlinked pets sleep (icon), they ne
 - Pet bubbles keep this ADR's rules. They show only during office hours, and colleagues see no sign of them (the
   shared `…` indicator is never set: a bubble starts only while the owner's tab is visible, so its onset would reveal
   the owner's attention, which [ADR 0004](0004-town-is-a-visualization.md) rules out).
+
+## Addendum (2026-10-29): pet replies ([ADR 0005](0005-enu-den-messenger-and-pets.md))
+
+- Sources of pet text are now: `post_pet_nudges` (optionally aimed at a `pet_id`), the title of a Claude-authored
+  to-do, and **pet replies** written by the owner's Claude through the sixth connector tool `post_pet_reply` or the
+  `reply` tool of the owner's local `enu-den-channel` plugin.
+- Both reply paths use one service and `preparePetReplyText`: rejected with field-level reasons, never rewritten.
+  Every reply follows the publishing rules (no personal data, no links, length) whatever its visibility.
+- A reply always answers an owner message. Pets never start a conversation; only nudges are proactive, under every
+  rule of `nudge-policy.ts`.
+- Timing: a reply may arrive whenever the owner's own Claude Code session answers through the channel, after hours
+  included, because the owner started the exchange. Connector replies (scheduled or interactive) are accepted only in
+  office hours. Town bubbles stay quiet after hours.
+- The channel plugin is a relay: no model call, no LLM SDK (`verify-policy.sh` and ESLint cover
+  `packages/pet-channel`). Role instructions are owner input to the owner's Claude, never pet text.
+- Pet replies are shown in the pet's room, never as town bubbles or on the map.

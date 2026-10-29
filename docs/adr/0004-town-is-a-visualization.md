@@ -76,6 +76,21 @@ design, its alternatives and the review that shaped it are in
 - Door walks on arrival and leaving (opening a tab is not entering the building).
 - Remote / field-work badges (`부재` covers being out without giving a reason).
 
+## Addendum (2026-10-29): ENU Den ([ADR 0005](0005-enu-den-messenger-and-pets.md))
+
+- Item 1: the director keeps one `Player` per roster member and that member's pets (1–5 `Pet`s). The default pet
+  leads; the others follow it. Pets never place or move anyone, and no pet is drawn without its owner's `Player`.
+- Item 3 and P1: the input "the town being open" becomes "ENU Den being open": a realtime session in any view
+  (messenger, pet room, town panel or full town), gated by `show_live`; its source label is `ENU Den 접속`. Tab
+  visibility, which view is open, whether the town panel is collapsed and the Claude Code channel state are never
+  inputs.
+- Each active member's default pet has a different species; further pets may reuse a species with a tint.
+- Bubbles keep this ADR's rules per pet: owner-only `.view()` fields, no shared indicator, office and quiet hours
+  only. Pet conversation text is never drawn on the map. Pet changes made after hours reach the town when it opens.
+- The companion's expressions are local to the owner's screen and never shared state.
+- Item 7: ADR 0005 is the new ADR for the dated pet conversations colleagues can read; its HR review is in the list
+  below.
+
 ## Review before rollout
 
 The notice is a draft until these are done. Record the results here.
@@ -85,3 +100,10 @@ The notice is a draft until these are done. Record the results here.
       is not required): date ________
 - [ ] Management's written confirmation that the town is **not used for attendance, performance evaluation or
       discipline** (근태·평가 미사용): date ________, confirmed by (title, not name) ________, kept at ________
+- [ ] ENU Den (ADR 0005): HR / legal review of pet conversations that colleagues can read the same day (dates, no
+      times), the company default with the explicit 펫 대화 공유 step, and `접속` meaning "ENU Den open": ________
+- [ ] Security review of the Claude Code pet channel (ADR 0006) and the S0 checks on the pinned Claude Code version:
+      ________
+- [ ] Claude organization: channels enabled, `enu-den-channel` allow-listed in managed settings, Always allow for the
+      six connector tools: ________
+- [ ] Old pilot database, volumes and backup destroyed after the cutover: date ________
