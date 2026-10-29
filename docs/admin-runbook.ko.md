@@ -13,7 +13,7 @@ Claude가 ENU Town에 로그인합니다(ENU Town이 OAuth 2.1 인가 서버, �
 | 호스트명 | 예: `town.enu-tech.co.kr`. **커넥터를 등록한 뒤에는 인증 설정을 바꿀 수 없으므로**(삭제 후 재등록, 전원 재연결) 먼저 확정합니다. 개발용은 별도 호스트(`town-dev...`)와 별도 커넥터를 씁니다. |
 | 공개 HTTPS | `/api/mcp`, `/.well-known/*`, `/api/auth/*`는 인터넷(최소 Claude 송신 대역 `160.79.104.0/21`)에서 접근 가능해야 합니다. 브라우저 화면은 Google 로그인으로 보호됩니다. |
 | Google Cloud | 회사 조직 아래 프로젝트 생성 → OAuth 동의 화면 **내부(Internal)** → 웹 클라이언트 생성, 승인된 리디렉션 URI `https://<host>/api/auth/callback/google` → Workspace 관리 콘솔 > 보안 > API 제어에서 이 클라이언트를 **신뢰함(Trusted)** 으로 지정 |
-| 서버 | `docker compose` (Postgres, web, realtime, worker, Caddy). `deploy/env/*.env.example`을 복사해 값 입력 → `docker compose up -d` |
+| 서버 | `docker compose` (Postgres, web, realtime, worker, Caddy). `.env.example`(→ `.env`, `PUBLIC_HOST` 등)과 `deploy/env/*.env.example`을 복사해 값 입력 → `docker compose up -d` |
 | 좌석 명단 | `config/seats.local.json`(깃에 올리지 않음)을 서버에 두고 `docker compose run --rm migrate node dist/seed-seats.mjs` 또는 개발 환경에서 `pnpm seed:seats` |
 | 관리자 | `ADMIN_EMAILS`에 관리자 이메일(쉼표 구분) |
 

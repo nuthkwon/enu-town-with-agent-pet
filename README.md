@@ -49,6 +49,7 @@ scripts/check-oauth-discovery.sh http://localhost:3000
 
 ## 배포 (Docker Compose)
 ```bash
+cp .env.example .env                               # PUBLIC_HOST(공개 HTTPS 호스트) 등
 cp deploy/env/web.env.example deploy/env/web.env   # realtime/worker/postgres도 같은 방식으로 작성
 docker compose up -d --build
 ```
