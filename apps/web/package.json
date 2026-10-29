@@ -12,8 +12,10 @@
     "test:int": "vitest run --config vitest.int.config.ts --passWithNoTests"
   },
   "dependencies": {
-    "@colyseus/sdk": "catalog:",
+    "@better-auth/mcp": "catalog:",
+    "@better-auth/oauth-provider": "catalog:",
     "@colyseus/schema": "catalog:",
+    "@colyseus/sdk": "catalog:",
     "@enu/auth": "workspace:*",
     "@enu/db": "workspace:*",
     "@enu/domain": "workspace:*",
@@ -21,9 +23,11 @@
     "@enu/mcp-tools": "workspace:*",
     "@enu/protocol": "workspace:*",
     "@enu/shared": "workspace:*",
+    "@enu/sprites": "workspace:*",
     "@modelcontextprotocol/server": "catalog:",
     "better-auth": "catalog:",
     "drizzle-orm": "catalog:",
+    "galmuri": "catalog:",
     "jose": "catalog:",
     "next": "catalog:",
     "phaser": "catalog:",

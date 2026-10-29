@@ -3,6 +3,9 @@
 export const APP_TIMEZONE_DEFAULT = 'Asia/Seoul';
 export const ALLOWED_GOOGLE_HD_DEFAULT = 'enu-tech.co.kr';
 
+/** Current privacy notice version (docs/privacy-notice.ko.md); bump to require re-acceptance. */
+export const PRIVACY_NOTICE_VERSION = '2026-10';
+
 /** Version of the check-in instructions; the Claude skill compares this to its own. */
 export const INSTRUCTIONS_VERSION = '2026-10-29.1';
 

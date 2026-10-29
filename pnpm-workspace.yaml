@@ -33,6 +33,7 @@ catalog:
   "@types/react": 19.3.0
   "@types/react-dom": 19.3.0
   phaser: 4.2.1
+  galmuri: 2.40.3
   # realtime
   "@colyseus/tools": 0.18.11
   express: 5.3.0
