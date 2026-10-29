@@ -7,7 +7,8 @@
     ".": "./src/index.ts",
     "./schema": "./src/schema/index.ts",
     "./notify": "./src/notify.ts",
-    "./migrate": "./src/migrate.ts"
+    "./migrate": "./src/migrate.ts",
+    "./seed-seats": "./src/seed-seats.ts"
   },
   "scripts": {
     "typecheck": "tsc -p .",

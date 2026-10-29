@@ -10,6 +10,7 @@ export default defineConfig({
     index: 'src/index.ts',
     migrate: 'src/migrate.ts',
     healthcheck: 'src/healthcheck.ts',
+    'seed-seats': 'src/seed-seats.ts',
   },
   platform: 'node',
   target: 'node24',
