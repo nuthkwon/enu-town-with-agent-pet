@@ -33,7 +33,10 @@ async function newcomer(name: string) {
 }
 
 async function speciesOf(userId: string) {
-  const [p] = await h.db.select({ species: profiles.petSpecies }).from(profiles).where(eq(profiles.userId, userId));
+  const [p] = await h.db
+    .select({ species: profiles.petSpecies })
+    .from(profiles)
+    .where(eq(profiles.userId, userId));
   return p?.species;
 }
 
@@ -52,7 +55,9 @@ describe('choosePetSpecies', () => {
 
 describe('provisionProfile pet species', () => {
   it('gives the seat preset while it is free and assigns the seat', async () => {
-    await h.db.insert(desks).values({ deskId: 'L1a', labelName: '자리주인', petSpecies: THIRD, petName: '여울' });
+    await h.db
+      .insert(desks)
+      .values({ deskId: 'L1a', labelName: '자리주인', petSpecies: THIRD, petName: '여울' });
     await holder(FIRST);
     const u = await newcomer('자리주인');
     await provisionProfile(h.db, u);
@@ -62,7 +67,9 @@ describe('provisionProfile pet species', () => {
   });
 
   it('falls back to the first free species when the preset is taken or there is no seat', async () => {
-    await h.db.insert(desks).values({ deskId: 'L1a', labelName: '자리주인', petSpecies: FIRST, petName: '여울' });
+    await h.db
+      .insert(desks)
+      .values({ deskId: 'L1a', labelName: '자리주인', petSpecies: FIRST, petName: '여울' });
     await holder(FIRST);
     await holder(SECOND);
     const seated = await newcomer('자리주인');
@@ -82,7 +89,9 @@ describe('provisionProfile pet species', () => {
     expect(await speciesOf(first.id)).toBe(FIRST);
 
     for (const s of PET_SPECIES.filter((x) => x !== FIRST)) await holder(s);
-    await h.db.insert(desks).values({ deskId: 'L2a', labelName: '막내', petSpecies: SECOND, petName: '몽실' });
+    await h.db
+      .insert(desks)
+      .values({ deskId: 'L2a', labelName: '막내', petSpecies: SECOND, petName: '몽실' });
     const last = await newcomer('막내');
     await provisionProfile(h.db, last);
     expect(await speciesOf(last.id)).toBe(SECOND);

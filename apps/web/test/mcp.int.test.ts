@@ -1,9 +1,10 @@
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, hkdfSync, randomBytes } from 'node:crypto';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { protectedResourceMetadataUrl } from '@enu/auth';
-import { auditEvents, claudeLinks, profiles, type DbHandle } from '@enu/db';
-import { MCP_TOOL_NAMES } from '@enu/shared';
+import { activityReports, auditEvents, claudeLinks, profiles, type DbHandle } from '@enu/db';
+import { activityRefHash } from '@enu/mcp-tools';
+import { MCP_TOOL_NAMES, localDateKey } from '@enu/shared';
 import { createTestUser } from '@enu/testing';
 import { Client, StreamableHTTPClientTransport, type FetchLike } from '@modelcontextprotocol/client';
 import { toNodeHandler } from 'better-auth/node';
@@ -157,9 +158,9 @@ describe('OAuth discovery for the connector', () => {
 });
 
 describe('authorize -> consent -> token -> MCP', () => {
-  it('connects an employee’s Claude and serves the four tools until revoked', async () => {
+  it('connects an employee’s Claude and serves the five tools until revoked', async () => {
     const clientId = await createLoopbackClient();
-    const member = await createTestUser(h.db, { name: '연결러' });
+    const member = await createTestUser(h.db, { name: '연결러', shareActivity: true });
     const { cookie } = await devLogin(member.email);
 
     const { consentUrl, verifier } = await authorize(cookie, clientId);
@@ -235,12 +236,31 @@ describe('authorize -> consent -> token -> MCP', () => {
       });
       await client.connect(transport);
       const { tools } = await client.listTools();
+      expect(tools).toHaveLength(5);
       expect(tools.map((t) => t.name).sort()).toEqual(Object.values(MCP_TOOL_NAMES).sort());
       const ctx = await client.callTool({ name: MCP_TOOL_NAMES.getMyContext, arguments: {} });
       expect(ctx.isError).toBeFalsy();
       expect((ctx.structuredContent as { me?: { email: string } }).me?.email).toBe(member.email);
+      const activity = await client.callTool({
+        name: MCP_TOOL_NAMES.postActivity,
+        arguments: { now: { kind: 'review', ref: 'jira:ENU-301' } },
+      });
+      expect(activity.isError, JSON.stringify(activity.content)).toBeFalsy();
+      expect(activity.structuredContent).toMatchObject({ result: 'stored', schedule_blocks: 0 });
       await client.close();
     }
+
+    // The route keys ref hashes with HKDF(BETTER_AUTH_SECRET) and the APP_TIMEZONE office day.
+    const [report] = await h.db.select().from(activityReports).where(eq(activityReports.userId, member.id));
+    const periodKey = localDateKey(new Date(), 'Asia/Seoul');
+    const key = new Uint8Array(
+      hkdfSync('sha256', process.env.BETTER_AUTH_SECRET!, 'enu-town', 'activity-ref/v1', 32),
+    );
+    expect(report).toMatchObject({
+      periodKey,
+      nowKind: 'review',
+      nowRefHash: activityRefHash(key, periodKey, 'jira:ENU-301'),
+    });
 
     const [touched] = await h.db.select().from(claudeLinks).where(eq(claudeLinks.userId, member.id));
     expect(touched?.toolCallCount).toBeGreaterThanOrEqual(2);

@@ -1,5 +1,13 @@
 import { provisionProfile } from '@enu/auth';
-import { activityReports, desks, privacyConsents, profiles, takenPetSpecies, type Db, type DbOrTx } from '@enu/db';
+import {
+  activityReports,
+  desks,
+  privacyConsents,
+  profiles,
+  takenPetSpecies,
+  type Db,
+  type DbOrTx,
+} from '@enu/db';
 import {
   MANUAL_STATUSES,
   PRIVACY_NOTICE_VERSION,
@@ -83,13 +91,25 @@ export async function loadActivityToday(
   officeTimeZone: string,
 ): Promise<ActivityTodayDto | null> {
   const [row] = await db
-    .select({ nowKind: activityReports.nowKind, nowUntil: activityReports.nowUntil, schedule: activityReports.schedule })
+    .select({
+      nowKind: activityReports.nowKind,
+      nowUntil: activityReports.nowUntil,
+      schedule: activityReports.schedule,
+    })
     .from(activityReports)
-    .where(and(eq(activityReports.userId, userId), eq(activityReports.periodKey, localDateKey(now, officeTimeZone))))
+    .where(
+      and(
+        eq(activityReports.userId, userId),
+        eq(activityReports.periodKey, localDateKey(now, officeTimeZone)),
+      ),
+    )
     .limit(1);
   if (!row) return null;
   return {
-    now: row.nowKind && row.nowUntil && row.nowUntil > now ? { kind: row.nowKind, until: row.nowUntil.toISOString() } : null,
+    now:
+      row.nowKind && row.nowUntil && row.nowUntil > now
+        ? { kind: row.nowKind, until: row.nowUntil.toISOString() }
+        : null,
     schedule: row.schedule
       .filter((b) => (SCHEDULE_KINDS as readonly string[]).includes(b.kind))
       .map((b) => ({ startAt: b.start_at, endAt: b.end_at, kind: b.kind, hasRef: b.ref_hash !== null })),
@@ -157,5 +177,10 @@ export async function buildMeDto(db: Db, viewer: Viewer, now = new Date()): Prom
     loadActivityToday(db, viewer.userId, now, officeTimeZone),
     takenPetSpecies(db, viewer.userId),
   ]);
-  return toMeDto(p, viewer, { deskId, noticeAccepted, officeTimeZone, activityToday, takenPetSpecies: taken }, now);
+  return toMeDto(
+    p,
+    viewer,
+    { deskId, noticeAccepted, officeTimeZone, activityToday, takenPetSpecies: taken },
+    now,
+  );
 }

@@ -94,7 +94,10 @@ export async function buildExport(db: DbOrTx, userId: string, now = new Date()) 
     })),
     activityReports: reports.map((r) => ({
       periodKey: r.periodKey,
-      now: r.nowKind && r.nowUntil ? { kind: r.nowKind, hasRef: r.nowRefHash !== null, until: r.nowUntil } : null,
+      now:
+        r.nowKind && r.nowUntil
+          ? { kind: r.nowKind, hasRef: r.nowRefHash !== null, until: r.nowUntil }
+          : null,
       schedule: r.schedule.map((b) => ({
         startAt: b.start_at,
         endAt: b.end_at,

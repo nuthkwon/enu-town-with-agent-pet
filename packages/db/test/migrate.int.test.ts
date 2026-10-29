@@ -88,7 +88,9 @@ describe('migration 0002_town_visualization', () => {
     await q(`insert into chat_message_recipients (message_id, user_id)
              values ('00000000-0000-7000-8000-000000000001', 'u-a'),
                     ('00000000-0000-7000-8000-000000000001', 'u-b')`);
-    await q(`insert into user_presence (user_id, x, y, zone_id, last_seen_at) values ('u-a', 3, 4, 'pantry', now())`);
+    await q(
+      `insert into user_presence (user_id, x, y, zone_id, last_seen_at) values ('u-a', 3, 4, 'pantry', now())`,
+    );
     await q(`insert into privacy_consents (id, user_id, notice_version, scope)
              values ('00000000-0000-7000-8000-0000000000c1', 'u-a', '2026-10', 'service')`);
 
@@ -97,7 +99,9 @@ describe('migration 0002_town_visualization', () => {
     const applied = await q('select count(*)::int as n from drizzle.__drizzle_migrations');
     expect(applied.rows[0]?.n).toBe(3);
     const chat = await q('select id, kind, body from chat_messages order by id');
-    expect(chat.rows).toEqual([{ id: '00000000-0000-7000-8000-000000000002', kind: 'room', body: '전체 대화' }]);
+    expect(chat.rows).toEqual([
+      { id: '00000000-0000-7000-8000-000000000002', kind: 'room', body: '전체 대화' },
+    ]);
     expect(await exists('chat_message_recipients')).toBe(false);
     expect(await exists('user_presence')).toBe(false);
     expect(await exists('activity_reports')).toBe(true);
@@ -127,9 +131,15 @@ describe('migration 0002_town_visualization', () => {
       `insert into chat_messages (id, kind, sender_id, body, client_msg_id)
        values ('00000000-0000-7000-8000-000000000003', 'nearby', 'u-a', '다시 근처', 'c3')`,
     );
-    await violation('profiles_manual_status_chk', `update profiles set manual_status = 'sleeping',
-      manual_status_until = now() where user_id = 'u-a'`);
-    await violation('profiles_manual_status_pair_chk', `update profiles set manual_status = 'focus' where user_id = 'u-a'`);
+    await violation(
+      'profiles_manual_status_chk',
+      `update profiles set manual_status = 'sleeping',
+      manual_status_until = now() where user_id = 'u-a'`,
+    );
+    await violation(
+      'profiles_manual_status_pair_chk',
+      `update profiles set manual_status = 'focus' where user_id = 'u-a'`,
+    );
     await violation(
       'profiles_manual_status_pair_chk',
       `update profiles set manual_status_until = now() where user_id = 'u-a'`,
@@ -161,11 +171,19 @@ describe('migration 0002_town_visualization', () => {
     ]);
     await violation('activity_source_chk', report({}, `'web'`));
 
-    const block = { start_at: '2026-10-29T01:00:00.000Z', end_at: '2026-10-29T02:00:00.000Z', kind: 'meeting', ref_hash: null };
-    await q(report({ now_kind: `'review'`, now_until: 'now()', now_ref_hash: '$1', schedule: '$2::jsonb' }, `'claude_code'`), [
-      'b'.repeat(32),
-      JSON.stringify([block]),
-    ]);
+    const block = {
+      start_at: '2026-10-29T01:00:00.000Z',
+      end_at: '2026-10-29T02:00:00.000Z',
+      kind: 'meeting',
+      ref_hash: null,
+    };
+    await q(
+      report(
+        { now_kind: `'review'`, now_until: 'now()', now_ref_hash: '$1', schedule: '$2::jsonb' },
+        `'claude_code'`,
+      ),
+      ['b'.repeat(32), JSON.stringify([block])],
+    );
     // One report per user and office day.
     expect(await failure(report({}))).toMatchObject({
       code: '23505',

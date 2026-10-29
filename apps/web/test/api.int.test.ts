@@ -232,7 +232,9 @@ describe('authentication and authorization', () => {
       .update(profiles)
       .set({ manualStatusUntil: new Date(Date.now() - 1000) })
       .where(eq(profiles.userId, me.id));
-    expect((await jsonOf<MeDto>(await call(meRoute.GET, '/api/v1/me', { cookie: me.cookie }))).manualStatus).toBeNull();
+    expect(
+      (await jsonOf<MeDto>(await call(meRoute.GET, '/api/v1/me', { cookie: me.cookie }))).manualStatus,
+    ).toBeNull();
   });
 
   it('keeps admin routes for admins (role or ADMIN_EMAILS)', async () => {
@@ -403,6 +405,66 @@ describe('work logs and visibility', () => {
     expect(mine.items).toHaveLength(3);
   });
 
+  it('gives colleagues no status text, status or log timestamps (the owner keeps them)', async () => {
+    const owner = await userWithSession({ name: '기록러' });
+    const viewer = await userWithSession();
+    await h.db
+      .update(profiles)
+      .set({ statusText: '오후 외근', lastWorkLogAt: new Date() })
+      .where(eq(profiles.userId, owner.id));
+    const id = await insertLog(owner.id, { editedByUser: true, userEditedAt: new Date() });
+
+    const people = await jsonOf<PersonDto[]>(
+      await call(peopleRoute.GET, '/api/v1/people', { cookie: viewer.cookie }),
+    );
+    const listed = people.find((p) => p.userId === owner.id);
+    expect(listed).toBeDefined();
+    const card = await jsonOf<ProfileCardDto>(
+      await call(cardRoute.GET, `/api/v1/users/${owner.id}/card`, {
+        cookie: viewer.cookie,
+        params: { id: owner.id },
+      }),
+    );
+    for (const person of [listed, card.person]) {
+      expect(person).not.toHaveProperty('statusText');
+      expect(person).not.toHaveProperty('lastWorkLogAt');
+    }
+    expect(JSON.stringify({ people, card })).not.toContain('오후 외근');
+    expect(card.latestLog).toMatchObject({
+      id,
+      claudeWrittenAt: null,
+      updatedAt: null,
+      userEditedAt: null,
+      editedByUser: true,
+      provenanceLabel: '기록러님의 Claude가 작성 · 본인 수정',
+    });
+    const feed = await jsonOf<Paginated<WorkLogDto>>(
+      await call(userLogsRoute.GET, `/api/v1/users/${owner.id}/work-logs`, {
+        cookie: viewer.cookie,
+        params: { id: owner.id },
+      }),
+    );
+    expect(feed.items[0]).toMatchObject({ claudeWrittenAt: null, updatedAt: null, userEditedAt: null });
+
+    // The owner still sees them on /me and in their own log views.
+    const me = await jsonOf<MeDto>(await call(meRoute.GET, '/api/v1/me', { cookie: owner.cookie }));
+    expect(me.statusText).toBe('오후 외근');
+    expect(me.lastWorkLogAt).not.toBeNull();
+    const own = await jsonOf<Paginated<WorkLogDto>>(
+      await call(myLogsRoute.GET, '/api/v1/me/work-logs', { cookie: owner.cookie }),
+    );
+    expect(own.items[0]?.claudeWrittenAt).not.toBeNull();
+    expect(own.items[0]?.updatedAt).not.toBeNull();
+    expect(own.items[0]?.userEditedAt).not.toBeNull();
+    const ownCard = await jsonOf<ProfileCardDto>(
+      await call(cardRoute.GET, `/api/v1/users/${owner.id}/card`, {
+        cookie: owner.cookie,
+        params: { id: owner.id },
+      }),
+    );
+    expect(ownCard.latestLog?.claudeWrittenAt).not.toBeNull();
+  });
+
   it('paginates with an opaque cursor', async () => {
     const owner = await userWithSession();
     for (const day of ['2026-10-20', '2026-10-21', '2026-10-22'])
@@ -558,7 +620,13 @@ describe('work logs and visibility', () => {
 });
 
 describe('chat history', () => {
-  async function msg(input: { kind: 'dm' | 'room'; sender: string; body: string; dm?: [string, string]; at: number }) {
+  async function msg(input: {
+    kind: 'dm' | 'room';
+    sender: string;
+    body: string;
+    dm?: [string, string];
+    at: number;
+  }) {
     const id = newId();
     const pair = input.dm ? ([...input.dm].sort() as [string, string]) : null;
     await h.db.insert(chatMessages).values({
@@ -608,7 +676,10 @@ describe('chat history', () => {
     for (const kind of ['nearby', 'all']) {
       const bad = await get(kind);
       expect(bad.status, kind).toBe(400);
-      expect(await bad.json()).toMatchObject({ error: 'invalid_query', fields: [{ field: 'kind', reason: 'invalid_value' }] });
+      expect(await bad.json()).toMatchObject({
+        error: 'invalid_query',
+        fields: [{ field: 'kind', reason: 'invalid_value' }],
+      });
     }
 
     const room = await jsonOf<Paginated<ChatItemDto>>(
@@ -635,6 +706,7 @@ describe('onboarding', () => {
     pet_species: 'fox',
     pet_name: '여울',
     default_chat_summary_visibility: 'company',
+    share_activity: false,
   } as const;
 
   it('requires the current notice version', async () => {
@@ -677,14 +749,15 @@ describe('onboarding', () => {
       .sort();
     expect(scopes).toEqual(['claude_chat_summary', 'service']);
 
-    // Taken seats are refused; moving to a free seat frees the old one.
+    // Taken seats are refused; moving to a free seat frees the old one (keeping my own pet is fine).
     const other = await userWithSession();
     const taken = await call(onboardingRoute.POST, '/api/v1/me/onboarding', {
       method: 'POST',
       cookie: other.cookie,
-      body,
+      body: { ...body, pet_species: 'bunny' },
     });
     expect(taken.status).toBe(409);
+    expect(await taken.json()).toMatchObject({ error: 'desk_taken' });
     const moved = await call(onboardingRoute.POST, '/api/v1/me/onboarding', {
       method: 'POST',
       cookie: me.cookie,
@@ -693,6 +766,198 @@ describe('onboarding', () => {
     expect((await jsonOf<MeDto>(moved)).deskId).toBe('L3b');
     const [old] = await h.db.select().from(desks).where(eq(desks.deskId, 'L3a'));
     expect(old?.userId).toBeNull();
+  });
+
+  it('requires an explicit 활동 공유 choice and records the activity_sharing consent', async () => {
+    const me = await userWithSession();
+    const { share_activity: _omitted, ...withoutChoice } = body;
+    const missing = await call(onboardingRoute.POST, '/api/v1/me/onboarding', {
+      method: 'POST',
+      cookie: me.cookie,
+      body: { ...withoutChoice, desk_id: null },
+    });
+    expect(missing.status).toBe(400);
+    expect(await missing.json()).toMatchObject({
+      error: 'invalid_body',
+      fields: [{ field: 'share_activity', reason: 'invalid_type' }],
+    });
+
+    const listener = await listenEvents();
+    const res = await call(onboardingRoute.POST, '/api/v1/me/onboarding', {
+      method: 'POST',
+      cookie: me.cookie,
+      body: { ...body, desk_id: null, share_activity: true },
+    });
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect((await jsonOf<MeDto>(res)).shareActivity).toBe(true);
+    await listener.stop();
+    expect(listener.events).toEqual(
+      expect.arrayContaining([
+        { v: 1, type: 'profile_changed', user_id: me.id },
+        { v: 1, type: 'activity_changed', user_id: me.id },
+      ]),
+    );
+    const consents = await h.db.select().from(privacyConsents).where(eq(privacyConsents.userId, me.id));
+    expect(consents.find((c) => c.scope === 'activity_sharing')).toMatchObject({
+      noticeVersion: PRIVACY_NOTICE_VERSION,
+      withdrawnAt: null,
+    });
+  });
+
+  it('refuses a pet another active member already has (409 pet_taken)', async () => {
+    const holder = await createTestUser(h.db);
+    await setPet(holder.id, 'fox');
+    const me = await userWithSession();
+    const res = await call(onboardingRoute.POST, '/api/v1/me/onboarding', {
+      method: 'POST',
+      cookie: me.cookie,
+      body: { ...body, desk_id: null },
+    });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({
+      error: 'pet_taken',
+      message: '이미 다른 동료가 고른 펫이에요. 다른 펫을 골라 주세요.',
+      fields: [{ field: 'pet_species', reason: 'taken' }],
+    });
+    // Nothing of the wizard was saved.
+    expect(await h.db.select().from(privacyConsents).where(eq(privacyConsents.userId, me.id))).toHaveLength(
+      0,
+    );
+    const [p] = await h.db.select().from(profiles).where(eq(profiles.userId, me.id));
+    expect(p?.petSpecies).not.toBe('fox');
+  });
+});
+
+describe('활동 공유, 접속 표시 and pets', () => {
+  it('turning 활동 공유 off deletes today’s report, withdraws the consent and NOTIFYs both events', async () => {
+    const me = await userWithSession({ shareActivity: true });
+    await insertReport(me.id);
+    const listener = await listenEvents();
+    const res = await call(profileRoute.PATCH, '/api/v1/me/profile', {
+      method: 'PATCH',
+      cookie: me.cookie,
+      body: { share_activity: false },
+    });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const dto = await jsonOf<MeDto>(res);
+    expect(dto).toMatchObject({ shareActivity: false, activityToday: null });
+    await listener.stop();
+    const mine = listener.events.filter((e) => 'user_id' in e && e.user_id === me.id);
+    expect(mine).toEqual(
+      expect.arrayContaining([
+        { v: 1, type: 'profile_changed', user_id: me.id },
+        { v: 1, type: 'activity_changed', user_id: me.id },
+      ]),
+    );
+    expect(await h.db.select().from(activityReports).where(eq(activityReports.userId, me.id))).toEqual([]);
+    const [consent] = await h.db
+      .select()
+      .from(privacyConsents)
+      .where(and(eq(privacyConsents.userId, me.id), eq(privacyConsents.scope, 'activity_sharing')));
+    expect(consent?.withdrawnAt).not.toBeNull();
+
+    // Back on: the consent is active again, and nothing of today's report comes back.
+    const on = await jsonOf<MeDto>(
+      await call(profileRoute.PATCH, '/api/v1/me/profile', {
+        method: 'PATCH',
+        cookie: me.cookie,
+        body: { share_activity: true },
+      }),
+    );
+    expect(on).toMatchObject({ shareActivity: true, activityToday: null });
+    const [again] = await h.db
+      .select()
+      .from(privacyConsents)
+      .where(and(eq(privacyConsents.userId, me.id), eq(privacyConsents.scope, 'activity_sharing')));
+    expect(again?.withdrawnAt).toBeNull();
+  });
+
+  it('PATCH show_live updates 접속 표시 and NOTIFYs profile_changed only', async () => {
+    const me = await userWithSession();
+    const listener = await listenEvents();
+    const res = await call(profileRoute.PATCH, '/api/v1/me/profile', {
+      method: 'PATCH',
+      cookie: me.cookie,
+      body: { show_live: false },
+    });
+    expect((await jsonOf<MeDto>(res)).showLive).toBe(false);
+    await listener.stop();
+    expect(listener.events.filter((e) => 'user_id' in e && e.user_id === me.id)).toEqual([
+      { v: 1, type: 'profile_changed', user_id: me.id },
+    ]);
+    const [p] = await h.db.select().from(profiles).where(eq(profiles.userId, me.id));
+    expect(p?.showLive).toBe(false);
+  });
+
+  it('keeps every active member’s pet different', async () => {
+    const [first, second, third, fourth] = PET_SPECIES as unknown as [
+      PetSpecies,
+      PetSpecies,
+      PetSpecies,
+      PetSpecies,
+    ];
+    const me = await userWithSession();
+    await setPet(me.id, third);
+    await setPet((await createTestUser(h.db)).id, fourth);
+    await setPet((await createTestUser(h.db)).id, second);
+    const leaver = await createTestUser(h.db, { status: 'deactivated' });
+    await setPet(leaver.id, first);
+
+    // Other active members' species, in PET_SPECIES order (not mine, not a deactivated member's).
+    const meDto = await jsonOf<MeDto>(await call(meRoute.GET, '/api/v1/me', { cookie: me.cookie }));
+    expect(meDto.takenPetSpecies).toEqual([second, fourth]);
+
+    const patchPet = (species: PetSpecies) =>
+      call(profileRoute.PATCH, '/api/v1/me/profile', {
+        method: 'PATCH',
+        cookie: me.cookie,
+        body: { pet_species: species, pet_name: '몽실' },
+      });
+    const taken = await patchPet(second);
+    expect(taken.status).toBe(409);
+    expect(await taken.json()).toMatchObject({
+      error: 'pet_taken',
+      fields: [{ field: 'pet_species', reason: 'taken' }],
+    });
+    const [unchanged] = await h.db.select().from(profiles).where(eq(profiles.userId, me.id));
+    expect(unchanged?.petSpecies).toBe(third);
+    expect(unchanged?.petName).not.toBe('몽실');
+
+    // Re-saving my own species is fine.
+    const own = await patchPet(third);
+    expect(own.status, await own.clone().text()).toBe(200);
+    expect((await jsonOf<MeDto>(own)).pet).toEqual({ species: third, name: '몽실' });
+
+    // A deactivated member's species is free again.
+    const freed = await patchPet(first);
+    expect(freed.status, await freed.clone().text()).toBe(200);
+    expect((await jsonOf<MeDto>(freed)).pet.species).toBe(first);
+
+    // A species shared from before this rule never blocks other profile edits; switching to it does.
+    await setPet((await createTestUser(h.db)).id, first);
+    const rename = await call(profileRoute.PATCH, '/api/v1/me/profile', {
+      method: 'PATCH',
+      cookie: me.cookie,
+      body: { display_name: '새 이름', pet_species: first },
+    });
+    expect(rename.status, await rename.clone().text()).toBe(200);
+    expect((await patchPet(fourth)).status).toBe(409);
+  });
+
+  it('never lets two concurrent picks of one species both win', async () => {
+    const a = await userWithSession();
+    const b = await userWithSession();
+    const species = PET_SPECIES[PET_SPECIES.length - 1] as PetSpecies;
+    const pick = (cookie: string) =>
+      call(profileRoute.PATCH, '/api/v1/me/profile', {
+        method: 'PATCH',
+        cookie,
+        body: { pet_species: species },
+      });
+    const statuses = (await Promise.all([pick(a.cookie), pick(b.cookie)])).map((r) => r.status).sort();
+    expect(statuses).toEqual([200, 409]);
+    const holders = await h.db.select().from(profiles).where(eq(profiles.petSpecies, species));
+    expect(holders).toHaveLength(1);
   });
 });
 
@@ -812,6 +1077,15 @@ describe('profile, pet and links', () => {
       body: '내가 보낸 DM',
       clientMsgId: 'x2',
     });
+    await insertReport(me.id);
+    await insertReport(other.id);
+    await h.db.insert(chatMessages).values({
+      id: newId(),
+      kind: 'room',
+      senderId: me.id,
+      body: '내가 보낸 전체 채팅',
+      clientMsgId: 'x3',
+    });
     const res = await call(exportRoute.GET, '/api/v1/me/export', { cookie: me.cookie });
     expect(res.status).toBe(200);
     expect(res.headers.get('content-disposition')).toMatch(
@@ -821,9 +1095,27 @@ describe('profile, pet and links', () => {
     expect(text).toContain('내가 보낸 DM');
     expect(text).not.toContain('남이 보낸 DM');
     expect(text).not.toContain('남의 비공개 로그');
-    const data = JSON.parse(text) as { workLogs: unknown[]; account: { email: string } };
+    const data = JSON.parse(text) as {
+      workLogs: unknown[];
+      account: { email: string };
+      profile: { showLive: boolean; manualStatus: string | null };
+      activityReports: { now: { kind: string; hasRef: boolean } | null; schedule: { hasRef: boolean }[] }[];
+      sentChatMessages: Record<string, unknown>[];
+    };
     expect(data.workLogs).toHaveLength(1);
     expect(data.account.email).toBe(me.email);
+    expect(data.profile).toMatchObject({ showLive: true, manualStatus: null });
+    // My own report only, with has_ref instead of the keyed hashes.
+    expect(data.activityReports).toEqual([
+      expect.objectContaining({
+        now: expect.objectContaining({ kind: 'review', hasRef: true }),
+        schedule: [expect.objectContaining({ kind: 'meeting', hasRef: true })],
+      }),
+    ]);
+    expect(text).not.toContain('f'.repeat(32));
+    expect(text).not.toContain('e'.repeat(32));
+    expect(data.sentChatMessages).toHaveLength(2);
+    for (const m of data.sentChatMessages) expect(m).not.toHaveProperty('zoneId');
   });
 });
 

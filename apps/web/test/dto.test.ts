@@ -152,7 +152,14 @@ describe('people and desks', () => {
 
   it('gives colleagues no status text, status or timestamps (realtime state only, office hours)', () => {
     const p = toPersonDto(profile, 'L4a');
-    for (const key of ['statusText', 'lastWorkLogAt', 'manualStatus', 'manualStatusUntil', 'shareActivity', 'showLive']) {
+    for (const key of [
+      'statusText',
+      'lastWorkLogAt',
+      'manualStatus',
+      'manualStatusUntil',
+      'shareActivity',
+      'showLive',
+    ]) {
       expect(p).not.toHaveProperty(key);
     }
     expect(JSON.stringify(p)).not.toContain('외근');

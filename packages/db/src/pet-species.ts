@@ -22,7 +22,9 @@ export async function takenPetSpecies(db: DbOrTx, exceptUserId: string | null): 
     .selectDistinct({ species: profiles.petSpecies })
     .from(profiles)
     .innerJoin(user, eq(user.id, profiles.userId))
-    .where(and(eq(user.status, 'active'), exceptUserId === null ? undefined : ne(profiles.userId, exceptUserId)));
+    .where(
+      and(eq(user.status, 'active'), exceptUserId === null ? undefined : ne(profiles.userId, exceptUserId)),
+    );
   const taken = new Set(rows.map((r) => r.species));
   return PET_SPECIES.filter((s) => taken.has(s));
 }

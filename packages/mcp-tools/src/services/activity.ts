@@ -68,7 +68,13 @@ export async function postActivity(
     throw new ToolError(
       'validation_failed',
       'activity rejected: nothing was saved. Fix the listed fields and call post_activity again.',
-      { problems: problems.map((p) => ({ field: p.field, reason: p.reason, ...(p.detail ? { detail: p.detail } : {}) })) },
+      {
+        problems: problems.map((p) => ({
+          field: p.field,
+          reason: p.reason,
+          ...(p.detail ? { detail: p.detail } : {}),
+        })),
+      },
     );
   }
 
@@ -111,7 +117,13 @@ export async function postActivity(
       .onConflictDoUpdate({
         target: [activityReports.userId, activityReports.periodKey],
         // `now` is always replaced (null clears it); the schedule only when it was sent.
-        set: { ...reported, ...(schedule ? { schedule } : {}), source, oauthClientId: caller.clientId, updatedAt: now },
+        set: {
+          ...reported,
+          ...(schedule ? { schedule } : {}),
+          source,
+          oauthClientId: caller.clientId,
+          updatedAt: now,
+        },
       })
       .returning({ schedule: activityReports.schedule });
     await notifyTown(tx, { v: 1, type: 'activity_changed', user_id: caller.userId });

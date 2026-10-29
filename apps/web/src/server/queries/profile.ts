@@ -10,7 +10,13 @@ import {
   type Db,
   type DbOrTx,
 } from '@enu/db';
-import { PRIVACY_NOTICE_VERSION, normalizeLine, type PetSpecies, type ProfilePatch, type Visibility } from '@enu/shared';
+import {
+  PRIVACY_NOTICE_VERSION,
+  normalizeLine,
+  type PetSpecies,
+  type ProfilePatch,
+  type Visibility,
+} from '@enu/shared';
 import { and, eq, isNull } from 'drizzle-orm';
 import { ko } from '@/i18n/ko';
 import { HttpError, type FieldIssue } from '../http';
@@ -144,7 +150,10 @@ export async function patchProfile(
   if (problems.length) throw new HttpError(400, 'invalid_body', ko.errors.invalidBody, problems);
 
   await db.transaction(async (tx) => {
-    if (patch.pet_species !== undefined) await claimPetSpecies(tx, viewer.userId, patch.pet_species);
+    // Only a change is a pick: re-sending my current species (the profile form always does) never conflicts.
+    if (patch.pet_species !== undefined && patch.pet_species !== current.petSpecies) {
+      await claimPetSpecies(tx, viewer.userId, patch.pet_species);
+    }
     await tx.update(profiles).set(set).where(eq(profiles.userId, viewer.userId));
     if (patch.share_activity !== undefined) {
       await recordShareActivity(tx, viewer.userId, current.shareActivity, patch.share_activity, now);
