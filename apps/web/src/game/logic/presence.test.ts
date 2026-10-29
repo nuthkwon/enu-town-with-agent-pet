@@ -54,17 +54,37 @@ describe('§5.3 label table', () => {
         ActivityCode.Collab,
         ActivityCode.Today,
       ].map(activityLabel),
-    ).toEqual(['', '대화 가능', '집중 모드', '회의 중', '휴식', '개인 업무', '문서 작성', '검토 중', '협업 중', '오늘 업무 기록']);
+    ).toEqual([
+      '',
+      '대화 가능',
+      '집중 모드',
+      '회의 중',
+      '휴식',
+      '개인 업무',
+      '문서 작성',
+      '검토 중',
+      '협업 중',
+      '오늘 업무 기록',
+    ]);
     expect(activityLabel(99)).toBe('');
   });
 
   it('labels every source code and plate note', () => {
     expect(
-      [SourceCode.None, SourceCode.Manual, SourceCode.Calendar, SourceCode.Claude, SourceCode.WorkLog, SourceCode.Town].map(
-        sourceLabel,
-      ),
+      [
+        SourceCode.None,
+        SourceCode.Manual,
+        SourceCode.Calendar,
+        SourceCode.Claude,
+        SourceCode.WorkLog,
+        SourceCode.Town,
+      ].map(sourceLabel),
     ).toEqual(['', '직접 설정', '캘린더 일정', 'Claude 보고', '업무 로그', '타운 접속']);
-    expect([PlateNote.None, PlateNote.Away, PlateNote.Absent].map(noteLabel)).toEqual(['', '자리 비움', '부재']);
+    expect([PlateNote.None, PlateNote.Away, PlateNote.Absent].map(noteLabel)).toEqual([
+      '',
+      '자리 비움',
+      '부재',
+    ]);
   });
 
   it('formats until as ~HH:MM in the office time zone, nothing for 0', () => {
@@ -88,11 +108,15 @@ describe('§5.3 label table', () => {
 
 describe('displayForm', () => {
   it('is `<activity> · <source>` plus ~HH:MM when until > 0', () => {
-    expect(displayForm(p({ activity: ActivityCode.Review, source: SourceCode.Claude, until: AT_11 }), TZ)).toBe(
-      '검토 중 · Claude 보고 · ~11:00',
+    expect(
+      displayForm(p({ activity: ActivityCode.Review, source: SourceCode.Claude, until: AT_11 }), TZ),
+    ).toBe('검토 중 · Claude 보고 · ~11:00');
+    expect(displayForm(p({ activity: ActivityCode.Focus, source: SourceCode.Manual }), TZ)).toBe(
+      '집중 모드 · 직접 설정',
     );
-    expect(displayForm(p({ activity: ActivityCode.Focus, source: SourceCode.Manual }), TZ)).toBe('집중 모드 · 직접 설정');
-    expect(displayForm(p({ activity: ActivityCode.Today, source: SourceCode.WorkLog }), TZ)).toBe('오늘 업무 기록 · 업무 로그');
+    expect(displayForm(p({ activity: ActivityCode.Today, source: SourceCode.WorkLog }), TZ)).toBe(
+      '오늘 업무 기록 · 업무 로그',
+    );
   });
 
   it('shows only the source when there is no activity', () => {
@@ -100,8 +124,12 @@ describe('displayForm', () => {
   });
 
   it('shows 부재 alone (no source, no end time) and 자리 비움 with its end time', () => {
-    expect(displayForm(p({ note: PlateNote.Absent, until: AT_11, source: SourceCode.Calendar }), TZ)).toBe('부재');
-    expect(displayForm(p({ note: PlateNote.Away, source: SourceCode.Manual, until: AT_1530 }), TZ)).toBe('자리 비움 · ~15:30');
+    expect(displayForm(p({ note: PlateNote.Absent, until: AT_11, source: SourceCode.Calendar }), TZ)).toBe(
+      '부재',
+    );
+    expect(displayForm(p({ note: PlateNote.Away, source: SourceCode.Manual, until: AT_1530 }), TZ)).toBe(
+      '자리 비움 · ~15:30',
+    );
   });
 
   it('is empty when nothing is known', () => {
@@ -111,7 +139,9 @@ describe('displayForm', () => {
 
 describe('hidden desk plates (§1.3)', () => {
   it('자리 비움: note with end time, plus the owner-typed 상태 문구', () => {
-    expect(hiddenPlate(p({ note: PlateNote.Away, until: AT_1530, statusText: '병원 다녀올게요' }), TZ)).toEqual({
+    expect(
+      hiddenPlate(p({ note: PlateNote.Away, until: AT_1530, statusText: '병원 다녀올게요' }), TZ),
+    ).toEqual({
       label: { icon: null, text: '자리 비움 · ~15:30' },
       detail: '병원 다녀올게요',
       quiet: false,
@@ -127,7 +157,9 @@ describe('hidden desk plates (§1.3)', () => {
   });
 
   it('a label without the avatar: icon + activity, then source (+ ~HH:MM)', () => {
-    expect(hiddenPlate(p({ activity: ActivityCode.Review, source: SourceCode.Claude, until: AT_11 }), TZ)).toEqual({
+    expect(
+      hiddenPlate(p({ activity: ActivityCode.Review, source: SourceCode.Claude, until: AT_11 }), TZ),
+    ).toEqual({
       label: { icon: 'magnifier', text: '검토 중' },
       detail: 'Claude 보고 · ~11:00',
       quiet: false,

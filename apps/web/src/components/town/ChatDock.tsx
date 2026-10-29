@@ -89,7 +89,9 @@ export function ChatDock({ docked = false }: { docked?: boolean }) {
     const ctrl = new AbortController();
     getJson<Paginated<ChatItemDto>>(api.roomChat(), ctrl.signal)
       .then((page) => {
-        const hist = (page?.items ?? []).map(fromHistory).sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
+        const hist = (page?.items ?? [])
+          .map(fromHistory)
+          .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
         setLines((prev) => {
           let merged: Line[] = [];
           for (const h of hist) merged = mergeLine(merged, h, '');

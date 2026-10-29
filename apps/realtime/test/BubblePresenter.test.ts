@@ -56,12 +56,12 @@ describe('BubblePresenter', () => {
     for (const text of TRICKY) {
       const pet = emptyPet();
       const candidate = nudge(text, due);
-      await presenter.show(pet, { userId: 'u1', candidate, trigger: 'join', indicatorAllowed: true });
+      await presenter.show(pet, { userId: 'u1', candidate, trigger: 'join' });
       expect(pet.bubbleText).toBe(text);
       expect(pet.bubbleText.length).toBe(text.length);
       expect(pet.bubbleText).not.toContain('14:00');
       expect(pet.bubbleDueAt).toBe(due.getTime());
-      expect(pet.indicator).toBe(Indicator.Dots);
+      expect(pet.indicator).toBe(Indicator.None);
       expect(pet.bubbleKind).toBe(BubbleKind.Nudge);
       expect(pet.bubbleId).toBe(candidate.refId);
       expect(pet.bubbleUntil).toBeGreaterThanOrEqual(now.getTime() + 6000);
@@ -80,7 +80,7 @@ describe('BubblePresenter', () => {
       { dueWindowsMin: [30, 5] },
     );
     const pet = emptyPet();
-    await presenter.show(pet, { userId: 'u1', candidate, trigger: 'due', dueKey: 't1:5', indicatorAllowed: true });
+    await presenter.show(pet, { userId: 'u1', candidate, trigger: 'due', dueKey: 't1:5' });
     expect(pet.bubbleText).toBe('주간 보고서 제출');
     expect(pet.bubbleKind).toBe(BubbleKind.TodoDue);
     expect(pet.bubbleDueAt).toBe(dueAt.getTime());
@@ -97,7 +97,6 @@ describe('BubblePresenter', () => {
       userId: 'u1',
       candidate: nudge('물 한 잔 드세요'),
       trigger: 'glance',
-      indicatorAllowed: true,
     });
     expect(pet.bubbleDueAt).toBe(0);
     presenter.hide(pet);
@@ -120,20 +119,19 @@ describe('BubblePresenter', () => {
       userId: 'u1',
       candidate: nudge('곧 사라질 넛지'),
       trigger: 'join',
-      indicatorAllowed: true,
     });
     expect(ok).toBe(false);
     expect(pet.bubbleText).toBe('');
     expect(pet.indicator).toBe(Indicator.None);
   });
 
-  it('keeps the shared indicator at None while the owner is not shown (indicatorAllowed=false)', async () => {
+  it('never sets the shared indicator: a bubble onset would tell colleagues the tab is visible', async () => {
     const store = new MemoryStore();
     const presenter = new BubblePresenter({ store, clock: new ManualClock(now.getTime()) });
     const pet = emptyPet();
-    const candidate = nudge('숨어 있어도 주인에게는 보여요');
-    await presenter.show(pet, { userId: 'u1', candidate, trigger: 'eligible', indicatorAllowed: false });
-    expect(pet.bubbleText).toBe('숨어 있어도 주인에게는 보여요');
+    const candidate = nudge('주인에게만 보여요');
+    await presenter.show(pet, { userId: 'u1', candidate, trigger: 'eligible' });
+    expect(pet.bubbleText).toBe('주인에게만 보여요');
     expect(pet.bubbleId).toBe(candidate.refId);
     expect(pet.indicator).toBe(Indicator.None);
     expect(store.records[0]).toMatchObject({ trigger: 'eligible' });

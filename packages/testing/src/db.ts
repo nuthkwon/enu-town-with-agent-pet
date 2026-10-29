@@ -67,7 +67,10 @@ export interface TestUserInput {
 let counter = 0;
 
 /** Inserts a user + profile directly (bypassing Better Auth) and returns the id. */
-export async function createTestUser(db: Db, input: TestUserInput = {}): Promise<{ id: string; email: string; name: string }> {
+export async function createTestUser(
+  db: Db,
+  input: TestUserInput = {},
+): Promise<{ id: string; email: string; name: string }> {
   counter += 1;
   const id = newId();
   const name = input.name ?? `테스트${counter}`;

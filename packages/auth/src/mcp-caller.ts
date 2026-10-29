@@ -14,7 +14,14 @@ export interface AccessTokenClaims {
 }
 
 export type McpCaller =
-  | { ok: true; userId: string; email: string; clientId: string; scopes: string[]; expiresAt: number | undefined }
+  | {
+      ok: true;
+      userId: string;
+      email: string;
+      clientId: string;
+      scopes: string[];
+      expiresAt: number | undefined;
+    }
   | { ok: false; reason: string };
 
 /**
@@ -22,13 +29,28 @@ export type McpCaller =
  * tool code: the user must still be active and in the workspace domain, and the token must
  * have been issued after any revocation (all links, or this client's link).
  */
-export async function resolveMcpCaller(db: Db, claims: AccessTokenClaims, policy: DomainPolicy): Promise<McpCaller> {
+export async function resolveMcpCaller(
+  db: Db,
+  claims: AccessTokenClaims,
+  policy: DomainPolicy,
+): Promise<McpCaller> {
   const userId = typeof claims.sub === 'string' ? claims.sub : null;
-  const clientId = typeof claims.azp === 'string' ? claims.azp : typeof claims.client_id === 'string' ? claims.client_id : null;
+  const clientId =
+    typeof claims.azp === 'string'
+      ? claims.azp
+      : typeof claims.client_id === 'string'
+        ? claims.client_id
+        : null;
   if (!userId || !clientId) return { ok: false, reason: 'token_missing_subject_or_client' };
 
   const [u] = await db
-    .select({ id: user.id, email: user.email, status: user.status, hd: user.hd, tokensRevokedAt: user.tokensRevokedAt })
+    .select({
+      id: user.id,
+      email: user.email,
+      status: user.status,
+      hd: user.hd,
+      tokensRevokedAt: user.tokensRevokedAt,
+    })
     .from(user)
     .where(eq(user.id, userId));
   if (!u) return { ok: false, reason: 'unknown_user' };
@@ -36,7 +58,8 @@ export async function resolveMcpCaller(db: Db, claims: AccessTokenClaims, policy
   if (!checkEmailAllowed(u.email, policy).ok) return { ok: false, reason: 'domain_not_allowed' };
 
   const issuedAtMs = typeof claims.iat === 'number' ? claims.iat * 1000 : 0;
-  if (u.tokensRevokedAt && issuedAtMs <= u.tokensRevokedAt.getTime()) return { ok: false, reason: 'tokens_revoked' };
+  if (u.tokensRevokedAt && issuedAtMs <= u.tokensRevokedAt.getTime())
+    return { ok: false, reason: 'tokens_revoked' };
 
   const [link] = await db
     .select({ revokedAt: claudeLinks.revokedAt })
@@ -55,7 +78,10 @@ export async function resolveMcpCaller(db: Db, claims: AccessTokenClaims, policy
 }
 
 /** RFC 6750 challenge that makes Claude restart the OAuth flow (reconnect). */
-export function invalidTokenChallenge(resourceMetadataUrl: string, description = 'token is no longer valid'): Response {
+export function invalidTokenChallenge(
+  resourceMetadataUrl: string,
+  description = 'token is no longer valid',
+): Response {
   return new Response(
     JSON.stringify({ jsonrpc: '2.0', error: { code: -32001, message: description }, id: null }),
     {

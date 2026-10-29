@@ -24,7 +24,10 @@ export const Composer = forwardRef<
     note?: string;
     rows?: number;
   }
->(function Composer({ value, onChange, onSend, placeholder, label, disabled, disabledReason, note, rows = 1 }, ref) {
+>(function Composer(
+  { value, onChange, onSend, placeholder, label, disabled, disabledReason, note, rows = 1 },
+  ref,
+) {
   const [error, setError] = useState<string | null>(null);
   const len = graphemeLength(value);
   const over = len > LIMITS.chatMaxLen;

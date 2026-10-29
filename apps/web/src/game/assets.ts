@@ -40,7 +40,11 @@ export function avatarSheetUrl(key: string, staticKeys: ReadonlySet<string>): st
   return staticKeys.has(key) ? SPRITE_PATHS.avatarStatic(key) : SPRITE_PATHS.avatarApi(key);
 }
 
-export function loadAvatarSheet(load: Phaser.Loader.LoaderPlugin, key: string, staticKeys: ReadonlySet<string>): void {
+export function loadAvatarSheet(
+  load: Phaser.Loader.LoaderPlugin,
+  key: string,
+  staticKeys: ReadonlySet<string>,
+): void {
   load.spritesheet(TEX.avatar(key), avatarSheetUrl(key, staticKeys), {
     frameWidth: AVATAR_FRAME,
     frameHeight: AVATAR_FRAME,
@@ -48,11 +52,17 @@ export function loadAvatarSheet(load: Phaser.Loader.LoaderPlugin, key: string, s
 }
 
 export function loadPetSheet(load: Phaser.Loader.LoaderPlugin, species: string): void {
-  load.spritesheet(TEX.pet(species), SPRITE_PATHS.pet(species), { frameWidth: PET_FRAME, frameHeight: PET_FRAME });
+  load.spritesheet(TEX.pet(species), SPRITE_PATHS.pet(species), {
+    frameWidth: PET_FRAME,
+    frameHeight: PET_FRAME,
+  });
 }
 
 export function loadEffects(load: Phaser.Loader.LoaderPlugin): void {
-  load.spritesheet(TEX.effects, SPRITE_PATHS.effects, { frameWidth: EFFECT_FRAME, frameHeight: EFFECT_FRAME });
+  load.spritesheet(TEX.effects, SPRITE_PATHS.effects, {
+    frameWidth: EFFECT_FRAME,
+    frameHeight: EFFECT_FRAME,
+  });
 }
 
 /** Idle animations per direction for one avatar sheet (walk frames are driven by hop progress). */

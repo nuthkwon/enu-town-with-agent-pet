@@ -6,7 +6,6 @@
  */
 import { boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
-
 export const user = pgTable('user', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
@@ -107,9 +106,7 @@ export const oauthClient = pgTable(
     enableEndSession: boolean('enable_end_session'),
     subjectType: text('subject_type'),
     scopes: text('scopes').array(),
-    clientCredentialsScopes: text('client_credentials_scopes')
-      .array()
-      .default([]),
+    clientCredentialsScopes: text('client_credentials_scopes').array().default([]),
     userId: text('user_id').references(() => user.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at'),
     updatedAt: timestamp('updated_at'),
@@ -125,9 +122,7 @@ export const oauthClient = pgTable(
     redirectUris: text('redirect_uris').array().notNull(),
     postLogoutRedirectUris: text('post_logout_redirect_uris').array(),
     backchannelLogoutUri: text('backchannel_logout_uri'),
-    backchannelLogoutSessionRequired: boolean(
-      'backchannel_logout_session_required',
-    ),
+    backchannelLogoutSessionRequired: boolean('backchannel_logout_session_required'),
     tokenEndpointAuthMethod: text('token_endpoint_auth_method'),
     applicationType: text('application_type'),
     jwks: text('jwks'),
@@ -152,9 +147,7 @@ export const oauthResource = pgTable('oauth_resource', {
   signingKeyId: text('signing_key_id'),
   allowedScopes: text('allowed_scopes').array(),
   customClaims: jsonb('custom_claims'),
-  dpopBoundAccessTokensRequired: boolean(
-    'dpop_bound_access_tokens_required',
-  ).default(false),
+  dpopBoundAccessTokensRequired: boolean('dpop_bound_access_tokens_required').default(false),
   disabled: boolean('disabled').default(false),
   createdAt: timestamp('created_at'),
   updatedAt: timestamp('updated_at'),
@@ -176,10 +169,7 @@ export const oauthClientResource = pgTable(
     createdAt: timestamp('created_at'),
   },
   (table) => [
-    uniqueIndex('oauthClientResource_clientId_resourceId_uidx').on(
-      table.clientId,
-      table.resourceId,
-    ),
+    uniqueIndex('oauthClientResource_clientId_resourceId_uidx').on(table.clientId, table.resourceId),
     index('oauthClientResource_clientId_idx').on(table.clientId),
     index('oauthClientResource_resourceId_idx').on(table.resourceId),
   ],
@@ -217,9 +207,7 @@ export const oauthRefreshToken = pgTable(
     index('oauthRefreshToken_clientId_idx').on(table.clientId),
     index('oauthRefreshToken_sessionId_idx').on(table.sessionId),
     index('oauthRefreshToken_userId_idx').on(table.userId),
-    index('oauthRefreshToken_authorizationCodeId_idx').on(
-      table.authorizationCodeId,
-    ),
+    index('oauthRefreshToken_authorizationCodeId_idx').on(table.authorizationCodeId),
   ],
 );
 
@@ -252,9 +240,7 @@ export const oauthAccessToken = pgTable(
     index('oauthAccessToken_clientId_idx').on(table.clientId),
     index('oauthAccessToken_sessionId_idx').on(table.sessionId),
     index('oauthAccessToken_userId_idx').on(table.userId),
-    index('oauthAccessToken_authorizationCodeId_idx').on(
-      table.authorizationCodeId,
-    ),
+    index('oauthAccessToken_authorizationCodeId_idx').on(table.authorizationCodeId),
     index('oauthAccessToken_refreshId_idx').on(table.refreshId),
   ],
 );

@@ -38,7 +38,10 @@ export class NameTag {
     });
     this.text.setOrigin(0, 0);
     const children: Phaser.GameObjects.GameObject[] = [this.bg, this.text];
-    this.star = isMe && scene.textures.exists(TEX.effects) ? scene.add.image(0, 0, TEX.effects, EFFECT_FRAMES.star) : null;
+    this.star =
+      isMe && scene.textures.exists(TEX.effects)
+        ? scene.add.image(0, 0, TEX.effects, EFFECT_FRAMES.star)
+        : null;
     if (this.star) {
       this.star.setScale(0.75);
       children.push(this.star);

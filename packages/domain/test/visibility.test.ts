@@ -37,10 +37,14 @@ describe('visibility', () => {
   });
 
   it('chat summary is never more visible than its log', () => {
-    expect(canViewChatSummary({ userId: 'bob' }, log({ chatSummaryVisibility: 'private' }), active)).toBe(false);
+    expect(canViewChatSummary({ userId: 'bob' }, log({ chatSummaryVisibility: 'private' }), active)).toBe(
+      false,
+    );
     expect(canViewChatSummary({ userId: 'bob' }, log({ visibility: 'private' }), active)).toBe(false);
     expect(canViewChatSummary({ userId: 'bob' }, log(), active)).toBe(true);
-    expect(canViewChatSummary({ userId: 'owner' }, log({ chatSummaryVisibility: 'private' }), active)).toBe(true);
+    expect(canViewChatSummary({ userId: 'owner' }, log({ chatSummaryVisibility: 'private' }), active)).toBe(
+      true,
+    );
   });
 
   it('Claude can lower but never raise visibility', () => {
@@ -75,7 +79,9 @@ describe('activity visibility', () => {
   it('ANY_COLLEAGUE sees exactly what an active colleague may see', () => {
     expect(canViewLog(ANY_COLLEAGUE, log(), active)).toBe(true);
     expect(canViewLog(ANY_COLLEAGUE, log({ visibility: 'private' }), active)).toBe(false);
-    expect(canViewLog(ANY_COLLEAGUE, log({ deletedAt: new Date('2026-11-02T00:00:00Z') }), active)).toBe(false);
+    expect(canViewLog(ANY_COLLEAGUE, log({ deletedAt: new Date('2026-11-02T00:00:00Z') }), active)).toBe(
+      false,
+    );
     expect(canViewLog(ANY_COLLEAGUE, log(), { active: false })).toBe(false);
   });
 });
@@ -105,7 +111,12 @@ describe('projectForColleagues', () => {
     r(),
     r({ shown: false, note: 'away', activity: 'none', source: 'manual', groupKey: null, dnd: false }),
     r({ shown: false, note: 'absent', activity: 'none', source: 'calendar', groupKey: null, dnd: false }),
-    r({ shown: false, activity: 'review', source: 'claude', groupKey: { family: 'work', hash: 'e'.repeat(32) } }),
+    r({
+      shown: false,
+      activity: 'review',
+      source: 'claude',
+      groupKey: { family: 'work', hash: 'e'.repeat(32) },
+    }),
     r({ activity: 'none', source: 'town', until: null, groupKey: null, dnd: false }),
     r({ shown: false, activity: 'none', source: 'none', until: null, groupKey: null, dnd: false }),
   ];
@@ -115,9 +126,9 @@ describe('projectForColleagues', () => {
       for (const connected of [true, false])
         for (const share of [true, false])
           for (const statusText of ['', '휴가']) {
-            expect(projectForColleagues(resolved, ctx({ officeOpen: false, connected, share, statusText }))).toEqual(
-              NEUTRAL_PROJECTION,
-            );
+            expect(
+              projectForColleagues(resolved, ctx({ officeOpen: false, connected, share, statusText })),
+            ).toEqual(NEUTRAL_PROJECTION);
           }
     expect(NEUTRAL_PROJECTION).toEqual({
       shown: false,
@@ -147,7 +158,11 @@ describe('projectForColleagues', () => {
 
   it('never shows the end or the source of 부재', () => {
     const absent = r({ shown: false, note: 'absent', activity: 'none', source: 'calendar', groupKey: null });
-    expect(projectForColleagues(absent, ctx())).toMatchObject({ note: 'absent', until: null, source: 'none' });
+    expect(projectForColleagues(absent, ctx())).toMatchObject({
+      note: 'absent',
+      until: null,
+      source: 'none',
+    });
   });
 
   it('is online only while shown and connected right now', () => {

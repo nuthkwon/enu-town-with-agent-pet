@@ -115,7 +115,7 @@ export function WelcomeWizard({
       <header className={s.header}>
         <h1 className={s.title}>{w.title}</h1>
         <p className={s.lead}>{w.lead(me.displayName)}</p>
-        <ol className={s.stepper} aria-label="진행 단계">
+        <ol className={s.stepper} aria-label={w.stepperLabel}>
           {STEPS.map((label, i) => (
             <li
               key={label}

@@ -1,4 +1,4 @@
-import { audit, newId, notifyTown, workLogs, type Db } from '@enu/db';
+import { audit, newOpaqueId, notifyTown, workLogs, type Db } from '@enu/db';
 import { decideWorkLogUpsert, prepareWorkLog, type ExistingWorkLog } from '@enu/domain';
 import {
   SOURCE_HINT_TO_SOURCE,
@@ -47,7 +47,13 @@ export async function postWorkLog(
     throw new ToolError(
       'validation_failed',
       'work log rejected: ENU Town never edits your text. Rewrite the listed fields (no personal data such as phone/resident/card/account numbers, no links except https URLs in tasks[].ref) and call post_work_log again. Nothing was saved.',
-      { problems: problems.map((p) => ({ field: p.field, reason: p.reason, ...(p.detail ? { detail: p.detail } : {}) })) },
+      {
+        problems: problems.map((p) => ({
+          field: p.field,
+          reason: p.reason,
+          ...(p.detail ? { detail: p.detail } : {}),
+        })),
+      },
     );
   }
 
@@ -68,7 +74,9 @@ export async function postWorkLog(
             summary: existing.summary ?? '',
             // jsonb reorders object keys; rebuild tasks in prepareWorkLog's key order so that
             // identical content compares equal.
-            tasks: (existing.tasks ?? []).map((t) => (t.ref ? { title: t.title, status: t.status, ref: t.ref } : { title: t.title, status: t.status })),
+            tasks: (existing.tasks ?? []).map((t) =>
+              t.ref ? { title: t.title, status: t.status, ref: t.ref } : { title: t.title, status: t.status },
+            ),
             blockers: existing.blockers ?? [],
             claudeChatSummary: existing.claudeChatSummary,
             visibility: existing.visibility,
@@ -83,7 +91,10 @@ export async function postWorkLog(
       const decision = decideWorkLogUpsert(
         existingForDecision,
         { ...log, visibility: input.visibility, chatSummaryVisibility: input.chat_summary_visibility },
-        { logVisibility: owner.defaultLogVisibility, chatSummaryVisibility: owner.defaultChatSummaryVisibility },
+        {
+          logVisibility: owner.defaultLogVisibility,
+          chatSummaryVisibility: owner.defaultChatSummaryVisibility,
+        },
       );
 
       let logId: string;
@@ -92,7 +103,8 @@ export async function postWorkLog(
       let revision = existing?.claudeRevision ?? 0;
 
       if (decision.result === 'created') {
-        logId = newId();
+        // Not v7: colleagues get the id, and a v7 id would carry the owner-only first-write time.
+        logId = newOpaqueId();
         const inserted = await tx
           .insert(workLogs)
           .values({
@@ -153,7 +165,12 @@ export async function postWorkLog(
         // Record the check-in without bumping updated_at (the company feed is ordered by it).
         await tx
           .update(workLogs)
-          .set({ claudeWrittenAt: now, source, oauthClientId: caller.clientId, updatedAt: existing.updatedAt })
+          .set({
+            claudeWrittenAt: now,
+            source,
+            oauthClientId: caller.clientId,
+            updatedAt: existing.updatedAt,
+          })
           .where(eq(workLogs.id, existing.id));
         visibility = decision.visibility;
         chatSummaryVisibility = decision.chatSummaryVisibility;

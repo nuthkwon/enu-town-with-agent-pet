@@ -12,7 +12,7 @@ import { getEnv } from '@/server/env';
 import { getPageViewer } from '@/server/page-session';
 import { SignInPanel, type DevUser } from './SignInPanel';
 
-export const metadata: Metadata = { title: '로그인' };
+export const metadata: Metadata = { title: ko.signIn.pageTitle };
 
 async function listDevUsers(hd: string): Promise<DevUser[]> {
   const rows = await getDb()

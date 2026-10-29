@@ -44,9 +44,17 @@ export function AvatarContextMenu({ userId, x, y }: { userId: string; x: number;
         <div style={{ minWidth: 0, flex: 1 }}>
           <div className={s.popoverTitle}>
             {name}
-            {state.online && <span className={s.onlineDot} title={ko.townUi.people.online} aria-label={ko.townUi.people.online} />}
+            {state.online && (
+              <span
+                className={s.onlineDot}
+                title={ko.townUi.people.online}
+                aria-label={ko.townUi.people.online}
+              />
+            )}
           </div>
-          <div className={s.popoverSub}>{[teamLabel(person?.team), person?.title].filter(Boolean).join(' · ')}</div>
+          <div className={s.popoverSub}>
+            {[teamLabel(person?.team), person?.title].filter(Boolean).join(' · ')}
+          </div>
           {state.form && (
             <div className={s.popoverState}>
               {icon && <EffectIcon name={icon} />}
@@ -56,19 +64,35 @@ export function AvatarContextMenu({ userId, x, y }: { userId: string; x: number;
         </div>
       </div>
       <div className={s.menu} onKeyDown={onMenuKeyDown}>
-        <button type="button" role="menuitem" className={s.menuItem} onClick={run(() => ui.openProfile(userId))} data-autofocus>
+        <button
+          type="button"
+          role="menuitem"
+          className={s.menuItem}
+          onClick={run(() => ui.openProfile(userId))}
+          data-autofocus
+        >
           <span className={s.menuIcon} aria-hidden="true">
             ☺
           </span>
           {t.profile}
         </button>
-        <button type="button" role="menuitem" className={s.menuItem} onClick={run(() => ui.openWorkLog(userId))}>
+        <button
+          type="button"
+          role="menuitem"
+          className={s.menuItem}
+          onClick={run(() => ui.openWorkLog(userId))}
+        >
           <span className={s.menuIcon} aria-hidden="true">
             ✎
           </span>
           {t.now}
         </button>
-        <button type="button" role="menuitem" className={s.menuItem} onClick={run(() => ui.openPastChats(userId))}>
+        <button
+          type="button"
+          role="menuitem"
+          className={s.menuItem}
+          onClick={run(() => ui.openPastChats(userId))}
+        >
           <span className={s.menuIcon} aria-hidden="true">
             ☰
           </span>

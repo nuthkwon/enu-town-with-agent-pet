@@ -4,7 +4,7 @@
  * The roster holds real names and roles, so it is never baked into an image or committed.
  */
 import { readFileSync } from 'node:fs';
-import { createDb } from '@enu/db';
+import { createDb, safeErr } from '@enu/db';
 import { seedSeats } from '@enu/db/seed-seats';
 import { rosterSchema } from '@enu/shared';
 import { loadWorkerEnv } from './env';
@@ -22,6 +22,7 @@ try {
   logger.info(result, 'seat roster and holidays loaded');
   process.exit(0);
 } catch (err) {
-  logger.fatal({ err: err instanceof Error ? err.message : err, file }, 'seeding seats failed');
+  // Never the raw message: a failed insert's Drizzle error lists the roster's real names as params.
+  logger.fatal({ err: safeErr(err), file }, 'seeding seats failed');
   process.exit(1);
 }

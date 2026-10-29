@@ -55,6 +55,17 @@ export function installCorsPolicy(allowedOrigins: readonly string[]): void {
   };
 }
 
+/**
+ * Matchmake methods a client may call over HTTP. The one persistent room is created server-side at
+ * boot (`matchMaker.createRoom` in index.ts), so clients only ever join it: `create` / `joinOrCreate`
+ * would let anyone with a ticket start extra rooms (each with its own LISTEN connection and timers).
+ */
+export const EXPOSED_MATCHMAKE_METHODS: readonly string[] = ['join', 'joinById', 'reconnect'];
+
+export function installMatchmakePolicy(): void {
+  matchMaker.controller.exposedMethods = [...EXPOSED_MATCHMAKE_METHODS];
+}
+
 interface JsonResponse {
   status(code: number): JsonResponse;
   json(body: unknown): void;
@@ -83,6 +94,7 @@ export function createRealtimeServer(deps: {
   pool: Pick<pg.Pool, 'query'>;
 }): Server {
   installCorsPolicy(deps.env.ALLOWED_ORIGINS);
+  installMatchmakePolicy();
   return defineServer({
     rooms,
     transport: createTransport(deps.env, deps.logger),

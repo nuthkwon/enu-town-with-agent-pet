@@ -39,7 +39,11 @@ export function createBoss(env: Pick<WorkerEnv, 'DATABASE_URL' | 'PGBOSS_SCHEMA'
 }
 
 /** Runs one job with logging; errors are rethrown so pg-boss records the failure and retries. */
-export async function runJob(def: JobDefinition, deps: Pick<BossDeps, 'db' | 'env' | 'logger' | 'clock'>, jobId?: string): Promise<object> {
+export async function runJob(
+  def: JobDefinition,
+  deps: Pick<BossDeps, 'db' | 'env' | 'logger' | 'clock'>,
+  jobId?: string,
+): Promise<object> {
   const now = (deps.clock ?? (() => new Date()))();
   const log = deps.logger.child({ job: def.name, jobId });
   const started = Date.now();

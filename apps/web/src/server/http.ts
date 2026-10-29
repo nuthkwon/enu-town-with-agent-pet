@@ -1,3 +1,4 @@
+import { safeErr } from '@enu/db';
 import type { ApiError } from '@enu/shared';
 import type * as z from 'zod';
 import { ko } from '@/i18n/ko';
@@ -47,7 +48,7 @@ export function apiError(
 export function errorResponse(e: unknown): Response {
   if (e instanceof HttpError)
     return apiError(e.status, e.code, e.message === e.code ? undefined : e.message, e.fields, e.headers);
-  console.error('[enu-town] unhandled route error', e);
+  console.error('[enu-town] unhandled route error', safeErr(e));
   return apiError(500, 'internal_error', ko.errors.internal);
 }
 

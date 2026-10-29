@@ -166,7 +166,7 @@ export function AdminClient({
                   <td>
                     <span className={s.nameCell}>
                       {u.displayName}
-                      {u.role === 'admin' && <Badge tone="pink">관리자</Badge>}
+                      {u.role === 'admin' && <Badge tone="pink">{ko.common.adminBadge}</Badge>}
                     </span>
                   </td>
                   <td className={s.mono}>{u.email}</td>

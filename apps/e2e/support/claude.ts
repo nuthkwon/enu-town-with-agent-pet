@@ -55,7 +55,10 @@ export async function connectClaude(context: BrowserContext): Promise<{ token: s
   await page.goto(`${BASE_URL}/api/auth/oauth2/authorize?${params}`);
   await expect(page).toHaveURL(/\/consent/);
   await expect(page.getByText('dev.', { exact: false }).first()).toBeVisible();
-  await page.getByRole('button', { name: /허용|연결/ }).first().click();
+  await page
+    .getByRole('button', { name: /허용|연결/ })
+    .first()
+    .click();
   await expect.poll(() => code, { timeout: 30_000 }).not.toBeNull();
   await page.close();
 

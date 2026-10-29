@@ -21,7 +21,9 @@ function ChatHistory({ userId, kind }: { userId: string; kind: 'dm' | 'room' }) 
   const { me } = useTown();
   const now = useNow();
   const t = ko.townUi.pastChats;
-  const paged = usePaged<ChatItemDto>(`history:${userId}:${kind}`, (before) => api.chatHistory(userId, kind, before));
+  const paged = usePaged<ChatItemDto>(`history:${userId}:${kind}`, (before) =>
+    api.chatHistory(userId, kind, before),
+  );
   const items = [...paged.items].sort(byTimeAsc);
   return (
     <>
@@ -56,7 +58,9 @@ function ChatHistory({ userId, kind }: { userId: string; kind: 'dm' | 'room' }) 
 function ClaudeSummaries({ userId }: { userId: string }) {
   const now = useNow();
   const t = ko.townUi.pastChats;
-  const paged = usePaged<ClaudeSummaryDto>(`summaries:${userId}`, (cursor) => api.claudeSummaries(userId, cursor));
+  const paged = usePaged<ClaudeSummaryDto>(`summaries:${userId}`, (cursor) =>
+    api.claudeSummaries(userId, cursor),
+  );
   return (
     <>
       <p className={s.explain}>{t.summariesNote}</p>
@@ -72,7 +76,9 @@ function ClaudeSummaries({ userId }: { userId: string }) {
       ))}
       {paged.loading && <div className={s.empty}>{ko.common.loading}</div>}
       {paged.error && <div className={s.empty}>{ko.townUi.loadFailed}</div>}
-      {!paged.loading && !paged.error && paged.items.length === 0 && <div className={s.empty}>{t.empty.summaries}</div>}
+      {!paged.loading && !paged.error && paged.items.length === 0 && (
+        <div className={s.empty}>{t.empty.summaries}</div>
+      )}
       {paged.nextCursor && !paged.loading && (
         <div className={s.loadMore}>
           <Button variant="ghost" size="sm" onClick={paged.loadMore}>

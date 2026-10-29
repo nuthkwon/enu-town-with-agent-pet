@@ -143,7 +143,12 @@ describe('PetFollower', () => {
   it('perchAt snaps onto the perch; setAsleep puts the pet to sleep there (office closed)', () => {
     const { pet, f } = setup(true);
     f.perchAt({ x: 10, y: 6, dir: Dir.Down }, 0);
-    expect({ x: pet.x, y: pet.y, dir: pet.dir, anim: pet.anim }).toEqual({ x: 10, y: 6, dir: Dir.Down, anim: Anim.Idle });
+    expect({ x: pet.x, y: pet.y, dir: pet.dir, anim: pet.anim }).toEqual({
+      x: 10,
+      y: 6,
+      dir: Dir.Down,
+      anim: Anim.Idle,
+    });
     f.setAsleep(true);
     expect(pet.anim).toBe(Anim.Sleep);
     f.update(5000, { x: 2, y: 2 }, Dir.Down, { x: 10, y: 6, dir: Dir.Down });

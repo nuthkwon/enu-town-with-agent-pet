@@ -1,4 +1,4 @@
-import type { Db } from '@enu/db';
+import { safeErr, type Db } from '@enu/db';
 import {
   APP_TIMEZONE_DEFAULT,
   INSTRUCTIONS_VERSION,
@@ -22,7 +22,12 @@ import {
   type PostWorkLogOutput,
   type UpsertTodosOutput,
 } from '@enu/shared';
-import { McpServer, type AuthInfo, type CallToolResult, type ToolAnnotations } from '@modelcontextprotocol/server';
+import {
+  McpServer,
+  type AuthInfo,
+  type CallToolResult,
+  type ToolAnnotations,
+} from '@modelcontextprotocol/server';
 import { SERVER_INSTRUCTIONS, TOOL_DESCRIPTIONS, TOOL_TITLES } from './descriptions';
 import { NOW_KIND_KO, ownerStatusKo, visibilityKo } from './format';
 import { touchClaudeLink, type CallerInfo } from './links';
@@ -78,12 +83,19 @@ type ToolBody = (caller: CallerInfo, now: Date) => Promise<CallToolResult>;
 
 function makeRunner(deps: McpDeps, caller: CallerInfo | undefined) {
   const limiter = deps.rateLimiter ?? processRateLimiter;
-  const report = deps.onError ?? ((error: unknown, tool: McpToolName) => console.error(`[enu-town mcp] ${tool} failed`, error));
+  // Never the raw error: a failed Drizzle query carries Claude's text (summaries, nudges, to-dos) as params.
+  const report =
+    deps.onError ??
+    ((error: unknown, tool: McpToolName) => console.error(`[enu-town mcp] ${tool} failed`, safeErr(error)));
   return async (toolName: McpToolName, body: ToolBody): Promise<CallToolResult> => {
     if (!caller) return errorResult(new ToolError('not_authenticated', NOT_AUTHENTICATED_MESSAGE));
     const now = deps.now?.() ?? new Date();
     try {
-      const rl = limiter.consume(rateLimitKey(caller.userId, toolName), TOOL_RATE_LIMITS[toolName], now.getTime());
+      const rl = limiter.consume(
+        rateLimitKey(caller.userId, toolName),
+        TOOL_RATE_LIMITS[toolName],
+        now.getTime(),
+      );
       if (!rl.ok) {
         return errorResult(
           new ToolError(
@@ -100,7 +112,10 @@ function makeRunner(deps: McpDeps, caller: CallerInfo | undefined) {
       if (err instanceof ToolError) return errorResult(err);
       report(err, toolName);
       return errorResult(
-        new ToolError('internal_error', 'ENU Town could not complete this request right now; try again later. Nothing else is needed.'),
+        new ToolError(
+          'internal_error',
+          'ENU Town could not complete this request right now; try again later. Nothing else is needed.',
+        ),
       );
     }
   };
@@ -123,7 +138,8 @@ export function contextSummaryKo(
   truncated: boolean,
   officeTimeZone: string = APP_TIMEZONE_DEFAULT,
 ): string {
-  if (o.skip) return `${o.skip_reason ?? '지금은 체크인 시간이 아니에요.'} 이번 체크인은 여기서 멈추세요(다른 ENU Town 도구를 호출하지 마세요).`;
+  if (o.skip)
+    return `${o.skip_reason ?? '지금은 체크인 시간이 아니에요.'} 이번 체크인은 여기서 멈추세요(다른 ENU Town 도구를 호출하지 마세요).`;
   const parts = [`ENU Town ${o.today} 컨텍스트(현지 시각 ${o.now_local.slice(11, 16)}).`];
   if (o.today_log !== undefined) {
     parts.push(
@@ -239,7 +255,11 @@ export function buildEnuTownMcpServer(deps: McpDeps, caller: CallerInfo | undefi
     (args) =>
       run(MCP_TOOL_NAMES.getMyContext, async (c, now) => {
         const out = await getMyContext(deps.db, c.userId, now, args, { officeTimeZone: deps.officeTimeZone });
-        return okResult((o, truncated) => contextSummaryKo(o, truncated, deps.officeTimeZone), out, shrinkContext);
+        return okResult(
+          (o, truncated) => contextSummaryKo(o, truncated, deps.officeTimeZone),
+          out,
+          shrinkContext,
+        );
       }),
   );
 

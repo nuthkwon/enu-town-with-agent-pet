@@ -51,7 +51,13 @@ describe('nudges.expire', () => {
     const c = await createTestUser(h.db);
 
     const pastExpiry = await seed({ userId: a.id, expiresAt: plus(NOW, -MIN) });
-    const exactExpiry = await seed({ userId: a.id, status: 'shown', showCount: 1, lastShownAt: plus(NOW, -HOUR), expiresAt: NOW });
+    const exactExpiry = await seed({
+      userId: a.id,
+      status: 'shown',
+      showCount: 1,
+      lastShownAt: plus(NOW, -HOUR),
+      expiresAt: NOW,
+    });
     const exhausted = await seed({
       userId: a.id,
       status: 'shown',
@@ -66,13 +72,29 @@ describe('nudges.expire', () => {
       maxShows: 2,
       lastShownAt: plus(NOW, -(2 * HOUR - MIN)),
     });
-    const shownOnce = await seed({ userId: a.id, status: 'shown', showCount: 1, maxShows: 2, lastShownAt: plus(NOW, -3 * HOUR) });
-    const acked = await seed({ userId: a.id, status: 'acked', expiresAt: plus(NOW, -HOUR), showAfter: plus(NOW, -DAY) });
+    const shownOnce = await seed({
+      userId: a.id,
+      status: 'shown',
+      showCount: 1,
+      maxShows: 2,
+      lastShownAt: plus(NOW, -3 * HOUR),
+    });
+    const acked = await seed({
+      userId: a.id,
+      status: 'acked',
+      expiresAt: plus(NOW, -HOUR),
+      showAfter: plus(NOW, -DAY),
+    });
 
     const snoozeOver = await seed({ userId: b.id, status: 'snoozed', snoozedUntil: plus(NOW, -MIN) });
     const snoozeEndsNow = await seed({ userId: b.id, status: 'snoozed', snoozedUntil: NOW });
     const stillSnoozed = await seed({ userId: b.id, status: 'snoozed', snoozedUntil: plus(NOW, 10 * MIN) });
-    const snoozedButExpired = await seed({ userId: b.id, status: 'snoozed', snoozedUntil: plus(NOW, -MIN), expiresAt: plus(NOW, -MIN) });
+    const snoozedButExpired = await seed({
+      userId: b.id,
+      status: 'snoozed',
+      snoozedUntil: plus(NOW, -MIN),
+      expiresAt: plus(NOW, -MIN),
+    });
 
     const untouched = await seed({ userId: c.id, expiresAt: plus(NOW, MIN) });
 
@@ -112,7 +134,12 @@ describe('nudges.expire', () => {
     await listener.waitFor([a.id], 1);
     listener.clear();
 
-    expect(await expireNudges(h.db, NOW)).toEqual({ expired: 0, exhausted: 0, unsnoozed: 0, notifiedUsers: 0 });
+    expect(await expireNudges(h.db, NOW)).toEqual({
+      expired: 0,
+      exhausted: 0,
+      unsnoozed: 0,
+      notifiedUsers: 0,
+    });
     expect(await listener.settle([a.id])).toHaveLength(0);
   });
 

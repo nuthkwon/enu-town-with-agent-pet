@@ -176,7 +176,7 @@ export function SignInPanel({
                       <span className={s.devText}>
                         <span className={s.devName}>
                           {u.name}
-                          {u.isAdmin && <span className={s.devAdmin}>관리자</span>}
+                          {u.isAdmin && <span className={s.devAdmin}>{ko.common.adminBadge}</span>}
                         </span>
                         <span className={s.devMeta}>
                           {busy === u.email ? ko.signIn.devBusy : (u.deskId ?? u.email)}

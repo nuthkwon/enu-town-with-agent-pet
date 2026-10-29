@@ -78,7 +78,11 @@ export class DeskPlate {
     this.name = scene.add.text(0, 0, '', style).setOrigin(0, 0);
     this.label = scene.add.text(0, 0, '', style).setOrigin(0, 0);
     this.detail = scene.add
-      .text(0, 0, '', { fontFamily: SMALL_PIXEL_FONT, fontSize: `${SMALL_PIXEL_FONT_SIZE}px`, color: COLORS.plateMutedCss })
+      .text(0, 0, '', {
+        fontFamily: SMALL_PIXEL_FONT,
+        fontSize: `${SMALL_PIXEL_FONT_SIZE}px`,
+        color: COLORS.plateMutedCss,
+      })
       .setOrigin(0, 0);
     const hasFx = scene.textures.exists(TEX.effects);
     this.icon = hasFx ? scene.add.image(0, 0, TEX.effects, EFFECT_FRAMES.note).setOrigin(0, 0) : null;
@@ -92,11 +96,14 @@ export class DeskPlate {
 
     this.bg.setInteractive(new Phaser.Geom.Rectangle(0, 0, 1, 1), Phaser.Geom.Rectangle.Contains);
     if (this.bg.input) this.bg.input.cursor = 'pointer';
-    this.bg.on('pointerdown', (pointer: Phaser.Input.Pointer, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => {
-      if (pointer.button !== 0) return;
-      ev.stopPropagation();
-      handlers.onClick(this.desk, pointer);
-    });
+    this.bg.on(
+      'pointerdown',
+      (pointer: Phaser.Input.Pointer, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => {
+        if (pointer.button !== 0) return;
+        ev.stopPropagation();
+        handlers.onClick(this.desk, pointer);
+      },
+    );
     this.bg.on('pointerover', (pointer: Phaser.Input.Pointer) => handlers.onHover(this.desk, pointer));
     this.bg.on('pointerout', (pointer: Phaser.Input.Pointer) => handlers.onHover(null, pointer));
   }
@@ -162,7 +169,15 @@ export class DeskPlate {
     const measure = this.stage.measure;
     const card = m.kind === 'hidden' && m.plate !== null && !m.plate.quiet;
     this.name.setText(fit(m.name, CARD_TEXT_MAX, measure));
-    this.name.setColor(m.isMe ? (card ? COLORS.inkCss : COLORS.meYellowCss) : m.kind === 'hidden' && !card ? COLORS.plateMutedCss : COLORS.inkCss);
+    this.name.setColor(
+      m.isMe
+        ? card
+          ? COLORS.inkCss
+          : COLORS.meYellowCss
+        : m.kind === 'hidden' && !card
+          ? COLORS.plateMutedCss
+          : COLORS.inkCss,
+    );
     const nameW = Math.ceil(this.name.width);
     const lead = m.isMe && this.star ? 13 : 0;
     if (!card) {
@@ -200,7 +215,8 @@ export class DeskPlate {
     y += nameH;
     if (lbl) {
       if (this.icon) {
-        if (lbl.icon) this.icon.setFrame(EFFECT_FRAMES[lbl.icon]).setPosition(CARD_PAD_X, Math.round(y)).setVisible(true);
+        if (lbl.icon)
+          this.icon.setFrame(EFFECT_FRAMES[lbl.icon]).setPosition(CARD_PAD_X, Math.round(y)).setVisible(true);
         else this.icon.setVisible(false);
       }
       this.label.setPosition(CARD_PAD_X + iconW, Math.round(y + (ICON - this.label.height) / 2) + 1);

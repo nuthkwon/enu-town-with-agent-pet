@@ -23,11 +23,18 @@ import { and, desc, eq, isNull } from 'drizzle-orm';
  * and revoked from /me. ENU Town never sees claude.ai credentials — only its own tokens.
  */
 
-export function classifyClient(clientId: string, redirectUri: string | null): 'claude_ai' | 'claude_code' | 'other' {
+export function classifyClient(
+  clientId: string,
+  redirectUri: string | null,
+): 'claude_ai' | 'claude_code' | 'other' {
   const redirectHost = redirectUri ? safeHost(redirectUri) : null;
   if (redirectHost === 'localhost' || redirectHost === '127.0.0.1') return 'claude_code';
   const clientHost = safeHost(clientId);
-  if (redirectHost?.endsWith('claude.ai') || clientHost?.endsWith('claude.ai') || clientHost?.endsWith('claude.com')) {
+  if (
+    redirectHost?.endsWith('claude.ai') ||
+    clientHost?.endsWith('claude.ai') ||
+    clientHost?.endsWith('claude.com')
+  ) {
     return 'claude_ai';
   }
   return 'other';
@@ -42,9 +49,17 @@ function safeHost(url: string): string | null {
 }
 
 /** Recomputes the owner's link state and notifies realtime when it changes. */
-export async function refreshLinkState(tx: DbOrTx, userId: string, now = new Date()): Promise<LinkState | null> {
+export async function refreshLinkState(
+  tx: DbOrTx,
+  userId: string,
+  now = new Date(),
+): Promise<LinkState | null> {
   const [profile] = await tx
-    .select({ timezone: profiles.timezone, lastWorkLogAt: profiles.lastWorkLogAt, linkState: profiles.linkState })
+    .select({
+      timezone: profiles.timezone,
+      lastWorkLogAt: profiles.lastWorkLogAt,
+      linkState: profiles.linkState,
+    })
     .from(profiles)
     .where(eq(profiles.userId, userId));
   if (!profile) return null;
@@ -64,7 +79,10 @@ export async function refreshLinkState(tx: DbOrTx, userId: string, now = new Dat
     lastWorkLogAt: profile.lastWorkLogAt,
   });
   if (state !== profile.linkState) {
-    await tx.update(profiles).set({ linkState: state, linkStateChangedAt: now }).where(eq(profiles.userId, userId));
+    await tx
+      .update(profiles)
+      .set({ linkState: state, linkStateChangedAt: now })
+      .where(eq(profiles.userId, userId));
     await notifyTown(tx, { v: 1, type: 'link_state_changed', user_id: userId, state });
   }
   return state;
@@ -147,7 +165,9 @@ export async function revokeClaudeLinks(
       await tx
         .delete(oauthRefreshToken)
         .where(and(eq(oauthRefreshToken.userId, userId), eq(oauthRefreshToken.clientId, row.clientId)));
-      await tx.delete(oauthConsent).where(and(eq(oauthConsent.userId, userId), eq(oauthConsent.clientId, row.clientId)));
+      await tx
+        .delete(oauthConsent)
+        .where(and(eq(oauthConsent.userId, userId), eq(oauthConsent.clientId, row.clientId)));
     }
     const [stillActive] = await tx
       .select({ id: claudeLinks.id })
@@ -173,7 +193,12 @@ export async function revokeClaudeLinks(
 }
 
 /** Admin offboarding: blocks sign-in, revokes every token and link, frees the desk. */
-export async function deactivateUser(db: Db, userId: string, adminId: string, now = new Date()): Promise<void> {
+export async function deactivateUser(
+  db: Db,
+  userId: string,
+  adminId: string,
+  now = new Date(),
+): Promise<void> {
   await db.transaction(async (tx) => {
     await tx.update(user).set({ status: 'deactivated', tokensRevokedAt: now }).where(eq(user.id, userId));
     await tx.delete(session).where(eq(session.userId, userId));
@@ -184,9 +209,18 @@ export async function deactivateUser(db: Db, userId: string, adminId: string, no
       .set({ revokedAt: now, revokedReason: 'deactivated' })
       .where(and(eq(claudeLinks.userId, userId), isNull(claudeLinks.revokedAt)));
     await tx.update(desks).set({ userId: null }).where(eq(desks.userId, userId));
-    await tx.update(profiles).set({ linkState: 'not_linked', linkStateChangedAt: now }).where(eq(profiles.userId, userId));
+    await tx
+      .update(profiles)
+      .set({ linkState: 'not_linked', linkStateChangedAt: now })
+      .where(eq(profiles.userId, userId));
     await notifyTown(tx, { v: 1, type: 'user_deactivated', user_id: userId });
     await notifyTown(tx, { v: 1, type: 'desks_changed' });
-    await audit(tx, { actorType: 'admin', actorUserId: adminId, action: 'admin.deactivate', targetType: 'user', targetId: userId });
+    await audit(tx, {
+      actorType: 'admin',
+      actorUserId: adminId,
+      action: 'admin.deactivate',
+      targetType: 'user',
+      targetId: userId,
+    });
   });
 }

@@ -33,10 +33,18 @@ export function checkEmailAllowed(email: string | null | undefined, policy: Doma
 }
 
 /** Checks the raw Google profile (id-token claims) Better Auth hands to validateUserInfo. */
-export function checkGoogleProfile(profile: Record<string, unknown> | undefined, policy: DomainPolicy): DomainCheck {
-  if (!profile) return { ok: false, error: 'profile_missing', description: 'Google 프로필을 확인할 수 없습니다.' };
+export function checkGoogleProfile(
+  profile: Record<string, unknown> | undefined,
+  policy: DomainPolicy,
+): DomainCheck {
+  if (!profile)
+    return { ok: false, error: 'profile_missing', description: 'Google 프로필을 확인할 수 없습니다.' };
   if (profile.hd !== policy.allowedHd) {
-    return { ok: false, error: 'domain_not_allowed', description: `${policy.allowedHd} 계정만 사용할 수 있습니다.` };
+    return {
+      ok: false,
+      error: 'domain_not_allowed',
+      description: `${policy.allowedHd} 계정만 사용할 수 있습니다.`,
+    };
   }
   if (profile.email_verified !== true && profile.email_verified !== 'true') {
     return { ok: false, error: 'email_not_verified', description: '확인된 이메일이 아닙니다.' };

@@ -34,13 +34,17 @@ async function devLogin(email: string, oauthQuery?: string): Promise<{ cookie: s
     body: JSON.stringify({ email, ...(oauthQuery ? { oauth_query: oauthQuery } : {}) }),
   });
   expect(res.status).toBe(200);
-  const cookie = res.headers.getSetCookie().map((c) => c.split(';')[0]).join('; ');
+  const cookie = res.headers
+    .getSetCookie()
+    .map((c) => c.split(';')[0])
+    .join('; ');
   return { cookie, body: await res.json() };
 }
 
 function toHeaders(h: http.IncomingHttpHeaders): Headers {
   const out = new Headers();
-  for (const [k, v] of Object.entries(h)) if (v !== undefined) out.set(k, Array.isArray(v) ? v.join(', ') : v);
+  for (const [k, v] of Object.entries(h))
+    if (v !== undefined) out.set(k, Array.isArray(v) ? v.join(', ') : v);
   return out;
 }
 
@@ -71,7 +75,11 @@ beforeAll(async () => {
         const chunks: Buffer[] = [];
         for await (const c of req) chunks.push(c as Buffer);
         const r = await mcpRoute(
-          new Request(url, { method: req.method, headers: toHeaders(req.headers), body: chunks.length ? Buffer.concat(chunks) : undefined }),
+          new Request(url, {
+            method: req.method,
+            headers: toHeaders(req.headers),
+            body: chunks.length ? Buffer.concat(chunks) : undefined,
+          }),
         );
         res.writeHead(r.status, Object.fromEntries(r.headers));
         res.end(Buffer.from(await r.arrayBuffer()));
@@ -176,10 +184,9 @@ describe('OAuth authorization server for the MCP connector', () => {
     };
     expect(prm.resource).toBe(resource);
     expect(prm.authorization_servers[0]).toBe(`${base}/api/auth`);
-    const as = (await fetch(`${base}/.well-known/oauth-authorization-server/api/auth`).then((r) => r.json())) as Record<
-      string,
-      string[]
-    >;
+    const as = (await fetch(`${base}/.well-known/oauth-authorization-server/api/auth`).then((r) =>
+      r.json(),
+    )) as Record<string, string[]>;
     expect(as.code_challenge_methods_supported).toContain('S256');
     expect(as.token_endpoint_auth_methods_supported).toContain('none');
     expect(as.scopes_supported).toEqual(expect.arrayContaining(['offline_access']));
@@ -225,7 +232,12 @@ describe('OAuth authorization server for the MCP connector', () => {
     expect(code).toBeTruthy();
 
     const session = await auth.api.getSession({ headers: new Headers({ cookie }) });
-    await recordConsent(h.db, { userId: session!.user.id, clientId, clientName: 'Test MCP client', redirectUri: REDIRECT });
+    await recordConsent(h.db, {
+      userId: session!.user.id,
+      clientId,
+      clientName: 'Test MCP client',
+      redirectUri: REDIRECT,
+    });
 
     const token = await fetch(`${base}/api/auth/oauth2/token`, {
       method: 'POST',
@@ -268,7 +280,11 @@ describe('OAuth authorization server for the MCP connector', () => {
     const refresh = await fetch(`${base}/api/auth/oauth2/token`, {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: token.refresh_token!, client_id: clientId }),
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: token.refresh_token!,
+        client_id: clientId,
+      }),
     });
     expect(refresh.status).toBeGreaterThanOrEqual(400);
     const [u] = await h.db.select().from(user).where(eq(user.id, session!.user.id));
@@ -279,7 +295,11 @@ describe('OAuth authorization server for the MCP connector', () => {
     const { cookie } = await devLogin('park@enu-tech.co.kr');
     const session = await auth.api.getSession({ headers: new Headers({ cookie }) });
     await h.db.update(user).set({ status: 'deactivated' }).where(eq(user.id, session!.user.id));
-    const r = await resolveMcpCaller(h.db, { sub: session!.user.id, azp: 'c1', iat: Math.floor(Date.now() / 1000) }, policy);
+    const r = await resolveMcpCaller(
+      h.db,
+      { sub: session!.user.id, azp: 'c1', iat: Math.floor(Date.now() / 1000) },
+      policy,
+    );
     expect(r).toEqual({ ok: false, reason: 'user_inactive' });
   });
 });

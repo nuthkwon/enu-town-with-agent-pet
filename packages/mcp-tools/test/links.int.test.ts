@@ -5,7 +5,16 @@ import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { LINK_REVOKED_MESSAGE, NOT_AUTHENTICATED_MESSAGE } from '../src/index';
 import { MODES, callTool, connectClient, createTestHandler, errorPayload, testDeps } from './harness';
-import { PUBLIC_URL, THU_14, auditFor, linkRow, listen, makeHarness, type Harness, type Listener } from './int-helpers';
+import {
+  PUBLIC_URL,
+  THU_14,
+  auditFor,
+  linkRow,
+  listen,
+  makeHarness,
+  type Harness,
+  type Listener,
+} from './int-helpers';
 
 let handle: DbHandle;
 beforeAll(async () => {
@@ -36,17 +45,26 @@ describe.each(MODES)('claude_links bookkeeping and auth defense (%s)', (mode) =>
     expect((await callTool(client, MCP_TOOL_NAMES.getMyContext)).isError).toBe(false);
 
     let link = await linkRow(handle.db, me.id, CLIENT);
-    expect(link).toMatchObject({ toolCallCount: 1, lastToolName: 'get_my_context', lastWriteAt: null, revokedAt: null });
+    expect(link).toMatchObject({
+      toolCallCount: 1,
+      lastToolName: 'get_my_context',
+      lastWriteAt: null,
+      revokedAt: null,
+    });
     expect(link?.consentedAt.toISOString()).toBe(THU_14);
     expect(link?.firstToolCallAt?.toISOString()).toBe(THU_14);
     // A newly created active link makes the owner "linked" (and realtime is told).
     const [profile] = await handle.db.select().from(profiles).where(eq(profiles.userId, me.id));
     expect(profile?.linkState).toBe('linked');
     await listener.waitFor(() => listener.forUser(me.id).some((e) => e.type === 'link_state_changed'));
-    expect((await auditFor(handle.db, me.id)).map((a) => a.action)).toEqual(['claude_link.create_on_tool_call']);
+    expect((await auditFor(handle.db, me.id)).map((a) => a.action)).toEqual([
+      'claude_link.create_on_tool_call',
+    ]);
 
     h.clock.advance(10 * 60 * 1000);
-    const write = await callTool(client, MCP_TOOL_NAMES.upsertTodos, { items: [{ external_ref: 'jira:ENU-1', title: '리뷰' }] });
+    const write = await callTool(client, MCP_TOOL_NAMES.upsertTodos, {
+      items: [{ external_ref: 'jira:ENU-1', title: '리뷰' }],
+    });
     expect(write.isError).toBe(false);
     link = await linkRow(handle.db, me.id, CLIENT);
     expect(link).toMatchObject({ toolCallCount: 2, lastToolName: 'upsert_todos' });
@@ -133,7 +151,10 @@ describe.each(MODES)('claude_links bookkeeping and auth defense (%s)', (mode) =>
     }
     const limited = await callTool(client, MCP_TOOL_NAMES.postPetNudges, { nudges: [{ text: '하나 더' }] });
     expect(limited.isError).toBe(true);
-    expect(errorPayload(limited)).toMatchObject({ error: 'rate_limited', retry_after_seconds: 3600 - 12 * 60 });
+    expect(errorPayload(limited)).toMatchObject({
+      error: 'rate_limited',
+      retry_after_seconds: 3600 - 12 * 60,
+    });
     // Other tools still work.
     expect((await callTool(client, MCP_TOOL_NAMES.getMyContext)).isError).toBe(false);
     // The refused call never reached the link counter.

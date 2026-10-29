@@ -1,4 +1,11 @@
-import { EFFECT_COLUMNS, EFFECT_FRAME, EFFECT_FRAMES, EFFECT_ROWS, SPRITE_PATHS, type EffectName } from '@/game/spriteSpec';
+import {
+  EFFECT_COLUMNS,
+  EFFECT_FRAME,
+  EFFECT_FRAMES,
+  EFFECT_ROWS,
+  SPRITE_PATHS,
+  type EffectName,
+} from '@/game/spriteSpec';
 import s from './town.module.css';
 
 /** One 16x16 frame of the effects sheet (the same icons the map draws), scaled with nearest-neighbour. */

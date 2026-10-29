@@ -1,4 +1,5 @@
 import { audit, desks, notifyTown, profiles, user, workLogs, type Db, type DbOrTx } from '@enu/db';
+import { ANY_COLLEAGUE, COLLEAGUE_VISIBLE_LOG_VISIBILITY, canViewLog } from '@enu/domain';
 import { DESK_IDS, type AdminSeatsDto, type LinkState } from '@enu/shared';
 import { and, asc, eq, isNull, max, ne } from 'drizzle-orm';
 import { ko } from '@/i18n/ko';
@@ -91,14 +92,29 @@ export interface AdminUserRow {
   isSelf: boolean;
 }
 
-/** Users for the admin console: account and link state, last log DATE only (never contents). */
+/**
+ * Users for the admin console: account and link state, and the DATE of the last log a colleague could
+ * see (never contents). Admins have no extra view (ADR 0003/0004): private logs never count.
+ */
 export async function adminUsers(db: DbOrTx, admin: Viewer): Promise<AdminUserRow[]> {
   const lastLogs = db
     .select({ userId: workLogs.userId, last: max(workLogs.periodKey).as('last') })
     .from(workLogs)
-    .where(isNull(workLogs.deletedAt))
+    .where(and(isNull(workLogs.deletedAt), eq(workLogs.visibility, COLLEAGUE_VISIBLE_LOG_VISIBILITY)))
     .groupBy(workLogs.userId)
     .as('last_logs');
+  // The SQL picked the newest non-deleted, company-visible log; the domain rule adds the author's state.
+  const colleagueSees = (ownerId: string, status: string) =>
+    canViewLog(
+      ANY_COLLEAGUE,
+      {
+        ownerId,
+        visibility: COLLEAGUE_VISIBLE_LOG_VISIBILITY,
+        chatSummaryVisibility: 'private',
+        deletedAt: null,
+      },
+      { active: status === 'active' },
+    );
   const rows = await db
     .select({
       userId: user.id,
@@ -123,7 +139,7 @@ export async function adminUsers(db: DbOrTx, admin: Viewer): Promise<AdminUserRo
     status: r.status,
     role: r.role,
     linkState: asLinkState(r.linkState),
-    lastLogDate: r.lastLogDate ?? null,
+    lastLogDate: r.lastLogDate && colleagueSees(r.userId, r.status) ? r.lastLogDate : null,
     deskId: r.deskId ?? null,
     isSelf: r.userId === admin.userId,
   }));

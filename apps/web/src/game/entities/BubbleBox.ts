@@ -138,10 +138,13 @@ export class BubbleBox {
       Phaser.Geom.Rectangle.Contains,
     );
     if (this.bg.input) this.bg.input.cursor = 'pointer';
-    this.bg.on('pointerdown', (pointer: Phaser.Input.Pointer, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => {
-      ev.stopPropagation();
-      onClick(pointer);
-    });
+    this.bg.on(
+      'pointerdown',
+      (pointer: Phaser.Input.Pointer, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => {
+        ev.stopPropagation();
+        onClick(pointer);
+      },
+    );
   }
 
   destroy(): void {

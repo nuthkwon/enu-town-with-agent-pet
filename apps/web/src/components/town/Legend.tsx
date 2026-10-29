@@ -20,7 +20,13 @@ const ACTIVITIES = [
   ActivityCode.Today,
 ] as const;
 
-const SOURCES = [SourceCode.Manual, SourceCode.Calendar, SourceCode.Claude, SourceCode.WorkLog, SourceCode.Town] as const;
+const SOURCES = [
+  SourceCode.Manual,
+  SourceCode.Calendar,
+  SourceCode.Claude,
+  SourceCode.WorkLog,
+  SourceCode.Town,
+] as const;
 
 /** `?` — how to read the map (ko.townUi.legend): what moves avatars, what labels mean, and the controls. */
 export function Legend({ x, y }: { x: number; y: number }) {
@@ -31,7 +37,13 @@ export function Legend({ x, y }: { x: number; y: number }) {
       <div className={s.legend}>
         <div className={s.popoverHeader}>
           <div className={s.popoverTitle}>{t.title}</div>
-          <button type="button" className={s.closeX} onClick={ui.closePopover} aria-label={t.close} data-autofocus>
+          <button
+            type="button"
+            className={s.closeX}
+            onClick={ui.closePopover}
+            aria-label={t.close}
+            data-autofocus
+          >
             ✕
           </button>
         </div>

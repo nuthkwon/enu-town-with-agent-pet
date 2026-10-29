@@ -24,11 +24,25 @@ interface DmLine {
 }
 
 function fromItem(m: ChatItemDto): DmLine {
-  return { key: m.id, id: m.id, fromUserId: m.senderId, text: m.text, createdAt: m.createdAt, pending: false };
+  return {
+    key: m.id,
+    id: m.id,
+    fromUserId: m.senderId,
+    text: m.text,
+    createdAt: m.createdAt,
+    pending: false,
+  };
 }
 
 function fromDm(m: DmMsg): DmLine {
-  return { key: m.id, id: m.id, fromUserId: m.fromUserId, text: m.text, createdAt: m.createdAt, pending: false };
+  return {
+    key: m.id,
+    id: m.id,
+    fromUserId: m.fromUserId,
+    text: m.text,
+    createdAt: m.createdAt,
+    pending: false,
+  };
 }
 
 function Conversation({ peerId, draft }: { peerId: string; draft: string | null }) {
@@ -50,7 +64,8 @@ function Conversation({ peerId, draft }: { peerId: string; draft: string | null 
   useEffect(() => {
     return session.on('dm:msg', (m) => {
       const involved =
-        (m.fromUserId === peerId && m.toUserId === me.userId) || (m.fromUserId === me.userId && m.toUserId === peerId);
+        (m.fromUserId === peerId && m.toUserId === me.userId) ||
+        (m.fromUserId === me.userId && m.toUserId === peerId);
       if (!involved) return;
       setLive((prev) => {
         if (prev.some((l) => l.id === m.id)) return prev;
@@ -99,7 +114,14 @@ function Conversation({ peerId, draft }: { peerId: string; draft: string | null 
     if (!id) return false;
     setLive((prev) => [
       ...prev,
-      { key: id, id: null, fromUserId: me.userId, text: value, createdAt: new Date().toISOString(), pending: true },
+      {
+        key: id,
+        id: null,
+        fromUserId: me.userId,
+        text: value,
+        createdAt: new Date().toISOString(),
+        pending: true,
+      },
     ]);
     return true;
   };
@@ -121,7 +143,10 @@ function Conversation({ peerId, draft }: { peerId: string; draft: string | null 
           {lines.map((l) => {
             const mine = l.fromUserId === me.userId;
             return (
-              <li key={l.key} className={`${s.msg} ${mine ? s.msgRowMine : ''} ${l.pending ? s.pending : ''}`}>
+              <li
+                key={l.key}
+                className={`${s.msg} ${mine ? s.msgRowMine : ''} ${l.pending ? s.pending : ''}`}
+              >
                 <div className={mine ? s.bubbleMine : s.bubbleTheirs}>{l.text}</div>
                 <div className={s.msgMeta}>
                   <time dateTime={l.createdAt}>{formatAbsolute(l.createdAt, now)}</time>

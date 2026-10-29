@@ -43,7 +43,8 @@ describe('Walker', () => {
     const avg = (times.at(-1)! - times[0]!) / (times.length - 1);
     expect(avg).toBeGreaterThanOrEqual(STEP_MS - 15);
     expect(avg).toBeLessThanOrEqual(STEP_MS + 45);
-    for (let i = 1; i < times.length; i++) expect(times[i]! - times[i - 1]!).toBeGreaterThanOrEqual(STEP_MS / 2);
+    for (let i = 1; i < times.length; i++)
+      expect(times[i]! - times[i - 1]!).toBeGreaterThanOrEqual(STEP_MS / 2);
     expect(w.walking).toBe(false);
     expect(w.target).toBeNull();
   });
@@ -56,7 +57,11 @@ describe('Walker', () => {
     const first = w.step(700, { x: 0, y: 0 });
     expect(first).toEqual({ from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, arrived: false });
     expect(w.step(750, { x: 1, y: 0 })).toBeNull();
-    expect(w.step(700 + STEP_MS, { x: 1, y: 0 })).toEqual({ from: { x: 1, y: 0 }, to: { x: 2, y: 0 }, arrived: true });
+    expect(w.step(700 + STEP_MS, { x: 1, y: 0 })).toEqual({
+      from: { x: 1, y: 0 },
+      to: { x: 2, y: 0 },
+      arrived: true,
+    });
   });
 
   it('never bursts after a stall', () => {
@@ -119,7 +124,12 @@ describe('Walker in the director: arrival anim and facing', () => {
     d.evaluate(now, 0, { snap: true });
     const p = state.players.get('u1')!;
     const pantry = world.spots.breakSpots[0]!;
-    expect({ x: p.x, y: p.y, dir: p.dir, anim: p.anim }).toEqual({ x: pantry.x, y: pantry.y, dir: Dir.Down, anim: Anim.Idle });
+    expect({ x: p.x, y: p.y, dir: p.dir, anim: p.anim }).toEqual({
+      x: pantry.x,
+      y: pantry.y,
+      dir: Dir.Down,
+      anim: Anim.Idle,
+    });
 
     d.setManual('u1', { status: 'available', until: new Date(now.getTime() + 3_600_000) });
     d.evaluate(now, 1000);
@@ -129,6 +139,11 @@ describe('Walker in the director: arrival anim and facing', () => {
       if (p.anim === Anim.Walk) walked = true;
     }
     expect(walked).toBe(true);
-    expect({ x: p.x, y: p.y, dir: p.dir, anim: p.anim }).toEqual({ x: 3, y: 5, dir: Dir.Down, anim: Anim.Sit });
+    expect({ x: p.x, y: p.y, dir: p.dir, anim: p.anim }).toEqual({
+      x: 3,
+      y: 5,
+      dir: Dir.Down,
+      anim: Anim.Sit,
+    });
   });
 });

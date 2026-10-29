@@ -13,7 +13,7 @@ import {
 import { createTestUser, setupTestDb, truncateAll } from '@enu/testing';
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { purgeRetention } from '../src/jobs/retention-purge';
+import { nudgeDeliveryCutoff, purgeRetention } from '../src/jobs/retention-purge';
 import { DAY, HOUR, kst, plus, testEnv } from './helpers';
 
 let h: DbHandle;
@@ -40,7 +40,12 @@ async function users() {
   return { a: a.id, b: b.id, low: a.id < b.id ? a.id : b.id, high: a.id < b.id ? b.id : a.id };
 }
 
-async function chat(kind: 'dm' | 'room', senderId: string, createdAt: Date, dm?: { low: string; high: string }) {
+async function chat(
+  kind: 'dm' | 'room',
+  senderId: string,
+  createdAt: Date,
+  dm?: { low: string; high: string },
+) {
   const id = newId();
   await h.db.insert(chatMessages).values({
     id,
@@ -90,7 +95,11 @@ describe('retention.purge', () => {
   it('deletes work logs by local period key, scrubs soft-deleted ones and purges them after 30 days', async () => {
     const u = await users();
     // Work-log cutoff = NOW - 90d = 2026-07-31 03:17 KST -> period keys before 2026-07-31 go.
-    const log = async (userId: string, periodKey: string, extra: Partial<typeof workLogs.$inferInsert> = {}) => {
+    const log = async (
+      userId: string,
+      periodKey: string,
+      extra: Partial<typeof workLogs.$inferInsert> = {},
+    ) => {
       const id = newId();
       const start = new Date(`${periodKey}T00:00:00+09:00`);
       await h.db.insert(workLogs).values({
@@ -137,7 +146,7 @@ describe('retention.purge', () => {
     expect((await purgeRetention(h.db, NOW, env)).softDeletedWorkLogsScrubbed).toBe(0);
   });
 
-  it('deletes terminal nudges and deliveries past the nudge cutoff, keeping active ones', async () => {
+  it('deletes terminal nudges past the nudge cutoff (keeping active ones) and deliveries the policy no longer reads', async () => {
     const u = await users();
     const nudge = async (status: string, at: Date) => {
       const id = newId();
@@ -169,27 +178,58 @@ describe('retention.purge', () => {
       createdAt: before(16),
     });
 
-    const delivery = async (nudgeId: string | null, shownAt: Date) => {
+    const delivery = async (nudgeId: string | null, shownAt: Date, dueKey: string | null = null) => {
       const [row] = await h.db
         .insert(nudgeDeliveries)
-        .values({ userId: u.a, nudgeId, trigger: 'join', shownAt })
+        .values({ userId: u.a, nudgeId, dueKey, shownAt })
         .returning({ id: nudgeDeliveries.id });
       return row!.id;
     };
+    // Deliveries keep only what the bubble policy reads: today's (APP_TIMEZONE) count and the last
+    // candidateHorizonMs (12 h) of due keys. At 03:17 the earlier bound is 15:17 the day before.
+    const cutoff = plus(NOW, -12 * HOUR);
     const dOld = await delivery(ackedOld, before(14, -SEC));
-    const dAtCutoff = await delivery(expiredNew, before(14));
-    const dNew = await delivery(expiredNew, before(14, SEC));
+    const dYesterdayMorning = await delivery(expiredNew, kst(2026, 10, 28, 9, 0));
+    const dJustBefore = await delivery(null, plus(cutoff, -SEC), 't1:5');
+    const dAtCutoff = await delivery(null, cutoff, 't2:5');
+    const dLateYesterday = await delivery(expiredNew, kst(2026, 10, 28, 22, 0));
+    const dToday = await delivery(expiredNew, kst(2026, 10, 29, 1, 0));
 
     const s = await purgeRetention(h.db, NOW, env);
     expect(s.nudges).toBe(3);
-    expect(s.nudgeDeliveries).toBe(1);
+    expect(s.nudgeDeliveries).toBe(3);
 
     const left = (await h.db.select({ id: petNudges.id }).from(petNudges)).map((r) => r.id).sort();
     expect(left).toEqual([expiredNew, pendingOld, longLived].sort());
     expect([ackedOld, supersededOld, dismissedOld].some((id) => left.includes(id))).toBe(false);
-    const deliveries = (await h.db.select({ id: nudgeDeliveries.id }).from(nudgeDeliveries)).map((r) => r.id).sort();
-    expect(deliveries).toEqual([dAtCutoff, dNew].sort());
-    expect(deliveries).not.toContain(dOld);
+    const deliveries = (await h.db.select({ id: nudgeDeliveries.id }).from(nudgeDeliveries))
+      .map((r) => r.id)
+      .sort();
+    expect(deliveries).toEqual([dAtCutoff, dLateYesterday, dToday].sort());
+    for (const gone of [dOld, dYesterdayMorning, dJustBefore]) expect(deliveries).not.toContain(gone);
+  });
+
+  it("keeps bubble deliveries only from the earlier of today's start and 12 hours ago", async () => {
+    expect(nudgeDeliveryCutoff(NOW, 'Asia/Seoul')).toEqual(plus(NOW, -12 * HOUR));
+    // Later in the day the start of today is the earlier bound (today's count must stay whole).
+    const afternoon = kst(2026, 10, 29, 14, 0);
+    expect(nudgeDeliveryCutoff(afternoon, 'Asia/Seoul')).toEqual(kst(2026, 10, 29, 0, 0));
+
+    const u = await users();
+    const delivery = async (shownAt: Date) => {
+      const [row] = await h.db
+        .insert(nudgeDeliveries)
+        .values({ userId: u.b, shownAt })
+        .returning({ id: nudgeDeliveries.id });
+      return row!.id;
+    };
+    const lastNight = await delivery(kst(2026, 10, 28, 23, 59));
+    const midnight = await delivery(kst(2026, 10, 29, 0, 0));
+    const s = await purgeRetention(h.db, afternoon, env);
+    expect(s.nudgeDeliveries).toBe(1);
+    const ids = (await h.db.select({ id: nudgeDeliveries.id }).from(nudgeDeliveries)).map((r) => r.id);
+    expect(ids).toEqual([midnight]);
+    expect(ids).not.toContain(lastNight);
   });
 
   it('deletes audit events older than a year and closed to-dos untouched for 30 days', async () => {
@@ -205,7 +245,9 @@ describe('retention.purge', () => {
 
     const todo = async (status: string, updatedAt: Date) => {
       const id = newId();
-      await h.db.insert(todos).values({ id, userId: u.a, externalRef: `ref:${id}`, title: '보고서', status, updatedAt });
+      await h.db
+        .insert(todos)
+        .values({ id, userId: u.a, externalRef: `ref:${id}`, title: '보고서', status, updatedAt });
       return id;
     };
     const doneOld = await todo('done', before(30, -SEC));
@@ -224,7 +266,10 @@ describe('retention.purge', () => {
     expect(ids).not.toContain(oldAudit!.id);
     // The run itself is audited with counts only.
     const run = audits.find((a) => a.action === 'retention.purge');
-    expect(run).toMatchObject({ actorType: 'system', metadata: expect.objectContaining({ auditEvents: 1, todos: 2 }) });
+    expect(run).toMatchObject({
+      actorType: 'system',
+      metadata: expect.objectContaining({ auditEvents: 1, todos: 2 }),
+    });
 
     const left = (await h.db.select({ id: todos.id }).from(todos)).map((r) => r.id).sort();
     expect(left).toEqual([doneRecent, openOld, snoozedOld].sort());
@@ -256,10 +301,17 @@ describe('retention.purge', () => {
       await h.db.delete(activityReports);
       await h.db
         .insert(activityReports)
-        .values([report(u.a, '2026-10-29'), report(u.a, '2026-10-28'), report(u.b, '2026-10-20'), report(u.b, '2026-10-29')]);
+        .values([
+          report(u.a, '2026-10-29'),
+          report(u.a, '2026-10-28'),
+          report(u.b, '2026-10-20'),
+          report(u.b, '2026-10-29'),
+        ]);
       const s = await purgeRetention(h.db, now, env);
       expect(s.activityReports).toBe(2);
-      const left = await h.db.select({ userId: activityReports.userId, periodKey: activityReports.periodKey }).from(activityReports);
+      const left = await h.db
+        .select({ userId: activityReports.userId, periodKey: activityReports.periodKey })
+        .from(activityReports);
       expect(left.map((r) => r.periodKey)).toEqual(['2026-10-29', '2026-10-29']);
       expect(left.map((r) => r.userId).sort()).toEqual([u.a, u.b].sort());
     }
@@ -283,7 +335,11 @@ describe('retention.purge', () => {
     expect(s.clearedManual).toBe(1);
     const rows = await h.db.select().from(profiles);
     const byId = new Map(rows.map((r) => [r.userId, r]));
-    expect(byId.get(u.a)).toMatchObject({ manualStatus: null, manualStatusUntil: null, statusText: '오후 반차' });
+    expect(byId.get(u.a)).toMatchObject({
+      manualStatus: null,
+      manualStatusUntil: null,
+      statusText: '오후 반차',
+    });
     expect(byId.get(u.a)?.updatedAt.toISOString()).toBe(updatedAt.toISOString());
     expect(byId.get(u.b)).toMatchObject({ manualStatus: 'focus', statusText: '집중 중' });
     expect(byId.get(c)).toMatchObject({ manualStatus: null, statusText: '재택' });

@@ -3,8 +3,9 @@ import { LIMITS, MANUAL_DURATIONS, MANUAL_STATUSES } from '@enu/shared';
 import { PROTOCOL_VERSION } from './constants';
 
 /**
- * Options every client sends with `joinOrCreate`. The room checks `protocol` in `onAuth`, before the
- * ticket, and refuses a missing or different value with CloseCodes.ProtocolMismatch.
+ * Options every client sends with `join`. The room reads `protocol` in `onAuth` and refuses a missing or
+ * different value at the start of `onJoin`, before any state is sent, with CloseCodes.ProtocolMismatch
+ * (Colyseus turns an onAuth error code into an HTTP status, so 4111 would not reach the client from there).
  */
 export interface JoinOptions {
   /** sha256 of the .tmj the client renders (compared with state.mapHash on the client). */
@@ -33,12 +34,18 @@ export const C2S = {
     text: z.string().max(LIMITS.statusTextMax).optional(),
   }),
   chatSend: z.object({
-    text: z.string().min(1).max(LIMITS.chatMaxLen * 2),
+    text: z
+      .string()
+      .min(1)
+      .max(LIMITS.chatMaxLen * 2),
     clientMsgId: z.string().min(8).max(64),
   }),
   dmSend: z.object({
     toUserId: z.string().min(1).max(64),
-    text: z.string().min(1).max(LIMITS.chatMaxLen * 2),
+    text: z
+      .string()
+      .min(1)
+      .max(LIMITS.chatMaxLen * 2),
     clientMsgId: z.string().min(8).max(64),
   }),
   dmRead: z.object({ peerUserId: z.string().min(1).max(64), lastMessageId: z.string().min(1).max(64) }),

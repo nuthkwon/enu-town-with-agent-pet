@@ -24,8 +24,12 @@ describe('decideWorkLogUpsert', () => {
   });
 
   it('never resurrects or overwrites owner decisions', () => {
-    expect(decideWorkLogUpsert(existing({ deletedAt: new Date() }), incoming, defaults).result).toBe('skipped_user_deleted');
-    expect(decideWorkLogUpsert(existing({ editedByUser: true }), incoming, defaults).result).toBe('skipped_user_edited');
+    expect(decideWorkLogUpsert(existing({ deletedAt: new Date() }), incoming, defaults).result).toBe(
+      'skipped_user_deleted',
+    );
+    expect(decideWorkLogUpsert(existing({ editedByUser: true }), incoming, defaults).result).toBe(
+      'skipped_user_edited',
+    );
   });
 
   it('keeps visibility chosen by the owner', () => {

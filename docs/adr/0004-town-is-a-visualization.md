@@ -3,6 +3,7 @@
 Status: accepted (2026-10-29)
 
 ## Context
+
 Owner intent: "사용자가 직접 키를 통해 움직이는 것이 아닙니다. 팀들이 업무를 하고 상호작용하는 것을 시각화하기
 위함입니다." A Gather-style office where each person steers an avatar stores positions, rewards being visibly "at
 the desk" and invites reading the map as attendance. In an employment relationship that is close to 근로자 감시.
@@ -11,6 +12,7 @@ design, its alternatives and the review that shaped it are in
 [the town visualization spec](../design/town-visualization-spec.md).
 
 ## Decision
+
 1. **Nobody steers an avatar.** A server-side director in `apps/realtime` places every roster member (one `Player` and
    one `Pet` each, whether or not anyone is connected). Viewers watch, click people, chat and DM; keys and clicks
    never move anyone.
@@ -49,6 +51,7 @@ design, its alternatives and the review that shaped it are in
    activity history, an admin activity view or a presence job needs a new ADR **and** an HR review.
 
 ## Consequences
+
 - Removed: keyboard and click steering, proximity chat, stored positions (`user_presence`), chat recipients lists
   (`chat_message_recipients`) and chat zones (`chat_messages.zone_id`). Migration `0002_town_visualization` drops them,
   so the release needs a backup and cannot be rolled back by images alone (see the
@@ -56,13 +59,17 @@ design, its alternatives and the review that shaped it are in
 - A fifth MCP tool, `post_activity`, takes only enums, times and opaque refs; it carries no free text
   ([ADR 0002](0002-pet-text-source.md) addendum). Visibility rules for activity live in `visibility.ts`
   ([ADR 0003](0003-visibility.md) addendum).
-- Pet bubbles stay owner-only; colleagues see the `…` indicator only while the owner is shown.
+- Pet bubbles stay owner-only, and colleagues see no sign of them: the shared `…` indicator is never set, because a
+  bubble starts only while the owner's tab is visible (and `glance` right when it becomes visible again), so any shared
+  onset would be the attention signal item 3 rules out. Bubble deliveries store no trigger and are kept only until
+  the next nightly purge (today's count and the last 12 hours of due keys are all the policy reads).
 - If calendar refs do not match across attendees, a meeting falls back to "each at their own desk with a headset",
   which is still truthful.
 - The privacy notice moves to version 2026-11 and everyone accepts it again
   ([privacy notice](../privacy-notice.ko.md)).
 
 ## Not chosen
+
 - Tab visibility as a presence signal (attention tracking).
 - A Claude-written headline or label on the map (a new free-text and PII surface).
 - Claude naming the colleagues someone works with (one person's Claude would make claims about another).
@@ -70,7 +77,9 @@ design, its alternatives and the review that shaped it are in
 - Remote / field-work badges (`부재` covers being out without giving a reason).
 
 ## Review before rollout
+
 The notice is a draft until these are done. Record the results here.
+
 - [ ] Checked whether the town counts as a 근로자 감시 설비, with HR / legal: ________
 - [ ] All-hands briefing and a round of employee feedback before go-live (even below 30 employees, where a 노사협의회
       is not required): date ________

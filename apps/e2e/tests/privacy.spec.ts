@@ -25,7 +25,11 @@ function focusBlockNow(): { start_at: string; end_at: string; kind: 'focus' } {
   return { start_at: new Date(start).toISOString(), end_at: new Date(end).toISOString(), kind: 'focus' };
 }
 
-async function saveSettings(page: Page, toggleId: 'share-activity' | 'show-live', on: boolean): Promise<void> {
+async function saveSettings(
+  page: Page,
+  toggleId: 'share-activity' | 'show-live',
+  on: boolean,
+): Promise<void> {
   await page.goto('/me?tab=settings');
   const input = page.locator(`#${toggleId}`);
   await expect(input).toBeAttached();
@@ -86,7 +90,9 @@ test('with 접속 표시 off, opening the town no longer draws the owner: only t
   await openTown(town);
   await waitForTownState(town);
   // 서로 보기: the open town draws the owner, with the online dot.
-  await expect.poll(async () => (await playerState(colleaguePage, ownerId))?.online, { timeout: 10_000 }).toBe(true);
+  await expect
+    .poll(async () => (await playerState(colleaguePage, ownerId))?.online, { timeout: 10_000 })
+    .toBe(true);
   await expect(railRow(colleaguePage, '직원07')).toContainText('타운 접속');
 
   const settings = await owner.newPage();
@@ -120,8 +126,12 @@ test('a DM paper plane is drawn for its two participants only', async ({ browser
   const box = colleaguePage.getByRole('textbox', { name: /메시지 입력/ });
   await box.fill('E2E: 검토 자료 공유드려요');
   await box.press('Enter');
-  await expect.poll(async () => (await fxDrawn(ownerTown)).plane, { timeout: 5_000 }).toBeGreaterThan(before[0]!.plane);
-  await expect.poll(async () => (await fxDrawn(colleaguePage)).plane, { timeout: 5_000 }).toBeGreaterThan(before[1]!.plane);
+  await expect
+    .poll(async () => (await fxDrawn(ownerTown)).plane, { timeout: 5_000 })
+    .toBeGreaterThan(before[0]!.plane);
+  await expect
+    .poll(async () => (await fxDrawn(colleaguePage)).plane, { timeout: 5_000 })
+    .toBeGreaterThan(before[1]!.plane);
   await thirdPage.waitForTimeout(1_500);
   expect((await fxDrawn(thirdPage)).plane).toBe(before[2]!.plane);
   await colleaguePage.keyboard.press('Escape');

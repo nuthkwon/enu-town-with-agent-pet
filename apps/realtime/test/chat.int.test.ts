@@ -39,7 +39,8 @@ async function people() {
   for (const k of Object.keys(seats)) joined[k] = await joinAs(h, users[k]!.id);
   const all = Object.values(joined);
   await waitFor(
-    () => all.every((j) => Object.values(users).every((u) => j.room.state.players.get(u.id)?.online === true)),
+    () =>
+      all.every((j) => Object.values(users).every((u) => j.room.state.players.get(u.id)?.online === true)),
     { message: 'everyone shown and online' },
   );
   return {
@@ -193,7 +194,8 @@ describe('social', () => {
     const { u, j } = await people();
     j.a.room.send('social:wave', { toUserId: u.c.id });
     const wave = { fromUserId: u.a.id, toUserId: u.c.id, kind: 'wave' };
-    for (const k of ['a', 'b', 'c', 'd', 'e', 'f'] as const) expect(await j[k].inbox.waitFor<EmoteMsg>('emote')).toEqual(wave);
+    for (const k of ['a', 'b', 'c', 'd', 'e', 'f'] as const)
+      expect(await j[k].inbox.waitFor<EmoteMsg>('emote')).toEqual(wave);
     j.a.room.send('social:wave', { toUserId: u.c.id });
     expect(await j.a.inbox.waitFor('error')).toEqual({ code: 'RATE_LIMITED', type: 'social:wave' });
 

@@ -39,7 +39,7 @@ export interface PlayerSnap {
   note: number;
   /** Opaque group id ('' = none). */
   groupId: string;
-  /** Wrapping counter bumped per Claude work-log write (the client sparkles on change). */
+  /** Changes on each Claude work-log write (the client sparkles on a change; the value counts nothing). */
   logPulse: number;
 }
 

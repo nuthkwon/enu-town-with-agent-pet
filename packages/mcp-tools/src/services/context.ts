@@ -118,7 +118,12 @@ export async function getMyContext(
  * Whether the owner shares activity, today's stored report (office date; refs never echoed, only
  * `has_ref`) and the owner's own status. A `now` report past its `until` is no longer current.
  */
-async function loadActivity(db: DbOrTx, owner: OwnerContext, now: Date, officeTimeZone: string): Promise<Activity> {
+async function loadActivity(
+  db: DbOrTx,
+  owner: OwnerContext,
+  now: Date,
+  officeTimeZone: string,
+): Promise<Activity> {
   const sharing = canShareActivity(owner, { active: true });
   const ownerStatus = activeOwnerStatus(owner, now);
   if (!sharing) return { sharing, now: null, schedule: [], owner_status: ownerStatus };
@@ -254,7 +259,12 @@ export async function countUnreadDms(db: DbOrTx, userId: string, now: Date, sinc
   return Number(row?.n ?? 0);
 }
 
-async function loadTownMessages(db: DbOrTx, owner: OwnerContext, now: Date, since: Date): Promise<TownMessages> {
+async function loadTownMessages(
+  db: DbOrTx,
+  owner: OwnerContext,
+  now: Date,
+  since: Date,
+): Promise<TownMessages> {
   const unread = await countUnreadDms(db, owner.userId, now, since);
   // Privacy: colleagues' messages reach Claude only when the owner opted in.
   if (!owner.shareDmsWithMyClaude) return { shared: false, unread_count: unread, items: [] };

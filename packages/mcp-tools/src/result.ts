@@ -25,7 +25,11 @@ export class ToolError extends Error {
   readonly problems: ToolProblem[] | undefined;
   readonly retryAfterSeconds: number | undefined;
 
-  constructor(code: ToolErrorCode, message: string, opts: { problems?: ToolProblem[]; retryAfterSeconds?: number } = {}) {
+  constructor(
+    code: ToolErrorCode,
+    message: string,
+    opts: { problems?: ToolProblem[]; retryAfterSeconds?: number } = {},
+  ) {
     super(message);
     this.name = 'ToolError';
     this.code = code;

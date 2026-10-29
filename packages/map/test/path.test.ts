@@ -108,7 +108,9 @@ describe('findPath (A*)', () => {
       }
     }
     expect(cells.length).toBeGreaterThan(50);
-  });
+    // Every pair of cells is a few thousand searches: ~1.5 s alone, past the default 5 s when `pnpm test` runs
+    // every package at once.
+  }, 30_000);
 });
 
 describe('reachableMask / nearestWalkable', () => {

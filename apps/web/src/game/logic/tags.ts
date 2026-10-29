@@ -29,8 +29,8 @@ const MAX_SHIFTS = 3;
 const STACK_GAP = 2;
 
 export function declutterTags(candidates: readonly TagCandidate[]): Map<string, TagPlacement> {
-  const order = [...candidates].sort(
-    (a, b) => (a.isMe !== b.isMe ? (a.isMe ? -1 : 1) : b.feetY - a.feetY || a.feetX - b.feetX),
+  const order = [...candidates].sort((a, b) =>
+    a.isMe !== b.isMe ? (a.isMe ? -1 : 1) : b.feetY - a.feetY || a.feetX - b.feetX,
   );
   const placed: Box[] = [];
   const hits = (r: Box) => placed.some((p) => boxesOverlap(p, r));

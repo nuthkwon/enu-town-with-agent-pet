@@ -4,7 +4,16 @@ import { createTestUser, setupTestDb, truncateAll } from '@enu/testing';
 import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { MODES, callTool, errorPayload } from './harness';
-import { PUBLIC_URL, THU_14, auditFor, listen, makeHarness, settle, type Harness, type Listener } from './int-helpers';
+import {
+  PUBLIC_URL,
+  THU_14,
+  auditFor,
+  listen,
+  makeHarness,
+  settle,
+  type Harness,
+  type Listener,
+} from './int-helpers';
 
 let handle: DbHandle;
 beforeAll(async () => {
@@ -14,7 +23,8 @@ afterAll(async () => {
   await handle.close();
 });
 
-const SUMMARY = '오전에 A사 견적서를 검토하고 오후에 배포 스크립트를 정리했습니다. 내일은 회의 자료를 준비합니다.';
+const SUMMARY =
+  '오전에 A사 견적서를 검토하고 오후에 배포 스크립트를 정리했습니다. 내일은 회의 자료를 준비합니다.';
 const CHAT = '배포 자동화와 견적 검토 방법에 대해 이야기했습니다.';
 
 describe.each(MODES)('post_work_log (%s)', (mode) => {
@@ -39,8 +49,10 @@ describe.each(MODES)('post_work_log (%s)', (mode) => {
     expect(out.isError, out.texts.join('\n')).toBe(false);
     return postWorkLogOutput.parse(out.structured);
   }
-  const rowOf = async (userId: string) => (await handle.db.select().from(workLogs).where(eq(workLogs.userId, userId)))[0];
-  const profileOf = async (userId: string) => (await handle.db.select().from(profiles).where(eq(profiles.userId, userId)))[0];
+  const rowOf = async (userId: string) =>
+    (await handle.db.select().from(workLogs).where(eq(workLogs.userId, userId)))[0];
+  const profileOf = async (userId: string) =>
+    (await handle.db.select().from(profiles).where(eq(profiles.userId, userId)))[0];
 
   it('creates, updates and leaves unchanged; updates profile/link state, NOTIFY and audit', async () => {
     const me = await createTestUser(handle.db, { linkState: 'not_linked' });
@@ -100,7 +112,10 @@ describe.each(MODES)('post_work_log (%s)', (mode) => {
     // Later the same day: cumulative update, Claude lowers visibility.
     h.clock.advance(2 * 60 * 60 * 1000);
     listener.events.length = 0;
-    const updated = await postOk(me.id, { summary: `${SUMMARY} 오후에는 버그 두 건을 고쳤습니다.`, visibility: 'private' });
+    const updated = await postOk(me.id, {
+      summary: `${SUMMARY} 오후에는 버그 두 건을 고쳤습니다.`,
+      visibility: 'private',
+    });
     expect(updated).toMatchObject({ log_id: created.log_id, result: 'updated', visibility: 'private' });
     row = await rowOf(me.id);
     expect(row?.claudeRevision).toBe(2);
@@ -125,7 +140,10 @@ describe.each(MODES)('post_work_log (%s)', (mode) => {
     const before = await rowOf(me.id);
     h.clock.advance(60 * 60 * 1000);
     listener.events.length = 0;
-    const same = await postOk(me.id, { summary: `${SUMMARY} 오후에는 버그 두 건을 고쳤습니다.`, visibility: 'private' });
+    const same = await postOk(me.id, {
+      summary: `${SUMMARY} 오후에는 버그 두 건을 고쳤습니다.`,
+      visibility: 'private',
+    });
     expect(same.result).toBe('unchanged');
     const after = await rowOf(me.id);
     expect(after?.updatedAt.toISOString()).toBe(before?.updatedAt.toISOString());
@@ -144,15 +162,32 @@ describe.each(MODES)('post_work_log (%s)', (mode) => {
       'work_log.update',
     ]);
     const createAudit = audits[1]!;
-    expect(createAudit).toMatchObject({ actorType: 'claude', oauthClientId: 'https://claude.ai/oauth/client', targetId: created.log_id });
-    expect(createAudit.metadata).toMatchObject({ result: 'created', summary_len: SUMMARY.length, tasks_count: 1, blockers_count: 1 });
+    expect(createAudit).toMatchObject({
+      actorType: 'claude',
+      oauthClientId: 'https://claude.ai/oauth/client',
+      targetId: created.log_id,
+    });
+    expect(createAudit.metadata).toMatchObject({
+      result: 'created',
+      summary_len: SUMMARY.length,
+      tasks_count: 1,
+      blockers_count: 1,
+    });
     const allMetadata = JSON.stringify(audits.map((a) => a.metadata));
-    for (const fragment of ['견적서', '배포', '스테이징', '이야기', 'ENU-123']) expect(allMetadata).not.toContain(fragment);
+    for (const fragment of ['견적서', '배포', '스테이징', '이야기', 'ENU-123'])
+      expect(allMetadata).not.toContain(fragment);
   });
 
   it('never raises visibility above the owner default', async () => {
-    const me = await createTestUser(handle.db, { defaultLogVisibility: 'private', defaultChatSummaryVisibility: 'company' });
-    const out = await postOk(me.id, { summary: SUMMARY, visibility: 'company', chat_summary_visibility: 'company' });
+    const me = await createTestUser(handle.db, {
+      defaultLogVisibility: 'private',
+      defaultChatSummaryVisibility: 'company',
+    });
+    const out = await postOk(me.id, {
+      summary: SUMMARY,
+      visibility: 'company',
+      chat_summary_visibility: 'company',
+    });
     // The chat summary is never more visible than the log itself is allowed to be (owner default caps both).
     expect(out.visibility).toBe('private');
     expect(out.chat_summary_visibility).toBe('company');
@@ -171,13 +206,20 @@ describe.each(MODES)('post_work_log (%s)', (mode) => {
     const out = await postOk(me.id, { summary: `${SUMMARY} 추가 작업을 했습니다.`, visibility: 'company' });
     expect(out).toMatchObject({ result: 'updated', visibility: 'private' });
     const row = await rowOf(me.id);
-    expect(row).toMatchObject({ visibility: 'private', visibilitySetBy: 'user', summary: `${SUMMARY} 추가 작업을 했습니다.` });
+    expect(row).toMatchObject({
+      visibility: 'private',
+      visibilitySetBy: 'user',
+      summary: `${SUMMARY} 추가 작업을 했습니다.`,
+    });
   });
 
   it('skips (without error) when the owner edited or deleted today’s log', async () => {
     const me = await createTestUser(handle.db);
     const created = await postOk(me.id, { summary: SUMMARY });
-    await handle.db.update(workLogs).set({ editedByUser: true, summary: '내가 고친 기록' }).where(eq(workLogs.id, created.log_id));
+    await handle.db
+      .update(workLogs)
+      .set({ editedByUser: true, summary: '내가 고친 기록' })
+      .where(eq(workLogs.id, created.log_id));
     listener.events.length = 0;
     const edited = await post(me.id, { summary: '클로드의 새 요약입니다.' });
     expect(edited.isError).toBe(false);
@@ -185,7 +227,10 @@ describe.each(MODES)('post_work_log (%s)', (mode) => {
     expect(edited.texts[0]).toContain('다시 시도하지 마세요');
     expect((await rowOf(me.id))?.summary).toBe('내가 고친 기록');
 
-    await handle.db.update(workLogs).set({ deletedAt: new Date(THU_14) }).where(eq(workLogs.id, created.log_id));
+    await handle.db
+      .update(workLogs)
+      .set({ deletedAt: new Date(THU_14) })
+      .where(eq(workLogs.id, created.log_id));
     const deleted = await postOk(me.id, { summary: '클로드의 새 요약입니다.' });
     expect(deleted).toMatchObject({ result: 'skipped_user_deleted', log_id: created.log_id });
     const row = await rowOf(me.id);

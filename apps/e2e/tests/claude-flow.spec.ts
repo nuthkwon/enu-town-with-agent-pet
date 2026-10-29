@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { BASE_URL, devEmail } from '../env';
 import { devLogin, openTown, userIdOf } from '../support/auth';
 import { connectClaude, mcpClient, structured } from '../support/claude';
-import { playerState, playerTile, railRow, waitForTownState } from '../support/town';
+import { petBubble, petState, playerState, playerTile, railRow, waitForTownState } from '../support/town';
 
 /**
  * The core promise of ENU Town, end to end:
@@ -75,8 +75,18 @@ test('Claude writes; the owner sees the pet bubble, colleagues see the work log'
   const colleaguePage = await colleague.newPage();
   await openTown(ownerPage);
   await openTown(colleaguePage);
-  await expect(ownerPage.getByText(NUDGE)).toBeVisible({ timeout: 45_000 });
+  // Drawn on the canvas (not just the hidden live region), and mirrored for screen readers.
+  await expect.poll(async () => (await petBubble(ownerPage))?.text, { timeout: 45_000 }).toBe(NUDGE);
+  await expect(ownerPage.getByRole('status').filter({ hasText: NUDGE })).toHaveCount(1);
+  // The colleague's client never decodes the text (or even a sign that a bubble is up).
+  await waitForTownState(colleaguePage);
   await colleaguePage.waitForTimeout(3_000);
+  expect(await petState(colleaguePage, ownerId)).toEqual({
+    bubbleId: '',
+    bubbleText: '',
+    bubbleUntil: 0,
+    indicator: 0,
+  });
   await expect(colleaguePage.getByText(NUDGE)).toHaveCount(0);
   await ownerPage.screenshot({ path: 'screenshots/owner-town.png' });
   await colleaguePage.screenshot({ path: 'screenshots/colleague-town.png' });
@@ -90,7 +100,10 @@ test('Claude writes; the owner sees the pet bubble, colleagues see the work log'
   expect(authorTile, 'the author has the town open, so they are drawn').not.toBeNull();
   const stored = [
     structured<{ result: string; now_until: string | null }>(
-      await claude.callTool({ name: 'post_activity', arguments: { now: { kind: 'work', ref: 'jira:ENU-301' } } }),
+      await claude.callTool({
+        name: 'post_activity',
+        arguments: { now: { kind: 'work', ref: 'jira:ENU-301' } },
+      }),
     ),
     structured<{ result: string; now_until: string | null }>(
       await colleagueClaude.callTool({

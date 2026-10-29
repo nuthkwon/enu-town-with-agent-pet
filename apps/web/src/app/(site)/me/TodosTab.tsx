@@ -6,17 +6,10 @@ import { Badge, Button, Card, Empty, Notice, cx } from '@/components/ui';
 import { ko } from '@/i18n/ko';
 import { apiFetch, describeError } from '@/lib/api';
 import { formatDate, formatDateTime } from '@/lib/format';
+import { tomorrowMorning } from '@/lib/snooze';
 import s from './me.module.css';
 
 const t = ko.me.todos;
-
-/** 09:00 tomorrow (local browser time is fine for a snooze target). */
-function tomorrowMorning(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  d.setHours(9, 0, 0, 0);
-  return d.toISOString();
-}
 
 export function TodosTab({ initial, timezone }: { initial: TodoDto[]; timezone: string }) {
   const [todos, setTodos] = useState(initial);
@@ -107,7 +100,7 @@ export function TodosTab({ initial, timezone }: { initial: TodoDto[]; timezone: 
                         variant="secondary"
                         size="sm"
                         disabled={busy === todo.id}
-                        onClick={() => patch(todo.id, { snoozed_until: tomorrowMorning() })}
+                        onClick={() => patch(todo.id, { snoozed_until: tomorrowMorning(timezone) })}
                       >
                         {t.snoozeTomorrow}
                       </Button>

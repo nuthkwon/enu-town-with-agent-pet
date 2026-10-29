@@ -8,7 +8,9 @@ import type { Candidate } from './CandidateLoader';
 
 /**
  * The pet fields a bubble touches. `bubble*` are `.view()`-tagged: only the owner receives them.
- * `indicator` is shared with everyone, so it shows `…` only while the owner is shown (`indicatorAllowed`).
+ * `indicator` is shared with everyone, so a bubble never sets it: bubbles start only while the owner's tab
+ * is visible (and `glance` right when it becomes visible again), so any shared onset would tell colleagues
+ * when the owner looks at the town (ADR 0004 D2). It stays `None`; the field is kept for the protocol.
  */
 export interface BubblePet {
   bubbleId: string;
@@ -29,6 +31,10 @@ export interface ShownBubble {
 export interface DeliveryRecord {
   userId: string;
   candidate: Candidate;
+  /**
+   * In-process only (tests, bookkeeping): never persisted. `join` / `glance` rows would be a history of when
+   * the owner opened the town or came back to the tab (ADR 0004 P4). `dueKey` carries what the policy needs.
+   */
   trigger: Trigger;
   dueKey: string | null;
   shownAt: Date;
@@ -42,7 +48,7 @@ export interface DeliveryStore {
 
 export function createDbDeliveryStore(db: Db): DeliveryStore {
   return {
-    async recordShown({ userId, candidate, trigger, dueKey, shownAt }) {
+    async recordShown({ userId, candidate, dueKey, shownAt }) {
       return db.transaction(async (tx) => {
         if (candidate.kind === 'nudge') {
           const updated = await tx
@@ -62,7 +68,6 @@ export function createDbDeliveryStore(db: Db): DeliveryStore {
           userId,
           nudgeId: candidate.kind === 'nudge' ? candidate.refId : null,
           todoId: candidate.kind === 'todo_due' ? candidate.refId : null,
-          trigger,
           dueKey,
           shownAt,
         });
@@ -91,8 +96,6 @@ export class BubblePresenter {
       candidate: Candidate;
       trigger: Trigger;
       dueKey?: string | null;
-      /** The owner is shown in the shared state (director); otherwise colleagues see no `…`. */
-      indicatorAllowed: boolean;
     },
     onShown?: (bubble: ShownBubble) => void,
   ): Promise<boolean> {
@@ -104,7 +107,8 @@ export class BubblePresenter {
     pet.bubbleText = candidate.text;
     pet.bubbleDueAt = candidate.dueAt ? candidate.dueAt.getTime() : 0;
     pet.bubbleUntil = until;
-    pet.indicator = input.indicatorAllowed ? Indicator.Dots : Indicator.None;
+    // Shared with everyone: never `Dots` (see BubblePet).
+    pet.indicator = Indicator.None;
     onShown?.({ kind: candidate.kind, refId: candidate.refId, until });
     try {
       const ok = await this.deps.store.recordShown({

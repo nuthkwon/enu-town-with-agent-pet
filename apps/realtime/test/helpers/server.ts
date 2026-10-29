@@ -3,7 +3,15 @@ import { matchMaker } from '@colyseus/core';
 import { boot, type ColyseusTestServer } from '@colyseus/testing';
 import config from '@colyseus/tools';
 import { Client, type Room } from '@colyseus/sdk';
-import { activityReports, desks, newId, workLogs, type Db, type DbHandle, type ScheduleBlockRow } from '@enu/db';
+import {
+  activityReports,
+  desks,
+  newId,
+  workLogs,
+  type Db,
+  type DbHandle,
+  type ScheduleBlockRow,
+} from '@enu/db';
 import { PROTOCOL_VERSION } from '@enu/protocol';
 import {
   OFFICE_ROOM_NAME,
@@ -21,7 +29,13 @@ import { setRealtimeContext } from '../../src/context';
 import { loadRealtimeEnv, type RealtimeEnv } from '../../src/env';
 import { createLogger } from '../../src/logger';
 import type { OfficeRoom } from '../../src/rooms/OfficeRoom';
-import { createTransport, installCorsPolicy, registerHttpRoutes, rooms } from '../../src/server';
+import {
+  createTransport,
+  installCorsPolicy,
+  installMatchmakePolicy,
+  registerHttpRoutes,
+  rooms,
+} from '../../src/server';
 
 export const SECRET = 'test-ticket-secret-0123456789abcdef0123';
 export const ORIGIN = 'http://localhost:3000';
@@ -79,6 +93,7 @@ export async function startHarness(port: number, overrides: Record<string, strin
     h.env = env;
     setRealtimeContext({ env, db: handle.db, logger, clock });
     installCorsPolicy(env.ALLOWED_ORIGINS);
+    installMatchmakePolicy();
   };
   const h: Harness = {
     colyseus: undefined as unknown as ColyseusTestServer,
@@ -160,7 +175,9 @@ export async function joinAs(
 ): Promise<Joined> {
   const client = sdkClient(h.port, opts.origin === undefined ? ORIGIN : opts.origin);
   client.auth.token = opts.ticket ?? (await mintTicket(userId));
-  const room = await client.joinOrCreate(OFFICE_ROOM_NAME, opts.options ?? { protocol: PROTOCOL_VERSION });
+  // Clients may only join (installMatchmakePolicy): the room is created server-side, as index.ts does.
+  await officeRoom(h);
+  const room = await client.join(OFFICE_ROOM_NAME, opts.options ?? { protocol: PROTOCOL_VERSION });
   const frames = opts.frames;
   if (frames) {
     const events = room.connection.events;

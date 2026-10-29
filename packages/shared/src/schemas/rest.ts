@@ -90,7 +90,12 @@ export type TodoPatch = z.infer<typeof todoPatch>;
 
 export const nudgeAction = z.object({
   action: z.enum(['ack', 'dismiss', 'snooze']),
-  snooze_minutes: z.number().int().min(5).max(24 * 60).optional(),
+  snooze_minutes: z
+    .number()
+    .int()
+    .min(5)
+    .max(24 * 60)
+    .optional(),
 });
 export type NudgeAction = z.infer<typeof nudgeAction>;
 

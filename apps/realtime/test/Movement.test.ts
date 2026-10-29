@@ -2,7 +2,14 @@ import path from 'node:path';
 import { Dir } from '@enu/protocol';
 import { describe, expect, it } from 'vitest';
 import { loadOfficeMap } from '../src/world/loadMap';
-import { adjacentWalkable, dirBetween, manhattan, opposite, samePoint, stepTarget } from '../src/world/Movement';
+import {
+  adjacentWalkable,
+  dirBetween,
+  manhattan,
+  opposite,
+  samePoint,
+  stepTarget,
+} from '../src/world/Movement';
 
 const MAPS_DIR = path.resolve(import.meta.dirname, '../../web/public/assets/maps');
 const map = loadOfficeMap(MAPS_DIR);

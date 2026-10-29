@@ -47,7 +47,12 @@ describe('declutterTags', () => {
   });
 
   it('is independent of the input order', () => {
-    const people = [person('a', 100, 600), person('b', 148, 600), person('c', 196, 600), person('d', 150, 640)];
+    const people = [
+      person('a', 100, 600),
+      person('b', 148, 600),
+      person('c', 196, 600),
+      person('d', 150, 640),
+    ];
     const ref = declutterTags(people);
     const shuffled = declutterTags([people[2]!, people[0]!, people[3]!, people[1]!]);
     expect([...shuffled.entries()].sort()).toEqual([...ref.entries()].sort());

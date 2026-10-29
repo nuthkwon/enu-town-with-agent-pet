@@ -66,7 +66,7 @@ export function MeClient({
               {ko.linkState[me.linkState]}
             </Badge>
             {me.deskId && <Badge tone="sky">{me.deskId}</Badge>}
-            {me.isAdmin && <Badge tone="pink">관리자</Badge>}
+            {me.isAdmin && <Badge tone="pink">{ko.common.adminBadge}</Badge>}
           </div>
           <div className={s.petRow}>
             <PetSprite species={me.pet.species} scale={2} animate label={me.pet.name} />

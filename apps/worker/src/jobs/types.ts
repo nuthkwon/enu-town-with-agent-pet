@@ -30,7 +30,10 @@ const MAX_BATCHES = 10_000;
  * Repeats `runBatch(limit)` until it affects fewer than `limit` rows. Each batch is its own
  * statement (autocommit), so row locks are held only briefly.
  */
-export async function inBatches(batchSize: number, runBatch: (limit: number) => Promise<number>): Promise<number> {
+export async function inBatches(
+  batchSize: number,
+  runBatch: (limit: number) => Promise<number>,
+): Promise<number> {
   if (!Number.isInteger(batchSize) || batchSize < 1) throw new Error(`invalid batch size ${batchSize}`);
   let total = 0;
   for (let i = 0; i < MAX_BATCHES; i++) {

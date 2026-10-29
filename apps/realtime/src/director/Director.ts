@@ -14,7 +14,14 @@ import {
   type LogVisibilityFields,
   type ResolvedActivity,
 } from '@enu/domain';
-import { allocateSpots, type AllocatedSpot, type OfficeWorld, type Point, type Spot, type SpotIntent } from '@enu/map';
+import {
+  allocateSpots,
+  type AllocatedSpot,
+  type OfficeWorld,
+  type Point,
+  type Spot,
+  type SpotIntent,
+} from '@enu/map';
 import {
   Anim,
   Indicator,
@@ -109,6 +116,11 @@ export interface DirectorOptions {
   ignoreOfficeHours?: boolean;
   /** Called with a short message and tile data only (never user ids or text). */
   warn?: (msg: string, data: Record<string, unknown>) => void;
+  /**
+   * How far `logPulse` moves per sparkle, 1..255 (mod 256). The room passes a random step so the synced
+   * value never counts log writes; injected so the director itself stays deterministic. Default: 1.
+   */
+  pulseStep?: () => number;
 }
 
 export interface ActorView {
@@ -137,20 +149,19 @@ export interface DirectorSnapshot {
 
 /**
  * The pet-bubble hooks of the NudgeScheduler, all answered by the director: do-not-disturb is the
- * owner's resolved focus/meeting, office hours force quiet, and colleagues see `…` only while the owner
- * is shown.
+ * owner's resolved focus/meeting and office hours force quiet. Colleagues never see that a bubble is up
+ * (`Pet.indicator` stays `None`): bubbles start only while the owner's tab is visible, so a shared `…`
+ * would reveal the owner's attention (ADR 0004 D2).
  */
 export function bubbleHooks(director: Director): {
   pet(userId: string): Pet | null;
   doNotDisturb(userId: string): boolean;
   officeOpen(): boolean;
-  indicatorAllowed(userId: string): boolean;
 } {
   return {
     pet: (userId) => director.pet(userId),
     doNotDisturb: (userId) => director.resolved(userId)?.dnd ?? true,
     officeOpen: () => director.officeOpen,
-    indicatorAllowed: (userId) => director.projected(userId)?.shown ?? false,
   };
 }
 
@@ -309,7 +320,9 @@ export class Director {
     if (!canShareActivity(a.snap, ACTIVE)) return false;
     const today = a.signals.todayLog;
     if (!today || !canViewLog(ANY_COLLEAGUE, today.log, ACTIVE)) return false;
-    a.player.logPulse = (a.player.logPulse + 1) & 0xff;
+    // Only a change matters to the client; a random non-zero step keeps the value from counting writes.
+    const step = Math.min(255, Math.max(1, Math.trunc(this.opts.pulseStep?.() ?? 1)));
+    a.player.logPulse = (a.player.logPulse + step) & 0xff;
     return true;
   }
 
@@ -402,7 +415,11 @@ export class Director {
         shown: a.projected.shown,
         key: a.projected.groupKey,
       })),
-      { periodKey: localDateKey(now, timeZone), deskOrder: DESK_IDS, meetingSeats: world.spots.meetingSeats.length },
+      {
+        periodKey: localDateKey(now, timeZone),
+        deskOrder: DESK_IDS,
+        meetingSeats: world.spots.meetingSeats.length,
+      },
     );
     const groupOf = new Map<string, ActivityGroup>();
     for (const g of groups) for (const id of g.members) groupOf.set(id, g);
@@ -425,7 +442,8 @@ export class Director {
       const wasShown = a.player.shown;
       this.writeFields(a, groupOf.get(a.userId)?.id ?? '');
       a.follower.setAsleep(!open);
-      set(a.pet, 'indicator', a.pet.bubbleId !== '' && a.projected.shown ? Indicator.Dots : Indicator.None);
+      // Shared with everyone, so never `Dots`: a bubble's onset would reveal the owner's tab visibility.
+      set(a.pet, 'indicator', Indicator.None);
 
       const spot = placed.get(a.userId) ?? null;
       if (!a.projected.shown || !spot) {
@@ -433,7 +451,11 @@ export class Director {
         if (wasShown && a.player.anim === Anim.Walk) set(a.player, 'anim', Anim.Idle);
         a.spot = null;
         if (!a.placed) this.park(a, nowMs);
-        else if (opts.snap) this.snapPerch(a, nowMs);
+        else {
+          // After hours nobody keeps the spot or pose of their last shown state (no "who was where at closing").
+          if (!open) this.parkPlayer(a);
+          if (opts.snap) this.snapPerch(a, nowMs);
+        }
         continue;
       }
       if (opts.snap || !a.placed || !wasShown) {
@@ -518,6 +540,8 @@ export class Director {
     set(p, 'note', plateNoteCode(v.note));
     set(p, 'groupId', groupId);
     set(p, 'statusText', v.statusText);
+    // Closed phase: no pulse value survives the night.
+    if (!this.open) set(p, 'logPulse', 0);
   }
 
   private applyIdentity(a: Actor): void {
@@ -554,12 +578,23 @@ export class Director {
 
   /** A hidden person stays out of sight at their seat (or the entrance); the pet rests on the desk. */
   private park(a: Actor, nowMs: number): void {
+    const at = this.parkPlayer(a);
+    const perch = this.perchOf(a);
+    if (perch) a.follower.perchAt(perch, nowMs);
+    else a.follower.placeNear(at, facingToDir(at.facing), nowMs);
+  }
+
+  /**
+   * The person half of `park`: their seat (or the first guest spot, or the entrance), facing the desk's way,
+   * `Idle`. `set` writes only changes, so calling it again for a parked person costs no schema writes.
+   */
+  private parkPlayer(a: Actor): Spot {
     const { world } = this.opts;
     const desk = a.snap.deskId ? world.deskById(a.snap.deskId) : null;
     const guest = world.spots.guestSpots[0];
-    const at = desk
+    const at: Spot = desk
       ? { x: desk.seatX, y: desk.seatY, facing: desk.facing }
-      : guest ?? { x: world.spawn.tileRect.x, y: world.spawn.tileRect.y, facing: 'up' as const };
+      : (guest ?? { x: world.spawn.tileRect.x, y: world.spawn.tileRect.y, facing: 'up' });
     const p = a.player;
     a.walker.stop();
     a.placed = true;
@@ -567,9 +602,7 @@ export class Director {
     set(p, 'y', at.y);
     set(p, 'dir', facingToDir(at.facing));
     set(p, 'anim', Anim.Idle);
-    const perch = this.perchOf(a);
-    if (perch) a.follower.perchAt(perch, nowMs);
-    else a.follower.placeNear(at, facingToDir(at.facing), nowMs);
+    return at;
   }
 
   /** Resync: a hidden owner's pet lands on its perch at once (people stay where they were hidden). */

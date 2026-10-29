@@ -25,7 +25,12 @@ export function GroupPopover({ groupId, x, y }: { groupId: string; x: number; y:
   const title = group?.family === 'meeting' ? t.meetingTitle : t.workTitle;
   const until = group && group.until > 0 ? ko.townUi.until(formatLocalHm(new Date(group.until), tz)) : '';
   return (
-    <Popover x={x} y={y} onClose={ui.closePopover} label={group ? t.label(title, group.members.length) : title}>
+    <Popover
+      x={x}
+      y={y}
+      onClose={ui.closePopover}
+      label={group ? t.label(title, group.members.length) : title}
+    >
       <div className={s.popoverHeader}>
         <div className={s.popoverTitle}>
           {title}
@@ -42,7 +47,11 @@ export function GroupPopover({ groupId, x, y }: { groupId: string; x: number; y:
             const form = displayForm(m, tz);
             return (
               <li key={m.id} className={s.groupMember}>
-                <span className={s.teamSwatch} style={{ background: teamColor(person?.team) }} aria-hidden="true" />
+                <span
+                  className={s.teamSwatch}
+                  style={{ background: teamColor(person?.team) }}
+                  aria-hidden="true"
+                />
                 <span className={s.groupMemberMain}>
                   <span className={s.personName}>{m.name || person?.displayName}</span>
                   {form && <span className={s.personSub}>{form}</span>}

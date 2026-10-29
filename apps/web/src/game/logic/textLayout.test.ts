@@ -51,7 +51,11 @@ describe('clampLines / layoutText', () => {
 
   it('never splits an emoji when truncating', () => {
     const heart = String.fromCodePoint(0x2764, 0xfe0f);
-    const r = layoutText(`aaa ${heart}${heart}${heart}${heart} bbb ccc ddd eee`, { maxWidth: 40, maxLines: 2, measure: mono });
+    const r = layoutText(`aaa ${heart}${heart}${heart}${heart} bbb ccc ddd eee`, {
+      maxWidth: 40,
+      maxLines: 2,
+      measure: mono,
+    });
     expect(r.truncated).toBe(true);
     const last = r.lines.at(-1) ?? '';
     expect(last.endsWith(ELLIPSIS)).toBe(true);

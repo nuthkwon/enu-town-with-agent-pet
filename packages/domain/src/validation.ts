@@ -22,7 +22,11 @@ export interface FieldProblem {
   detail?: string;
 }
 
-export function checkPublishableText(field: string, text: string, opts: { allowUrl: boolean }): FieldProblem[] {
+export function checkPublishableText(
+  field: string,
+  text: string,
+  opts: { allowUrl: boolean },
+): FieldProblem[] {
   const problems: FieldProblem[] = [];
   const pii = detectPii(text);
   if (pii.length) problems.push({ field, reason: 'pii', detail: `contains ${pii.join(', ')}` });
@@ -64,7 +68,8 @@ export function prepareWorkLog(input: WorkLogTextInput): { log: PreparedWorkLog;
     const title = normalizeLine(t.title);
     problems.push(...checkPublishableText(`tasks[${i}].title`, title, { allowUrl: false }));
     const ref = t.ref ? normalizeLine(t.ref) : undefined;
-    if (ref && !SAFE_REF.test(ref)) problems.push({ field: `tasks[${i}].ref`, reason: 'url', detail: 'ref must be a label or https URL' });
+    if (ref && !SAFE_REF.test(ref))
+      problems.push({ field: `tasks[${i}].ref`, reason: 'url', detail: 'ref must be a label or https URL' });
     return ref ? { title, status: t.status, ref } : { title, status: t.status };
   });
   const blockers = input.blockers.map((b, i) => {
@@ -82,7 +87,10 @@ export function prepareWorkLog(input: WorkLogTextInput): { log: PreparedWorkLog;
   return { log: { summary, tasks, blockers, claudeChatSummary }, problems };
 }
 
-export function prepareTodoText(title: string, note: string | undefined): { title: string; note: string | null; problems: FieldProblem[] } {
+export function prepareTodoText(
+  title: string,
+  note: string | undefined,
+): { title: string; note: string | null; problems: FieldProblem[] } {
   const t = normalizeLine(title);
   const n = note ? normalizeText(note) || null : null;
   const problems = [
@@ -145,8 +153,11 @@ export function prepareActivity(
   let reported: PreparedActivity['now'] = null;
   if (input.now) {
     const max = new Date(now.getTime() + LIMITS.nowMaxMin * MIN);
-    const until = input.now.until ? new Date(input.now.until) : new Date(now.getTime() + LIMITS.nowDefaultMin * MIN);
-    if (until <= now) problems.push({ field: 'now.until', reason: 'invalid_time', detail: 'until must be in the future' });
+    const until = input.now.until
+      ? new Date(input.now.until)
+      : new Date(now.getTime() + LIMITS.nowDefaultMin * MIN);
+    if (until <= now)
+      problems.push({ field: 'now.until', reason: 'invalid_time', detail: 'until must be in the future' });
     reported = {
       kind: input.now.kind,
       ref: input.now.ref ? normalizeWorkRef(input.now.ref) : null,
@@ -161,7 +172,11 @@ export function prepareActivity(
       const start = new Date(b.start_at);
       const end = new Date(b.end_at);
       if (end <= start) {
-        problems.push({ field: `schedule[${i}].end_at`, reason: 'invalid_time', detail: 'end_at must be after start_at' });
+        problems.push({
+          field: `schedule[${i}].end_at`,
+          reason: 'invalid_time',
+          detail: 'end_at must be after start_at',
+        });
       }
       if (start < day.start || end > day.end) {
         problems.push({
@@ -179,7 +194,11 @@ export function prepareActivity(
         });
       }
       if (b.ref && b.kind !== 'meeting') {
-        problems.push({ field: `schedule[${i}].ref`, reason: 'unsupported', detail: 'ref is only for meeting blocks' });
+        problems.push({
+          field: `schedule[${i}].ref`,
+          reason: 'unsupported',
+          detail: 'ref is only for meeting blocks',
+        });
       }
       return { start, end, kind: b.kind, ref: b.ref ? normalizeWorkRef(b.ref) : null };
     });

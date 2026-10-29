@@ -47,7 +47,9 @@ export function avatarFrames(dir: number, anim: AvatarAnim): { start: number; en
 
 /** Lift (px) of the current walk frame (0..5) for the drop shadow; idle never lifts. */
 export function walkLift(frameInCycle: number): number {
-  const i = ((Math.floor(frameInCycle) % AVATAR_WALK_LIFT.length) + AVATAR_WALK_LIFT.length) % AVATAR_WALK_LIFT.length;
+  const i =
+    ((Math.floor(frameInCycle) % AVATAR_WALK_LIFT.length) + AVATAR_WALK_LIFT.length) %
+    AVATAR_WALK_LIFT.length;
   return AVATAR_WALK_LIFT[i] ?? 0;
 }
 

@@ -22,8 +22,12 @@ describe('time (Asia/Seoul)', () => {
 
   it('converts wall clock to instant', () => {
     expect(zonedTimeToUtc(2026, 10, 29, 9, 0, TZ).toISOString()).toBe('2026-10-29T00:00:00.000Z');
-    expect(startOfLocalDay(new Date('2026-10-29T16:00:00Z'), TZ).toISOString()).toBe('2026-10-29T15:00:00.000Z');
-    expect(atLocalTime(new Date('2026-10-29T03:00:00Z'), TZ, '19:00').toISOString()).toBe('2026-10-29T10:00:00.000Z');
+    expect(startOfLocalDay(new Date('2026-10-29T16:00:00Z'), TZ).toISOString()).toBe(
+      '2026-10-29T15:00:00.000Z',
+    );
+    expect(atLocalTime(new Date('2026-10-29T03:00:00Z'), TZ, '19:00').toISOString()).toBe(
+      '2026-10-29T10:00:00.000Z',
+    );
   });
 
   it('handles ranges that wrap midnight', () => {

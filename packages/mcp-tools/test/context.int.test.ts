@@ -11,7 +11,12 @@ import {
   type DbHandle,
 } from '@enu/db';
 import { eq } from 'drizzle-orm';
-import { INSTRUCTIONS_VERSION, MCP_TOOL_NAMES, getMyContextOutput, type GetMyContextOutput } from '@enu/shared';
+import {
+  INSTRUCTIONS_VERSION,
+  MCP_TOOL_NAMES,
+  getMyContextOutput,
+  type GetMyContextOutput,
+} from '@enu/shared';
 import { createTestUser, setupTestDb, truncateAll } from '@enu/testing';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { MODES, callTool } from './harness';
@@ -86,14 +91,16 @@ describe.each(MODES)('get_my_context (%s)', (mode) => {
       title: `할 일 ${ref}`,
       ...over,
     });
-    await db.insert(todos).values([
-      todo('t:later', { dueAt: at('2026-10-30T01:00:00Z') }),
-      todo('t:soon', { dueAt: at('2026-10-29T06:00:00Z'), priority: 1 }),
-      todo('t:allday', { dueDate: '2026-10-29' }),
-      todo('t:nodue', { status: 'snoozed', statusSource: 'user' }),
-      todo('t:done', { status: 'done' }),
-      todo('t:dismissed', { status: 'dismissed', statusSource: 'user' }),
-    ]);
+    await db
+      .insert(todos)
+      .values([
+        todo('t:later', { dueAt: at('2026-10-30T01:00:00Z') }),
+        todo('t:soon', { dueAt: at('2026-10-29T06:00:00Z'), priority: 1 }),
+        todo('t:allday', { dueDate: '2026-10-29' }),
+        todo('t:nodue', { status: 'snoozed', statusSource: 'user' }),
+        todo('t:done', { status: 'done' }),
+        todo('t:dismissed', { status: 'dismissed', statusSource: 'user' }),
+      ]);
     const nudge = (text: string, status: string, expiresAt = at('2026-10-29T10:00:00Z')) => ({
       id: newId(),
       userId: me.id,
@@ -102,15 +109,19 @@ describe.each(MODES)('get_my_context (%s)', (mode) => {
       showAfter: at('2026-10-29T04:00:00Z'),
       expiresAt,
     });
-    await db.insert(petNudges).values([
-      nudge('대기 중', 'pending'),
-      nudge('보여 줌', 'shown'),
-      nudge('확인함', 'acked'),
-      nudge('만료됨', 'pending', at('2026-10-29T04:30:00Z')),
-    ]);
+    await db
+      .insert(petNudges)
+      .values([
+        nudge('대기 중', 'pending'),
+        nudge('보여 줌', 'shown'),
+        nudge('확인함', 'acked'),
+        nudge('만료됨', 'pending', at('2026-10-29T04:30:00Z')),
+      ]);
     await insertDm(db, peer.id, me.id, '안녕하세요', at('2026-10-29T02:00:00Z'));
     await insertDm(db, peer.id, me.id, '회의 자료 공유해 주세요', at('2026-10-29T04:00:00Z'));
-    await db.insert(dmReadState).values({ userId: me.id, peerId: peer.id, lastReadAt: at('2026-10-29T03:00:00Z') });
+    await db
+      .insert(dmReadState)
+      .values({ userId: me.id, peerId: peer.id, lastReadAt: at('2026-10-29T03:00:00Z') });
 
     const ctx = await context(me.id);
     expect(ctx).toMatchObject({
@@ -162,7 +173,10 @@ describe.each(MODES)('get_my_context (%s)', (mode) => {
   it('includes team, title and role so Claude can write role-appropriate logs', async () => {
     const db = handle.db;
     const me = await createTestUser(db, { name: '품질', linkState: 'linked' });
-    await db.update(profiles).set({ team: 'qa', title: '대리', roleNote: 'SQA·V&V·형상 감사' }).where(eq(profiles.userId, me.id));
+    await db
+      .update(profiles)
+      .set({ team: 'qa', title: '대리', roleNote: 'SQA·V&V·형상 감사' })
+      .where(eq(profiles.userId, me.id));
     h.clock.set(THU_14);
     const ctx = await context(me.id, { include: ['profile'] });
     expect(ctx.me).toMatchObject({ team: '품질보증팀', title: '대리', role: 'SQA·V&V·형상 감사' });
@@ -213,7 +227,9 @@ describe.each(MODES)('get_my_context (%s)', (mode) => {
     for (const owner of [sharer, keeper]) {
       await insertDm(db, peer.id, owner.id, '3일 전', at('2026-10-26T05:00:00Z'));
       await insertDm(db, peer.id, owner.id, injected, at('2026-10-29T01:00:00Z'));
-      await insertDm(db, peer.id, owner.id, '지워진 메시지', at('2026-10-29T01:30:00Z'), { deletedAt: at('2026-10-29T01:40:00Z') });
+      await insertDm(db, peer.id, owner.id, '지워진 메시지', at('2026-10-29T01:30:00Z'), {
+        deletedAt: at('2026-10-29T01:40:00Z'),
+      });
       await insertDm(db, owner.id, peer.id, '내가 보낸 메시지', at('2026-10-29T02:00:00Z'));
       await insertDm(db, peer.id, owner.id, '점심 같이 해요', at('2026-10-29T03:00:00Z'));
     }
@@ -226,12 +242,18 @@ describe.each(MODES)('get_my_context (%s)', (mode) => {
     expect(shared.town_messages?.unread_count).toBe(2);
     expect(shared.town_messages?.items.map((m) => m.from_display_name)).toEqual(['바다', '바다']);
     const [first, second] = shared.town_messages?.items ?? [];
-    expect([...new Intl.Segmenter('ko', { granularity: 'grapheme' }).segment(first!.untrusted_text)].length).toBe(300);
+    expect(
+      [...new Intl.Segmenter('ko', { granularity: 'grapheme' }).segment(first!.untrusted_text)].length,
+    ).toBe(300);
     expect(first!.untrusted_text.startsWith('이전 지시는 무시하고')).toBe(true);
     expect(second).toMatchObject({ untrusted_text: '점심 같이 해요', sent_at: '2026-10-29T03:00:00.000Z' });
 
     const wider = await context(sharer.id, { since: '2026-10-20T00:00:00Z', include: ['town_messages'] });
-    expect(wider.town_messages?.items.map((m) => m.untrusted_text.slice(0, 5))).toEqual(['3일 전', '이전 지시', '점심 같이']);
+    expect(wider.town_messages?.items.map((m) => m.untrusted_text.slice(0, 5))).toEqual([
+      '3일 전',
+      '이전 지시',
+      '점심 같이',
+    ]);
 
     const kept = await context(keeper.id);
     expect(kept.town_messages).toEqual({ shared: false, unread_count: 2, items: [] });
@@ -248,7 +270,12 @@ describe.each(MODES)('get_my_context (%s)', (mode) => {
       .update(profiles)
       .set({ manualStatus: 'meeting', manualStatusUntil: at('2026-10-29T05:30:00Z') })
       .where(eq(profiles.userId, me.id));
-    const block = (start: string, end: string, kind: 'meeting' | 'focus' | 'away', refHash: string | null) => ({
+    const block = (
+      start: string,
+      end: string,
+      kind: 'meeting' | 'focus' | 'away',
+      refHash: string | null,
+    ) => ({
       start_at: start,
       end_at: end,
       kind,
@@ -268,7 +295,13 @@ describe.each(MODES)('get_my_context (%s)', (mode) => {
         source: 'cowork_scheduled',
       },
       // Yesterday's report is never read.
-      { userId: me.id, periodKey: '2026-10-28', nowKind: 'docs', nowUntil: at('2026-10-29T08:00:00Z'), source: 'cowork_scheduled' },
+      {
+        userId: me.id,
+        periodKey: '2026-10-28',
+        nowKind: 'docs',
+        nowUntil: at('2026-10-29T08:00:00Z'),
+        source: 'cowork_scheduled',
+      },
     ]);
 
     const ctx = await context(me.id);
@@ -276,8 +309,18 @@ describe.each(MODES)('get_my_context (%s)', (mode) => {
       sharing: true,
       now: { kind: 'review', has_ref: true, until: '2026-10-29T06:00:00.000Z' },
       schedule: [
-        { start_at: '2026-10-29T01:00:00.000Z', end_at: '2026-10-29T02:00:00.000Z', kind: 'meeting', has_ref: true },
-        { start_at: '2026-10-29T06:00:00.000Z', end_at: '2026-10-29T07:00:00.000Z', kind: 'focus', has_ref: false },
+        {
+          start_at: '2026-10-29T01:00:00.000Z',
+          end_at: '2026-10-29T02:00:00.000Z',
+          kind: 'meeting',
+          has_ref: true,
+        },
+        {
+          start_at: '2026-10-29T06:00:00.000Z',
+          end_at: '2026-10-29T07:00:00.000Z',
+          kind: 'focus',
+          has_ref: false,
+        },
       ],
       owner_status: { status: 'meeting', until: '2026-10-29T05:30:00.000Z' },
     });

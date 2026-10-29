@@ -8,7 +8,7 @@ import { Button } from '@/components/ui';
 import type { EffectName } from '@/game/spriteSpec';
 import { ko } from '@/i18n/ko';
 import { useConnectionStatus, useOfficeOpen, useRoster } from '@/realtime/useRealtime';
-import { api } from './api';
+import { api, sendJson } from './api';
 import { Popover } from './Chrome';
 import { EffectIcon } from './EffectIcon';
 import { useFetch, useNow } from './hooks';
@@ -19,7 +19,7 @@ import {
   activeManual,
   currentChoice,
   ownHiddenLine,
-  statusPayload,
+  statusUpdate,
   type StatusChoice,
 } from './townModel';
 import s from './town.module.css';
@@ -47,14 +47,46 @@ export function StatusMenu({ x, y }: { x: number; y: number }) {
   const current = currentChoice(mine, officeOpen, activeManual(myStatus.manual, now));
   const [choice, setChoice] = useState<StatusChoice>(current.choice);
   const [duration, setDuration] = useState<ManualDuration>(DEFAULT_DURATION);
+  // The chips start at DEFAULT_DURATION, not at the status in force: only a click means "restart it".
+  const [durationTouched, setDurationTouched] = useState(false);
   const [text, setText] = useState<string>(myStatus.text);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
   const t = ko.townUi.status;
   const connected = conn.kind === 'connected';
   const hiddenLine = ownHiddenLine(mine, officeOpen, tz);
   const hm = (iso: string) => formatLocalHm(new Date(iso), tz);
 
-  const apply = (nextText: string) => {
-    const msg = statusPayload(choice, duration, nextText, myStatus.text);
+  const apply = async (nextText: string) => {
+    const update = statusUpdate({
+      choice,
+      currentChoice: current.choice,
+      durationTouched,
+      duration,
+      text: nextText,
+      previousText: myStatus.text,
+    });
+    if (update.kind === 'none') {
+      ui.closePopover();
+      return;
+    }
+    if (update.kind === 'text') {
+      // Only the 상태 문구: the manual status and its end stay exactly as they are.
+      setBusy(true);
+      setFailed(false);
+      try {
+        await sendJson('PATCH', api.myProfile(), { status_text: update.text });
+      } catch {
+        setFailed(true);
+        return;
+      } finally {
+        setBusy(false);
+      }
+      myStatus.set({ text: update.text });
+      ui.closePopover();
+      return;
+    }
+    const msg = update.msg;
     if (!session.sendStatus(msg)) return;
     myStatus.set({
       manual:
@@ -80,7 +112,7 @@ export function StatusMenu({ x, y }: { x: number; y: number }) {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            apply(text);
+            void apply(text);
           }}
         >
           <fieldset className={s.radioList}>
@@ -112,7 +144,10 @@ export function StatusMenu({ x, y }: { x: number; y: number }) {
                   type="button"
                   className={s.durationChip}
                   aria-pressed={duration === d}
-                  onClick={() => setDuration(d)}
+                  onClick={() => {
+                    setDuration(d);
+                    setDurationTouched(true);
+                  }}
                 >
                   {t.durations[d]}
                 </button>
@@ -132,17 +167,17 @@ export function StatusMenu({ x, y }: { x: number; y: number }) {
           />
           <p className={s.explain}>{t.textHelp}</p>
           <div className={s.actionRow}>
-            <Button type="submit" size="sm" disabled={!connected}>
+            <Button type="submit" size="sm" disabled={!connected || busy}>
               {t.apply}
             </Button>
             {text && (
               <Button
                 variant="ghost"
                 size="sm"
-                disabled={!connected}
+                disabled={!connected || busy}
                 onClick={() => {
                   setText('');
-                  apply('');
+                  void apply('');
                 }}
               >
                 {t.clear}
@@ -150,6 +185,11 @@ export function StatusMenu({ x, y }: { x: number; y: number }) {
             )}
           </div>
           {!connected && <p className={s.err}>{t.notConnected}</p>}
+          {failed && (
+            <p className={s.err} role="alert">
+              {t.textFailed}
+            </p>
+          )}
         </form>
 
         <div className={s.todayBox}>
@@ -168,7 +208,9 @@ export function StatusMenu({ x, y }: { x: number; y: number }) {
               ))}
               {today.now && (
                 <li>
-                  <span className={s.todayTime}>{t.todayNow(t.nowKind[today.now.kind], hm(today.now.until))}</span>
+                  <span className={s.todayTime}>
+                    {t.todayNow(t.nowKind[today.now.kind], hm(today.now.until))}
+                  </span>
                 </li>
               )}
             </ul>

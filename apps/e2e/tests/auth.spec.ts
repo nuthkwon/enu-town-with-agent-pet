@@ -24,10 +24,14 @@ test.describe('access control', () => {
     const res = await request.post(`${BASE_URL}/api/mcp`, { data: {} });
     expect(res.status()).toBe(401);
     const challenge = res.headers()['www-authenticate'] ?? '';
-    expect(challenge).toContain(`resource_metadata="${BASE_URL}/.well-known/oauth-protected-resource/api/mcp"`);
+    expect(challenge).toContain(
+      `resource_metadata="${BASE_URL}/.well-known/oauth-protected-resource/api/mcp"`,
+    );
     const prm = await (await request.get(`${BASE_URL}/.well-known/oauth-protected-resource/api/mcp`)).json();
     expect(prm.resource).toBe(`${BASE_URL}/api/mcp`);
-    const as = await (await request.get(`${BASE_URL}/.well-known/oauth-authorization-server/api/auth`)).json();
+    const as = await (
+      await request.get(`${BASE_URL}/.well-known/oauth-authorization-server/api/auth`)
+    ).json();
     expect(as.code_challenge_methods_supported).toContain('S256');
   });
 });

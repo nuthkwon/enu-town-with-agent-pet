@@ -7,11 +7,12 @@ MCP connector). Read `docs/architecture.md` and the ADRs in `docs/adr/` before c
 what the town shows.
 
 ## Non-negotiable rules
+
 - **No server-side LLM.** Never add `@anthropic-ai/*`, `openai`, `ai`, `@ai-sdk/*`, LangChain, etc. Pet bubbles show
-  Claude-authored text verbatim; ENU Town only decides *when*. `scripts/verify-policy.sh` + ESLint enforce this.
-- **Never rewrite Claude's text.** Policy violations (PII, URLs, too long) are *rejected* with field-level reasons so
+  Claude-authored text verbatim; ENU Town only decides _when_. `scripts/verify-policy.sh` + ESLint enforce this.
+- **Never rewrite Claude's text.** Policy violations (PII, URLs, too long) are _rejected_ with field-level reasons so
   Claude rewrites them (`packages/domain/src/validation.ts`). Only meaning-preserving normalization (NFC, invisible
-  and control characters) is allowed. System information (due time, link state) is drawn *outside* the bubble.
+  and control characters) is allowed. System information (due time, link state) is drawn _outside_ the bubble.
 - **Never touch claude.ai credentials.** ENU Town is the OAuth server for its own MCP connector; Claude logs in to us.
 - **MCP tools never set `requiresUserInteraction`** (unattended scheduled runs would stall) and never take a user id
   (or a colleague's name or email).
@@ -31,6 +32,7 @@ what the town shows.
 - Google sign-in is restricted to `ALLOWED_GOOGLE_HD` (default `enu-tech.co.kr`) via the verified `hd` claim.
 
 ## Layout
+
 - `apps/web` — Next 16 (App Router, `src/`): pages, Better Auth (+ MCP OAuth AS), `/api/mcp`, `/api/v1/*`, Phaser client.
 - `apps/realtime` — Colyseus 0.18 server (room `office-606`): director (server-placed avatars), pets, chat, pet bubbles
   (StateView).
@@ -48,6 +50,7 @@ what the town shows.
 - `claude/` — Claude org plugin (skills `enu-town-checkin`, `enu-town-setup`). `docs/` — runbooks (Korean).
 
 ## Conventions
+
 - TypeScript 6 strict, ESM everywhere, `moduleResolution: Bundler`. Internal packages export TS source
   (`"exports": "./src/index.ts"`); Next transpiles them, realtime/worker are bundled with tsdown, scripts run with tsx.
 - Use `import type` for types. Prefer small pure functions in `packages/domain` with unit tests.
@@ -61,6 +64,7 @@ what the town shows.
 - Versions are pinned in the `catalog:` of `pnpm-workspace.yaml`; add deps with `catalog:` entries.
 
 ## Commands
+
 ```bash
 pnpm install                      # pnpm 12 (see packageManager)
 pnpm check:policy && pnpm lint && pnpm typecheck && pnpm test
@@ -71,5 +75,6 @@ pnpm db:generate && pnpm db:migrate && pnpm seed:seats
 pnpm dev                          # web :3000, realtime :2567, worker
 pnpm test:e2e
 ```
+
 Local Postgres (this dev container has PG 16): `pg_ctlcluster 16 main start`, then create `enu_town_dev` and
 `enu_town_test` databases. Compose uses Postgres 18; schema must stay compatible with 16+ (UUIDv7 generated in app).

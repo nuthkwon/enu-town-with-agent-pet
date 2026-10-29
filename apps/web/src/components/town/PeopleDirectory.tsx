@@ -13,7 +13,13 @@ import { useTown } from './TownContext';
 import { onlineCount, railGroups, type RailRow } from './townModel';
 import s from './town.module.css';
 
-function Row({ row, onOpen }: { row: RailRow; onOpen: (row: RailRow, e: MouseEvent<HTMLButtonElement>) => void }) {
+function Row({
+  row,
+  onOpen,
+}: {
+  row: RailRow;
+  onOpen: (row: RailRow, e: MouseEvent<HTMLButtonElement>) => void;
+}) {
   const { bus } = useTown();
   const t = ko.townUi.people;
   const p = row.person;
@@ -37,13 +43,15 @@ function Row({ row, onOpen }: { row: RailRow; onOpen: (row: RailRow, e: MouseEve
           <span className={s.personName}>
             {p.displayName}
             {row.isMe ? ` (${t.me})` : ''}
-            {row.online && (
-              <span className={s.onlineDot} role="img" aria-label={t.online} title={t.online} />
-            )}
+            {row.online && <span className={s.onlineDot} role="img" aria-label={t.online} title={t.online} />}
           </span>
           {row.form && (
             <span className={s.personState}>
-              {row.icon ? <EffectIcon name={row.icon} size={16} /> : <span className={s.stateDot} aria-hidden="true" />}
+              {row.icon ? (
+                <EffectIcon name={row.icon} size={16} />
+              ) : (
+                <span className={s.stateDot} aria-hidden="true" />
+              )}
               <span>{row.form}</span>
             </span>
           )}
@@ -69,7 +77,9 @@ export function PeopleDirectory({ docked = false, onHide }: { docked?: boolean; 
   const players = useMemo(() => new Map<string, PlayerSnap>(roster.map((p) => [p.id, p])), [roster]);
   const online = onlineCount(roster);
   const query = q.trim().toLowerCase();
-  const filtered = query ? snap.people.filter((p) => p.displayName.toLowerCase().includes(query)) : snap.people;
+  const filtered = query
+    ? snap.people.filter((p) => p.displayName.toLowerCase().includes(query))
+    : snap.people;
   const groups = railGroups(filtered, players, me.userId, me.officeTimeZone);
 
   const open = (row: RailRow, e: MouseEvent<HTMLButtonElement>) => {
@@ -119,7 +129,13 @@ export function PeopleDirectory({ docked = false, onHide }: { docked?: boolean; 
             <span className={s.railCount}>{t.count(online)}</span>
           </h2>
           {onHide && (
-            <button type="button" className={s.closeX} onClick={onHide} aria-label={t.hideRail} title={t.hideRail}>
+            <button
+              type="button"
+              className={s.closeX}
+              onClick={onHide}
+              aria-label={t.hideRail}
+              title={t.hideRail}
+            >
               ›
             </button>
           )}

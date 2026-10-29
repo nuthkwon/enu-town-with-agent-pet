@@ -38,7 +38,11 @@ export class ChatService {
   constructor(private readonly db: Db) {}
 
   /** Stores a room message (everyone in the office hears it; nearby chat no longer exists). */
-  async storeRoomMessage(input: { senderId: string; body: string; clientMsgId: string }): Promise<StoredMessage> {
+  async storeRoomMessage(input: {
+    senderId: string;
+    body: string;
+    clientMsgId: string;
+  }): Promise<StoredMessage> {
     const [row] = await this.db
       .insert(chatMessages)
       .values({

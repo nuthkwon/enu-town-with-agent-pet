@@ -113,7 +113,12 @@ describe('director (real room)', () => {
     await waitFor(() => w.room.state.players.get(u.id)?.shown === false, { message: 'hidden' });
     const until = h.clock.now().getTime() + 30 * MIN;
     const seen = w.room.state.players.get(u.id);
-    expect(seen).toMatchObject({ note: PlateNote.Away, source: SourceCode.Manual, statusText: '점심 식사', online: false });
+    expect(seen).toMatchObject({
+      note: PlateNote.Away,
+      source: SourceCode.Manual,
+      statusText: '점심 식사',
+      online: false,
+    });
     expect(Math.abs(seen.until - until)).toBeLessThan(2000);
     const [row] = await h.db.select().from(profiles).where(eq(profiles.userId, u.id));
     expect(row).toMatchObject({ manualStatus: 'away', statusText: '점심 식사' });
@@ -122,7 +127,11 @@ describe('director (real room)', () => {
     // restart: a new room reads the stored status
     await h.colyseus.cleanup();
     const fresh = await officeRoom(h);
-    expect(fresh.state.players.get(u.id)).toMatchObject({ shown: false, note: PlateNote.Away, statusText: '점심 식사' });
+    expect(fresh.state.players.get(u.id)).toMatchObject({
+      shown: false,
+      note: PlateNote.Away,
+      statusText: '점심 식사',
+    });
     const again = await joinAs(h, u.id);
     await sleep(300);
     expect(again.room.state.players.get(u.id)).toMatchObject({ shown: false, note: PlateNote.Away });
@@ -142,7 +151,9 @@ describe('director (real room)', () => {
     again.room.send('status:set', { status: 'focus' });
     await waitFor(() => again.room.state.players.get(u.id)?.activity === ActivityCode.Focus);
     expect(again.room.state.players.get(u.id).source).toBe(SourceCode.Manual);
-    expect(Math.abs(again.room.state.players.get(u.id).until - (h.clock.now().getTime() + 60 * MIN))).toBeLessThan(2000);
+    expect(
+      Math.abs(again.room.state.players.get(u.id).until - (h.clock.now().getTime() + 60 * MIN)),
+    ).toBeLessThan(2000);
   });
 
   it('activity_changed re-reads the report: a Claude `now` labels the shown avatar', async () => {
@@ -152,13 +163,21 @@ describe('director (real room)', () => {
     const until = new Date(h.clock.now().getTime() + 90 * MIN);
     await setReport(h, u.id, { now: { kind: 'review', until } });
     await notifyTown(h.db, { v: 1, type: 'activity_changed', user_id: u.id });
-    await waitFor(() => j.room.state.players.get(u.id)?.activity === ActivityCode.Review, { message: 'label' });
-    expect(j.room.state.players.get(u.id)).toMatchObject({ source: SourceCode.Claude, until: until.getTime(), shown: true });
+    await waitFor(() => j.room.state.players.get(u.id)?.activity === ActivityCode.Review, {
+      message: 'label',
+    });
+    expect(j.room.state.players.get(u.id)).toMatchObject({
+      source: SourceCode.Claude,
+      until: until.getTime(),
+      shown: true,
+    });
     // sharing turned off (PATCH deletes today's row and notifies both events)
     await h.db.update(profiles).set({ shareActivity: false }).where(eq(profiles.userId, u.id));
     await notifyTown(h.db, { v: 1, type: 'profile_changed', user_id: u.id });
     await notifyTown(h.db, { v: 1, type: 'activity_changed', user_id: u.id });
-    await waitFor(() => j.room.state.players.get(u.id)?.activity === ActivityCode.None, { message: 'label gone' });
+    await waitFor(() => j.room.state.players.get(u.id)?.activity === ActivityCode.None, {
+      message: 'label gone',
+    });
     expect(j.room.state.players.get(u.id)).toMatchObject({ source: SourceCode.Town, shown: true });
   });
 
@@ -173,16 +192,26 @@ describe('director (real room)', () => {
     const logP = await setWorkLog(h, p.id, { visibility: 'private' });
     const logN = await setWorkLog(h, n.id, { visibility: 'company' });
     const event = (userId: string, logId: string, visibility: 'company' | 'private', by: 'claude' | 'user') =>
-      notifyTown(h.db, { v: 1, type: 'work_log_changed', user_id: userId, log_id: logId, visibility, created: false, by });
+      notifyTown(h.db, {
+        v: 1,
+        type: 'work_log_changed',
+        user_id: userId,
+        log_id: logId,
+        visibility,
+        created: false,
+        by,
+      });
     const pulse = (id: string) => ja.room.state.players.get(id)?.logPulse;
 
     await event(a.id, logA, 'company', 'claude');
-    await waitFor(() => pulse(a.id) === 1, { message: 'sparkle' });
+    // Only a change matters (a random step: the value never counts writes).
+    await waitFor(() => pulse(a.id) !== 0, { message: 'sparkle' });
+    const pulsed = pulse(a.id);
     await event(a.id, logA, 'company', 'user');
     await event(p.id, logP, 'private', 'claude');
     await event(n.id, logN, 'company', 'claude');
     await sleep(400);
-    expect(pulse(a.id)).toBe(1);
+    expect(pulse(a.id)).toBe(pulsed);
     expect(pulse(p.id)).toBe(0);
     expect(pulse(n.id)).toBe(0);
 
@@ -190,16 +219,17 @@ describe('director (real room)', () => {
     await h.db.update(workLogs).set({ deletedAt: new Date() }).where(eq(workLogs.id, logA));
     await event(a.id, logA, 'company', 'claude');
     await sleep(400);
-    expect(pulse(a.id)).toBe(1);
+    expect(pulse(a.id)).toBe(pulsed);
 
     // after hours: the shared state is neutral and nothing sparkles
     await h.db.update(workLogs).set({ deletedAt: null }).where(eq(workLogs.id, logA));
     h.clock.set(AFTER_HOURS);
     serverRoom(h, ja).evaluateNow();
     await waitFor(() => ja.room.state.officeOpen === false);
+    await waitFor(() => pulse(a.id) === 0, { message: 'pulse reset at closing' }); // no value survives the night
     await event(a.id, logA, 'company', 'claude');
     await sleep(400);
-    expect(pulse(a.id)).toBe(1);
+    expect(pulse(a.id)).toBe(0);
   });
 
   it('desks_changed during an active bubble: the owner still decodes bubbleText (same Pet instance)', async () => {
@@ -249,7 +279,10 @@ describe('director (real room)', () => {
       type: 'face',
     });
     await sleep(300);
-    expect({ x: j.room.state.players.get(u.id).x, y: j.room.state.players.get(u.id).y }).toEqual({ x: 6, y: 5 });
+    expect({ x: j.room.state.players.get(u.id).x, y: j.room.state.players.get(u.id).y }).toEqual({
+      x: 6,
+      y: 5,
+    });
     j.room.send('status:set', { status: 'nap' });
     expect(await j.inbox.waitFor<ErrorMsg>('error', (e) => e.type === 'status:set')).toEqual({
       code: 'INVALID_PAYLOAD',

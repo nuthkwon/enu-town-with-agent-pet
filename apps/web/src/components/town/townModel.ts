@@ -51,7 +51,11 @@ export function railGroups(
   myUserId: string,
   timeZone: string,
 ): RailGroup[] {
-  const groups: RailGroup[] = TEAMS.map((t) => ({ teamId: t.id as string, label: t.label as string, rows: [] }));
+  const groups: RailGroup[] = TEAMS.map((t) => ({
+    teamId: t.id as string,
+    label: t.label as string,
+    rows: [],
+  }));
   const none: RailGroup = { teamId: null, label: ko.townUi.people.noTeam, rows: [] };
   for (const person of people) {
     const player = players.get(person.userId) ?? null;
@@ -172,8 +176,37 @@ export function statusPayload(
   return msg;
 }
 
+/** What applying the StatusMenu sends (`none`: nothing changed). */
+export type StatusUpdate =
+  { kind: 'status'; msg: StatusSetMsg } | { kind: 'text'; text: string } | { kind: 'none' };
+
+/**
+ * `status:set` always restarts the status's end (`now + duration`), so it is sent only when the owner picked
+ * another status or a duration chip. A 상태 문구-only edit (or clearing it) goes to `PATCH /me/profile`
+ * (`status_text`) and leaves the manual status and its end alone (P6: the owner's own choice wins).
+ */
+export function statusUpdate(input: {
+  choice: StatusChoice;
+  currentChoice: StatusChoice;
+  durationTouched: boolean;
+  duration: ManualDuration;
+  text: string;
+  previousText: string;
+}): StatusUpdate {
+  const { choice, currentChoice, durationTouched, duration, text, previousText } = input;
+  if (choice !== currentChoice || (choice !== 'auto' && durationTouched)) {
+    return { kind: 'status', msg: statusPayload(choice, duration, text, previousText) };
+  }
+  const trimmed = text.trim();
+  return trimmed !== previousText.trim() ? { kind: 'text', text: trimmed } : { kind: 'none' };
+}
+
 /** Short top-bar label: `집중 ~11:00`, `자동`. */
-export function statusChipLabel(choice: StatusChoice, until: number, formatHm: (ms: number) => string): string {
+export function statusChipLabel(
+  choice: StatusChoice,
+  until: number,
+  formatHm: (ms: number) => string,
+): string {
   const short = ko.townUi.status.short[choice];
   return choice !== 'auto' && until > 0 ? `${short} ${ko.townUi.until(formatHm(until))}` : short;
 }
@@ -182,7 +215,11 @@ export function statusChipLabel(choice: StatusChoice, until: number, formatHm: (
  * StatusMenu line about how colleagues see me while I am hidden (office hours only; null when shown or
  * closed): the note, the plate label, or my name only.
  */
-export function ownHiddenLine(mine: PlayerSnap | null | undefined, officeOpen: boolean | null, timeZone: string): string | null {
+export function ownHiddenLine(
+  mine: PlayerSnap | null | undefined,
+  officeOpen: boolean | null,
+  timeZone: string,
+): string | null {
   if (officeOpen !== true || !mine || mine.shown) return null;
   if (mine.note !== PlateNote.None) return ko.townUi.status.hiddenNote(noteLabel(mine.note));
   if (hasLabel(mine)) return ko.townUi.status.hiddenLabel(displayForm(mine, timeZone));

@@ -7,7 +7,11 @@ export const HEARTBEAT_INTERVAL_MS = 30_000;
 export const HEARTBEAT_MAX_AGE_MS = 90_000;
 
 /** True when `content` holds an epoch-ms timestamp younger than `maxAgeMs` (small future skew tolerated). */
-export function isHeartbeatFresh(content: string | null, nowMs: number, maxAgeMs = HEARTBEAT_MAX_AGE_MS): boolean {
+export function isHeartbeatFresh(
+  content: string | null,
+  nowMs: number,
+  maxAgeMs = HEARTBEAT_MAX_AGE_MS,
+): boolean {
   if (content == null) return false;
   const trimmed = content.trim();
   if (!/^\d{1,16}$/.test(trimmed)) return false;
@@ -23,7 +27,11 @@ export async function writeHeartbeat(file = HEARTBEAT_FILE, nowMs = Date.now()):
   await rename(tmp, file);
 }
 
-export async function checkHeartbeat(file = HEARTBEAT_FILE, nowMs = Date.now(), maxAgeMs = HEARTBEAT_MAX_AGE_MS): Promise<boolean> {
+export async function checkHeartbeat(
+  file = HEARTBEAT_FILE,
+  nowMs = Date.now(),
+  maxAgeMs = HEARTBEAT_MAX_AGE_MS,
+): Promise<boolean> {
   const content = await readFile(file, 'utf8').catch(() => null);
   return isHeartbeatFresh(content, nowMs, maxAgeMs);
 }

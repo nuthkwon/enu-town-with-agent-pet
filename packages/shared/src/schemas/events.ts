@@ -6,7 +6,12 @@ export const townEvent = z.discriminatedUnion('type', [
   z.object({ v: z.literal(1), type: z.literal('nudges_changed'), user_id: z.string() }),
   z.object({ v: z.literal(1), type: z.literal('todos_changed'), user_id: z.string() }),
   z.object({ v: z.literal(1), type: z.literal('profile_changed'), user_id: z.string() }),
-  z.object({ v: z.literal(1), type: z.literal('link_state_changed'), user_id: z.string(), state: z.enum(LINK_STATES) }),
+  z.object({
+    v: z.literal(1),
+    type: z.literal('link_state_changed'),
+    user_id: z.string(),
+    state: z.enum(LINK_STATES),
+  }),
   z.object({
     v: z.literal(1),
     type: z.literal('work_log_changed'),

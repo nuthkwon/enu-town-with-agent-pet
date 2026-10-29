@@ -12,7 +12,13 @@ import s from './town.module.css';
  * 4101 replaced -> 다시 연결, gave up -> 지금 다시 시도, map or protocol changed -> 새로고침,
  * forbidden -> 로그인, privacy notice not accepted -> 안내 보기 (/welcome).
  */
-export function ConnectionBanner({ status, session }: { status: ConnectionStatus; session: RealtimeSession }) {
+export function ConnectionBanner({
+  status,
+  session,
+}: {
+  status: ConnectionStatus;
+  session: RealtimeSession;
+}) {
   const router = useRouter();
   const t = ko.townUi.connection;
   const view = ((): { text: string; label: string; onClick: () => void } | null => {

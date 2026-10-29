@@ -6,7 +6,10 @@
 
 // C0 controls except \n and \t, DEL, C1 controls.
 const charRange = (from: number, to: number) => `${String.fromCharCode(from)}-${String.fromCharCode(to)}`;
-const CONTROL_CHARS = new RegExp(`[${charRange(0x00, 0x08)}${charRange(0x0b, 0x1f)}${charRange(0x7f, 0x9f)}]`, 'g');
+const CONTROL_CHARS = new RegExp(
+  `[${charRange(0x00, 0x08)}${charRange(0x0b, 0x1f)}${charRange(0x7f, 0x9f)}]`,
+  'g',
+);
 // Zero-width and bidi override/isolate characters, BOM.
 const INVISIBLE_CHARS = new RegExp(
   `[${charRange(0x200b, 0x200f)}${charRange(0x202a, 0x202e)}${charRange(0x2066, 0x2069)}${String.fromCharCode(0xfeff)}]`,
@@ -25,10 +28,16 @@ export function normalizeText(input: string): string {
 
 /** Single-line variant (chat, nudges, titles): newlines and tabs collapse to spaces. */
 export function normalizeLine(input: string): string {
-  return normalizeText(input).replace(/\s*\n\s*/g, ' ').replace(/\t/g, ' ').replace(/ {2,}/g, ' ');
+  return normalizeText(input)
+    .replace(/\s*\n\s*/g, ' ')
+    .replace(/\t/g, ' ')
+    .replace(/ {2,}/g, ' ');
 }
 
-const segmenter = typeof Intl !== 'undefined' && 'Segmenter' in Intl ? new Intl.Segmenter('ko', { granularity: 'grapheme' }) : null;
+const segmenter =
+  typeof Intl !== 'undefined' && 'Segmenter' in Intl
+    ? new Intl.Segmenter('ko', { granularity: 'grapheme' })
+    : null;
 
 /** User-perceived character count (Korean syllables, emoji sequences count as 1). */
 export function graphemeLength(input: string): number {

@@ -67,7 +67,9 @@ test.beforeAll(async ({ browser }) => {
   c = await person(browser, 'L5a');
   // Everyone with the town open is drawn ("서로 보기"), at their own desk.
   for (const p of [a, b, c]) {
-    await expect.poll(async () => (await playerState(a.page, p.userId))?.shown, { timeout: 15_000 }).toBe(true);
+    await expect
+      .poll(async () => (await playerState(a.page, p.userId))?.shown, { timeout: 15_000 })
+      .toBe(true);
   }
 });
 
@@ -101,7 +103,10 @@ test('a click inside a menu that lies over the map never reaches the map', async
   const box = (await dialog.boundingBox())!;
   const canvas = (await a.page.locator('canvas').first().boundingBox())!;
   const rects = await a.page.evaluate(() => window.__ENU_TOWN_DEBUG__!.plateRects());
-  const centre = (r: (typeof rects)[number]) => ({ x: canvas.x + r.x + r.w / 2, y: canvas.y + r.y + r.h / 2 });
+  const centre = (r: (typeof rects)[number]) => ({
+    x: canvas.x + r.x + r.w / 2,
+    y: canvas.y + r.y + r.h / 2,
+  });
   const under = rects.find((r) => {
     const p = centre(r);
     return p.x > box.x + 8 && p.x < box.x + box.width - 8 && p.y > box.y + 8 && p.y < box.y + box.height - 8;
@@ -168,10 +173,9 @@ test('my status is what colleagues see: 집중 모드 · 직접 설정, and 자�
 test('자리 비움 hides the avatar; the desk plate reads 자리 비움 · ~HH:MM', async () => {
   await setMyStatus(a.page, '자리 비움');
   await expect.poll(async () => (await playerState(b.page, a.userId))?.shown, { timeout: 5_000 }).toBe(false);
-  await expect.poll(async () => (await plate(b.page, 'L4a'))?.lines).toEqual([
-    '직원11',
-    expect.stringMatching(/^자리 비움 · ~\d{2}:\d{2}$/),
-  ]);
+  await expect
+    .poll(async () => (await plate(b.page, 'L4a'))?.lines)
+    .toEqual(['직원11', expect.stringMatching(/^자리 비움 · ~\d{2}:\d{2}$/)]);
   expect((await playerState(b.page, a.userId))?.online).toBe(false);
   await setMyStatus(a.page, '자동 (일정·Claude·업무 기록 기준)');
   await expect.poll(async () => (await playerState(b.page, a.userId))?.shown, { timeout: 5_000 }).toBe(true);
@@ -181,6 +185,8 @@ test('a wave is shown to everyone, a third browser included', async () => {
   const before = await fxDrawn(c.page);
   const menu = await openMenuFromRail(a.page, '직원12');
   await menu.getByRole('menuitem', { name: /손 흔들기/ }).click();
-  await expect.poll(async () => (await fxDrawn(c.page)).wave, { timeout: 5_000 }).toBeGreaterThan(before.wave);
+  await expect
+    .poll(async () => (await fxDrawn(c.page)).wave, { timeout: 5_000 })
+    .toBeGreaterThan(before.wave);
   await expect(b.page.getByText('직원11님이 나에게 손을 흔들었어요')).toBeVisible();
 });

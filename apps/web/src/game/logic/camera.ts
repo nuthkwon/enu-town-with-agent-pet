@@ -123,7 +123,13 @@ export function screenToWorld(screen: Point, focus: Point, zoom: number, free: F
  * New focus after zooming from `fromZoom` to `toZoom` so the world point under `anchor` (canvas px; the
  * cursor for the wheel, the free-area centre for buttons and keys) stays under it.
  */
-export function zoomAround(focus: Point, fromZoom: number, toZoom: number, anchor: Point, free: FreeArea): Point {
+export function zoomAround(
+  focus: Point,
+  fromZoom: number,
+  toZoom: number,
+  anchor: Point,
+  free: FreeArea,
+): Point {
   const c = freeCentre(free);
   const wx = focus.x + (anchor.x - c.x) / fromZoom;
   const wy = focus.y + (anchor.y - c.y) / fromZoom;

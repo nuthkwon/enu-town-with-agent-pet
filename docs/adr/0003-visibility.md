@@ -11,6 +11,7 @@ Status: accepted (2026-10-29)
 - No raw Claude conversations, no Compliance API.
 
 ## Addendum (2026-10-29): activity and the colleague projection ([ADR 0004](0004-town-is-a-visualization.md))
+
 - `packages/domain/src/visibility.ts` also decides who sees the town's activity state:
   - `ANY_COLLEAGUE` — a viewer that never equals an owner id; log-derived signals (the `오늘 업무 기록` label and the
     log sparkle) use `canViewLog(ANY_COLLEAGUE, …)`.
@@ -26,5 +27,5 @@ Status: accepted (2026-10-29)
     - 상태 문구 only while the owner is shown or `자리 비움`;
     - a group key only when the owner shares, so a group requires every member to share.
 - Everyone, the owner included, sees the same projection. Claude can only send less (skip `post_activity`, `now:
-  null`); it can never turn sharing on. Only the owner can, explicitly.
+null`); it can never turn sharing on. Only the owner can, explicitly.
 - Admins see exactly what colleagues see; there is no admin view of activity or presence.

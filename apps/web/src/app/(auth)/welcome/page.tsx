@@ -5,9 +5,10 @@ import { getDb } from '@/server/db';
 import { requirePageViewer } from '@/server/page-session';
 import { buildMeDto } from '@/server/queries/me';
 import { listDesks } from '@/server/queries/people';
+import { ko } from '@/i18n/ko';
 import { WelcomeWizard } from './WelcomeWizard';
 
-export const metadata: Metadata = { title: '시작하기' };
+export const metadata: Metadata = { title: ko.welcome.pageTitle };
 
 export default async function WelcomePage() {
   const viewer = await requirePageViewer('/welcome');

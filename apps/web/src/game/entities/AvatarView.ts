@@ -141,7 +141,10 @@ export class AvatarView {
       : null;
 
     this.icon = scene.textures.exists(TEX.effects)
-      ? stage.overlay(scene.add.image(0, 0, TEX.effects, EFFECT_FRAMES.headset)).setDepth(DEPTH.overlayIcon).setVisible(false)
+      ? stage
+          .overlay(scene.add.image(0, 0, TEX.effects, EFFECT_FRAMES.headset))
+          .setDepth(DEPTH.overlayIcon)
+          .setVisible(false)
       : null;
     this.tag = new NameTag(stage, init.name, init.teamColor, init.isMe);
     this.tag.setVisible(false);
@@ -355,7 +358,12 @@ export class AvatarView {
   tagRect(): ScreenRect {
     const w = this.tag.width;
     const lead = this.iconLead;
-    return { x: this.headX - (w + lead) / 2, y: this.headY - this.tag.height, w: w + lead, h: this.tag.height };
+    return {
+      x: this.headX - (w + lead) / 2,
+      y: this.headY - this.tag.height,
+      w: w + lead,
+      h: this.tag.height,
+    };
   }
 
   /** The decluttering alternative: the tag just under the feet (clear of the pet hovering above). */

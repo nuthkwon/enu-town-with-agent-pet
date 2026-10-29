@@ -37,7 +37,11 @@ describe.each(MODES)('post_pet_nudges (%s)', (mode) => {
     return postPetNudgesOutput.parse(out.structured);
   }
   const nudgesOf = async (userId: string) =>
-    handle.db.select().from(petNudges).where(eq(petNudges.userId, userId)).orderBy(petNudges.createdAt, petNudges.id);
+    handle.db
+      .select()
+      .from(petNudges)
+      .where(eq(petNudges.userId, userId))
+      .orderBy(petNudges.createdAt, petNudges.id);
   const existing = (userId: string, over: Partial<typeof petNudges.$inferInsert>) => ({
     id: newId(),
     userId,
@@ -51,7 +55,9 @@ describe.each(MODES)('post_pet_nudges (%s)', (mode) => {
   it('accepts nudges, stores the normalized text exactly and explains delivery', async () => {
     const me = await createTestUser(handle.db);
     const todoId = newId();
-    await handle.db.insert(todos).values({ id: todoId, userId: me.id, externalRef: 'gcal:evt1', title: '주간 회의' });
+    await handle.db
+      .insert(todos)
+      .values({ id: todoId, userId: me.id, externalRef: 'gcal:evt1', title: '주간 회의' });
     const out = await post(me.id, {
       nudges: [
         { text: `  4시 주간 회의${ZWSP} 자료   챙기셨나요?  `, priority: 1, todo_external_ref: 'gcal:evt1' },
@@ -95,7 +101,11 @@ describe.each(MODES)('post_pet_nudges (%s)', (mode) => {
         { text: '010-1234-5678로 연락 주세요' },
         { text: '자료는 https://example.com 에 있어요' },
         { text: '다음 주에 봐요', show_after: '2026-11-10T10:00:00+09:00' },
-        { text: '이상한 시간', show_after: '2026-10-29T16:00:00+09:00', expires_at: '2026-10-29T15:00:00+09:00' },
+        {
+          text: '이상한 시간',
+          show_after: '2026-10-29T16:00:00+09:00',
+          expires_at: '2026-10-29T15:00:00+09:00',
+        },
       ],
     });
     expect(out.accepted).toBe(0);
@@ -112,20 +122,26 @@ describe.each(MODES)('post_pet_nudges (%s)', (mode) => {
     });
     expect(second.accepted).toBe(1);
     expect(second.rejected).toEqual([
-      { index: 0, reason: 'unknown_todo', detail: 'no to-do with this todo_external_ref; call upsert_todos first' },
+      {
+        index: 0,
+        reason: 'unknown_todo',
+        detail: 'no to-do with this todo_external_ref; call upsert_todos first',
+      },
     ]);
     expect((await nudgesOf(me.id)).map((r) => r.text)).toEqual(['물 한 잔 마셔요']);
   });
 
   it('supersedes only not-yet-shown nudges (pending/snoozed) unless replace_pending=false', async () => {
     const me = await createTestUser(handle.db);
-    await handle.db.insert(petNudges).values([
-      existing(me.id, { text: 'pending', status: 'pending' }),
-      existing(me.id, { text: 'snoozed', status: 'snoozed' }),
-      existing(me.id, { text: 'shown', status: 'shown', showCount: 1 }),
-      existing(me.id, { text: 'acked', status: 'acked' }),
-      existing(me.id, { text: 'dismissed', status: 'dismissed' }),
-    ]);
+    await handle.db
+      .insert(petNudges)
+      .values([
+        existing(me.id, { text: 'pending', status: 'pending' }),
+        existing(me.id, { text: 'snoozed', status: 'snoozed' }),
+        existing(me.id, { text: 'shown', status: 'shown', showCount: 1 }),
+        existing(me.id, { text: 'acked', status: 'acked' }),
+        existing(me.id, { text: 'dismissed', status: 'dismissed' }),
+      ]);
     const keep = await post(me.id, { nudges: [{ text: '추가 메시지' }], replace_pending: false });
     expect(keep).toMatchObject({ accepted: 1, superseded: 0 });
 
@@ -154,7 +170,13 @@ describe.each(MODES)('post_pet_nudges (%s)', (mode) => {
     const shownId = newId();
     const ackedId = newId();
     await handle.db.insert(petNudges).values([
-      existing(me.id, { id: shownId, text: '예전 문구', status: 'shown', showCount: 2, dedupeKey: 'standup' }),
+      existing(me.id, {
+        id: shownId,
+        text: '예전 문구',
+        status: 'shown',
+        showCount: 2,
+        dedupeKey: 'standup',
+      }),
       existing(me.id, { id: ackedId, text: '확인한 문구', status: 'acked', dedupeKey: 'lunch' }),
       existing(me.id, { text: '다른 대기', status: 'pending' }),
     ]);
@@ -169,7 +191,12 @@ describe.each(MODES)('post_pet_nudges (%s)', (mode) => {
     const rows = await nudgesOf(me.id);
     expect(rows).toHaveLength(3);
     const shown = rows.find((r) => r.id === shownId);
-    expect(shown).toMatchObject({ text: '스탠드업 10분 전이에요', status: 'pending', showCount: 0, priority: 1 });
+    expect(shown).toMatchObject({
+      text: '스탠드업 10분 전이에요',
+      status: 'pending',
+      showCount: 0,
+      priority: 1,
+    });
     expect(shown?.showAfter.toISOString()).toBe(THU_14);
     expect(rows.find((r) => r.id === ackedId)).toMatchObject({ text: '확인한 문구', status: 'acked' });
     expect(rows.find((r) => r.text === '다른 대기')?.status).toBe('superseded');
@@ -191,16 +218,22 @@ describe.each(MODES)('post_pet_nudges (%s)', (mode) => {
 
   it(`caps new nudges at ${LIMITS.nudgesPerDayMax} per local day`, async () => {
     const me = await createTestUser(handle.db);
-    await handle.db.insert(petNudges).values(
-      Array.from({ length: LIMITS.nudgesPerDayMax - 1 }, (_, i) =>
-        existing(me.id, { text: `오늘 ${i}`, status: 'expired', createdAt: at('2026-10-28T15:30:00Z') }),
-      ),
-    );
+    await handle.db
+      .insert(petNudges)
+      .values(
+        Array.from({ length: LIMITS.nudgesPerDayMax - 1 }, (_, i) =>
+          existing(me.id, { text: `오늘 ${i}`, status: 'expired', createdAt: at('2026-10-28T15:30:00Z') }),
+        ),
+      );
     // Created yesterday (local): does not count.
-    await handle.db.insert(petNudges).values(existing(me.id, { text: '어제', status: 'expired', createdAt: at('2026-10-28T14:59:00Z') }));
+    await handle.db
+      .insert(petNudges)
+      .values(existing(me.id, { text: '어제', status: 'expired', createdAt: at('2026-10-28T14:59:00Z') }));
     const out = await post(me.id, { nudges: [{ text: '마지막 하나' }, { text: '한도 초과' }] });
     expect(out.accepted).toBe(1);
-    expect(out.rejected).toEqual([{ index: 1, reason: 'daily_limit', detail: `at most ${LIMITS.nudgesPerDayMax} nudges per local day` }]);
+    expect(out.rejected).toEqual([
+      { index: 1, reason: 'daily_limit', detail: `at most ${LIMITS.nudgesPerDayMax} nudges per local day` },
+    ]);
   });
 
   it('tells Claude when nudges cannot be shown before they expire', async () => {

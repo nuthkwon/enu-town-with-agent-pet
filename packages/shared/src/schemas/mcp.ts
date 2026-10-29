@@ -22,14 +22,23 @@ export const LocalDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD');
 export const VisibilitySchema = z.enum(VISIBILITIES);
 export const Priority = z.number().int().min(1).max(3);
 
-export const CONTEXT_SECTIONS = ['profile', 'today_log', 'todos', 'nudges', 'town_messages', 'activity'] as const;
+export const CONTEXT_SECTIONS = [
+  'profile',
+  'today_log',
+  'todos',
+  'nudges',
+  'town_messages',
+  'activity',
+] as const;
 
 export const getMyContextInput = z.object({
   include: z
     .array(z.enum(CONTEXT_SECTIONS))
     .optional()
     .describe('Sections to return. Default: all sections you are allowed to read.'),
-  since: IsoDateTime.optional().describe('Only town messages after this instant (default: 24h ago, max 7 days).'),
+  since: IsoDateTime.optional().describe(
+    'Only town messages after this instant (default: 24h ago, max 7 days).',
+  ),
 });
 export type GetMyContextInput = z.infer<typeof getMyContextInput>;
 
@@ -50,13 +59,20 @@ export const postWorkLogInput = z.object({
     .max(LIMITS.workLogSummaryMax)
     .describe("Factual 3-6 sentence summary of today's work so far (cumulative for the day)."),
   tasks: z.array(workLogTask).max(LIMITS.workLogTasksMax).default([]),
-  blockers: z.array(z.string().min(1).max(LIMITS.workLogBlockerMax)).max(LIMITS.workLogBlockersMax).default([]),
+  blockers: z
+    .array(z.string().min(1).max(LIMITS.workLogBlockerMax))
+    .max(LIMITS.workLogBlockersMax)
+    .default([]),
   claude_chat_summary: z
     .string()
     .max(LIMITS.claudeChatSummaryMax)
     .optional()
-    .describe('2-3 sentences on the topics of work conversations with Claude today. No quotes, no private chats.'),
-  visibility: VisibilitySchema.optional().describe('Omit to use the owner default. You may only lower it to private.'),
+    .describe(
+      '2-3 sentences on the topics of work conversations with Claude today. No quotes, no private chats.',
+    ),
+  visibility: VisibilitySchema.optional().describe(
+    'Omit to use the owner default. You may only lower it to private.',
+  ),
   chat_summary_visibility: VisibilitySchema.optional(),
   source_hint: z.enum(SOURCE_HINTS).default('scheduled_task'),
 });
@@ -71,7 +87,9 @@ export const todoItem = z
     title: z.string().min(1).max(LIMITS.todoTitleMax),
     note: z.string().max(LIMITS.todoNoteMax).optional(),
     due_at: IsoDateTime.optional(),
-    due_date: LocalDate.optional().describe('All-day due date in the owner timezone (alternative to due_at).'),
+    due_date: LocalDate.optional().describe(
+      'All-day due date in the owner timezone (alternative to due_at).',
+    ),
     priority: Priority.default(2),
     status: z.enum(['open', 'done']).default('open'),
   })
@@ -98,10 +116,7 @@ export const nudgeItem = z.object({
 
 export const postPetNudgesInput = z.object({
   nudges: z.array(nudgeItem).min(1).max(LIMITS.nudgesBatchMax),
-  replace_pending: z
-    .boolean()
-    .default(true)
-    .describe('Supersede nudges that have not been shown yet.'),
+  replace_pending: z.boolean().default(true).describe('Supersede nudges that have not been shown yet.'),
 });
 export type PostPetNudgesInput = z.infer<typeof postPetNudgesInput>;
 
@@ -122,7 +137,9 @@ export const activityNow = z.object({
         'review = 검토·V&V·코드 리뷰 | collab = 동료와 함께 진행 중인 작업',
     ),
   ref: WorkRef.optional().describe('The one primary work item (ticket, PR, document) of this activity.'),
-  until: IsoDateTime.optional().describe('When this stops being current. Default now+90 min; capped at now+120 min.'),
+  until: IsoDateTime.optional().describe(
+    'When this stops being current. Default now+90 min; capped at now+120 min.',
+  ),
 });
 
 export const scheduleBlock = z.object({
@@ -155,7 +172,9 @@ export const postActivityInput = z.object({
     .array(scheduleBlock)
     .max(LIMITS.scheduleBlocksMax)
     .optional()
-    .describe("ALL of today's work blocks (office date, Asia/Seoul). Replaces the previous list; [] clears it; omit to keep it."),
+    .describe(
+      "ALL of today's work blocks (office date, Asia/Seoul). Replaces the previous list; [] clears it; omit to keep it.",
+    ),
   source_hint: z.enum(SOURCE_HINTS).default('scheduled_task'),
 });
 export type PostActivityInput = z.infer<typeof postActivityInput>;
@@ -244,7 +263,12 @@ export const getMyContextOutput = z.object({
       now: z.object({ kind: z.enum(NOW_KINDS), has_ref: z.boolean(), until: IsoDateTime }).nullable(),
       /** Today's stored list; refs are never echoed. */
       schedule: z.array(
-        z.object({ start_at: IsoDateTime, end_at: IsoDateTime, kind: z.enum(SCHEDULE_KINDS), has_ref: z.boolean() }),
+        z.object({
+          start_at: IsoDateTime,
+          end_at: IsoDateTime,
+          kind: z.enum(SCHEDULE_KINDS),
+          has_ref: z.boolean(),
+        }),
       ),
       owner_status: OwnerStatus.nullable(),
     })

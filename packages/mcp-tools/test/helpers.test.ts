@@ -19,7 +19,9 @@ describe('formatLocalIso', () => {
   it('renders the owner-local wall clock with offset', () => {
     expect(formatLocalIso(new Date('2026-10-29T05:05:09Z'), TZ)).toBe('2026-10-29T14:05:09+09:00');
     expect(formatLocalIso(new Date('2026-10-29T05:05:09Z'), 'UTC')).toBe('2026-10-29T05:05:09+00:00');
-    expect(formatLocalIso(new Date('2026-01-15T12:00:00Z'), 'America/New_York')).toBe('2026-01-15T07:00:00-05:00');
+    expect(formatLocalIso(new Date('2026-01-15T12:00:00Z'), 'America/New_York')).toBe(
+      '2026-01-15T07:00:00-05:00',
+    );
   });
 });
 
@@ -71,17 +73,25 @@ describe('firstVisibleTime', () => {
   };
   it('skips quiet hours and weekends', () => {
     // Thu 2026-10-29 21:00 KST -> Fri 08:30 KST
-    expect(firstVisibleTime(new Date('2026-10-29T12:00:00Z'), new Date('2026-10-30T10:00:00Z'), prefs)?.toISOString()).toBe(
-      '2026-10-29T23:30:00.000Z',
-    );
+    expect(
+      firstVisibleTime(
+        new Date('2026-10-29T12:00:00Z'),
+        new Date('2026-10-30T10:00:00Z'),
+        prefs,
+      )?.toISOString(),
+    ).toBe('2026-10-29T23:30:00.000Z');
     // Fri 21:00 KST with 24h lifetime never reaches Monday.
-    expect(firstVisibleTime(new Date('2026-10-30T12:00:00Z'), new Date('2026-10-31T12:00:00Z'), prefs)).toBeNull();
+    expect(
+      firstVisibleTime(new Date('2026-10-30T12:00:00Z'), new Date('2026-10-31T12:00:00Z'), prefs),
+    ).toBeNull();
   });
 });
 
 describe('results', () => {
   it('error results are text-only with a JSON line', () => {
-    const r = errorResult(new ToolError('validation_failed', 'rejected', { problems: [{ field: 'summary', reason: 'pii' }] }));
+    const r = errorResult(
+      new ToolError('validation_failed', 'rejected', { problems: [{ field: 'summary', reason: 'pii' }] }),
+    );
     expect(r.isError).toBe(true);
     expect(r.structuredContent).toBeUndefined();
     const text = (r.content[0] as { text: string }).text;

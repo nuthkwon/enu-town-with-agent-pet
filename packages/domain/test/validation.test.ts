@@ -23,7 +23,11 @@ describe('validation (reject, never rewrite)', () => {
       blockers: [],
     });
     expect(r.problems.map((p) => p.field)).toEqual(['summary', 'tasks[0].ref']);
-    const ok = prepareWorkLog({ summary: 'ENU-12 처리', tasks: [{ title: 'PR 리뷰', status: 'done', ref: 'ENU-12' }], blockers: [] });
+    const ok = prepareWorkLog({
+      summary: 'ENU-12 처리',
+      tasks: [{ title: 'PR 리뷰', status: 'done', ref: 'ENU-12' }],
+      blockers: [],
+    });
     expect(ok.problems).toEqual([]);
   });
 });
@@ -40,10 +44,15 @@ describe('prepareActivity (Asia/Seoul office day)', () => {
     kind,
     ...(ref ? { ref } : {}),
   });
-  const prepare = (input: Parameters<typeof prepareActivity>[0], when = now) => prepareActivity(input, when, TZ);
+  const prepare = (input: Parameters<typeof prepareActivity>[0], when = now) =>
+    prepareActivity(input, when, TZ);
 
   it('defaults now.until to 90 minutes and clamps it to 120', () => {
-    expect(prepare({ now: { kind: 'work' } }).prepared.now).toEqual({ kind: 'work', ref: null, until: at('11:30') });
+    expect(prepare({ now: { kind: 'work' } }).prepared.now).toEqual({
+      kind: 'work',
+      ref: null,
+      until: at('11:30'),
+    });
     expect(prepare({ now: { kind: 'docs', until: iso('13:00') } }).prepared.now?.until).toEqual(at('12:00'));
     expect(prepare({ now: { kind: 'docs', until: iso('10:45') } }).prepared.now?.until).toEqual(at('10:45'));
     expect(prepare({ now: null }).prepared.now).toBeNull();
@@ -94,10 +103,15 @@ describe('prepareActivity (Asia/Seoul office day)', () => {
     const r = prepare({ now: null, schedule: [block('focus', '23:00', '23:30')] }, afterMidnight);
     expect(r.prepared.periodKey).toBe('2026-11-03');
     expect(r.problems).toMatchObject([
-      { field: 'schedule[0]', detail: 'blocks must lie within 2026-11-03 (Asia/Seoul); cut blocks at midnight' },
+      {
+        field: 'schedule[0]',
+        detail: 'blocks must lie within 2026-11-03 (Asia/Seoul); cut blocks at midnight',
+      },
     ]);
     const lastMinute = new Date('2026-11-02T23:59:00+09:00');
-    expect(prepare({ now: null, schedule: [block('focus', '23:00', '23:30')] }, lastMinute).problems).toEqual([]);
+    expect(prepare({ now: null, schedule: [block('focus', '23:00', '23:30')] }, lastMinute).problems).toEqual(
+      [],
+    );
   });
 
   it('limits meeting and focus blocks to 10 hours; away may span the day', () => {
@@ -170,7 +184,11 @@ describe('WORK_REF_PATTERN', () => {
 
   it('is enforced by the post_activity input schema together with the block limit', () => {
     expect(postActivityInput.safeParse({ now: { kind: 'work', ref: 'jira:ENU 1' } }).success).toBe(false);
-    const block = { start_at: '2026-11-02T09:00:00+09:00', end_at: '2026-11-02T10:00:00+09:00', kind: 'focus' };
+    const block = {
+      start_at: '2026-11-02T09:00:00+09:00',
+      end_at: '2026-11-02T10:00:00+09:00',
+      kind: 'focus',
+    };
     expect(postActivityInput.safeParse({ now: null, schedule: Array(16).fill(block) }).success).toBe(true);
     expect(postActivityInput.safeParse({ now: null, schedule: Array(17).fill(block) }).success).toBe(false);
     expect(postActivityInput.parse({ now: null })).toEqual({ now: null, source_hint: 'scheduled_task' });

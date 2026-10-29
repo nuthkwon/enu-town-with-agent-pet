@@ -11,6 +11,7 @@ import {
   workLogs,
   type DbHandle,
 } from '@enu/db';
+import { postWorkLog } from '@enu/mcp-tools';
 import { createTestUser } from '@enu/testing';
 import {
   PET_SPECIES,
@@ -55,6 +56,7 @@ import * as healthRoute from '@/app/api/healthz/route';
 import * as ticketRoute from '@/app/api/realtime-ticket/route';
 import * as spriteRoute from '@/app/api/sprites/avatar/[key]/route';
 import { closeDb } from '@/server/db';
+import { adminUsers } from '@/server/queries/admin';
 import { call, devLogin, freshDb, jsonOf } from './helpers';
 
 let h: DbHandle;
@@ -463,6 +465,61 @@ describe('work logs and visibility', () => {
       }),
     );
     expect(ownCard.latestLog?.claudeWrittenAt).not.toBeNull();
+  });
+
+  it('gives colleagues work-log ids that carry no time (a UUIDv7 id would leak the first Claude write)', async () => {
+    const owner = await userWithSession({ name: '기록러' });
+    const viewer = await userWithSession();
+    await h.db
+      .update(profiles)
+      .set({ defaultChatSummaryVisibility: 'company' })
+      .where(eq(profiles.userId, owner.id));
+    // The real write path, as the owner's Claude calls post_work_log.
+    const out = await postWorkLog(
+      h.db,
+      { userId: owner.id, clientId: 'https://claude.ai/oauth/mcp-oauth-client-metadata' },
+      {
+        summary: '센서 모듈 버그를 재현했습니다.',
+        tasks: [{ title: '버그 재현', status: 'done' }],
+        blockers: [],
+        source_hint: 'scheduled_task',
+        claude_chat_summary: '재시도 전략을 Claude와 검토했습니다.',
+        chat_summary_visibility: 'company',
+      },
+      { now: new Date(), publicUrl: 'http://localhost:3000' },
+    );
+    const [row] = await h.db.select().from(workLogs).where(eq(workLogs.id, out.log_id));
+    expect(row).toBeDefined();
+    const timeOf = (uuid: string) => parseInt(uuid.replace(/-/g, '').slice(0, 12), 16);
+    const leaks = (uuid: string) =>
+      [row!.createdAt, row!.periodStart, row!.claudeWrittenAt].some(
+        (d) => Math.abs(timeOf(uuid) - d.getTime()) < 60_000,
+      );
+
+    const feed = await jsonOf<Paginated<WorkLogDto>>(
+      await call(userLogsRoute.GET, `/api/v1/users/${owner.id}/work-logs`, {
+        cookie: viewer.cookie,
+        params: { id: owner.id },
+      }),
+    );
+    const card = await jsonOf<ProfileCardDto>(
+      await call(cardRoute.GET, `/api/v1/users/${owner.id}/card`, {
+        cookie: viewer.cookie,
+        params: { id: owner.id },
+      }),
+    );
+    const summaries = await jsonOf<Paginated<{ logId: string }>>(
+      await call(summariesRoute.GET, `/api/v1/users/${owner.id}/claude-summaries`, {
+        cookie: viewer.cookie,
+        params: { id: owner.id },
+      }),
+    );
+    const ids = [feed.items[0]?.id, card.latestLog?.id, summaries.items[0]?.logId];
+    expect(ids).toEqual([row!.id, row!.id, row!.id]);
+    for (const id of ids) {
+      expect(id!.charAt(14)).toBe('4'); // random UUIDv4, not time-ordered v7
+      expect(leaks(id!)).toBe(false);
+    }
   });
 
   it('paginates with an opaque cursor', async () => {
@@ -1249,6 +1306,30 @@ describe('admin', () => {
     const [d] = await h.db.select().from(desks).where(eq(desks.deskId, 'L1b'));
     expect(d?.userId).toBeNull();
     expect((await assign('L1a', newId())).status).toBe(404);
+  });
+
+  it('shows the last log date only for logs a colleague could see (never a private one)', async () => {
+    const admin = await userWithSession({ role: 'admin' });
+    const secretive = await createTestUser(h.db, { name: '비공개러' });
+    const open = await createTestUser(h.db, { name: '공개러' });
+    const gone = await createTestUser(h.db, { name: '퇴사자', status: 'deactivated' });
+    await insertLog(secretive.id, { periodKey: '2026-10-29', visibility: 'private' });
+    await insertLog(open.id, { periodKey: '2026-10-27', visibility: 'company' });
+    await insertLog(open.id, { periodKey: '2026-10-29', visibility: 'private' });
+    await insertLog(open.id, { periodKey: '2026-10-28', visibility: 'company', deletedAt: new Date() });
+    await insertLog(gone.id, { periodKey: '2026-10-26', visibility: 'company' });
+    const rows = await adminUsers(h.db, {
+      userId: admin.id,
+      email: admin.email,
+      name: admin.name,
+      role: 'admin',
+      isAdmin: true,
+      sessionId: 'test-session',
+    });
+    const last = (id: string) => rows.find((r) => r.userId === id)?.lastLogDate;
+    expect(last(secretive.id)).toBeNull();
+    expect(last(open.id)).toBe('2026-10-27');
+    expect(last(gone.id)).toBeNull(); // colleagues see no logs of a deactivated author at all
   });
 
   it('deactivates a user (sessions, links and seat revoked)', async () => {

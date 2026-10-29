@@ -70,7 +70,13 @@ export function SettingsTab({ me, onSaved }: { me: MeDto; onSaved: (me: MeDto) =
         />
         {me.shareActivity === null && <p className={s.footNote}>{t.shareActivityUnset}</p>}
         <div style={{ marginTop: 14 }}>
-          <Toggle id="show-live" checked={showLive} onChange={setShowLive} label={t.showLive} help={t.showLiveHelp} />
+          <Toggle
+            id="show-live"
+            checked={showLive}
+            onChange={setShowLive}
+            label={t.showLive}
+            help={t.showLiveHelp}
+          />
         </div>
       </Card>
 

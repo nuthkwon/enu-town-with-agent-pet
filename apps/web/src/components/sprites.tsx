@@ -1,5 +1,6 @@
 import { avatarSpriteKey, type AvatarPreset } from '@enu/shared';
 import type { CSSProperties, ReactNode } from 'react';
+import { ko } from '@/i18n/ko';
 import s from './sprites.module.css';
 
 /**
@@ -38,7 +39,7 @@ export function AvatarSprite({
   return (
     <span
       role="img"
-      aria-label={label ?? '아바타'}
+      aria-label={label ?? ko.common.avatar}
       className={animate ? `${s.sprite} ${s.animated}` : s.sprite}
       style={sheetStyle(url, AVATAR.frame, AVATAR.columns, AVATAR.rows, scale)}
     />

@@ -118,7 +118,11 @@ export function TownShell({
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [textFocused, setTextFocused] = useState(false);
   const [hover, setHover] = useState<{ userId: string; x: number; y: number } | null>(null);
-  const [camera, setCamera] = useState<{ zoom: number; fit: number; atFit: boolean }>({ zoom: 1, fit: 1, atFit: true });
+  const [camera, setCamera] = useState<{ zoom: number; fit: number; atFit: boolean }>({
+    zoom: 1,
+    fit: 1,
+    atFit: true,
+  });
   const [manual, setManual] = useState<ManualStatusDto | null>(me.manualStatus);
   const [statusText, setStatusText] = useState(me.statusText ?? '');
   const wide = useMedia(RAIL_MEDIA);
@@ -192,7 +196,8 @@ export function TownShell({
         setSheet({ kind: 'myPet' });
       },
       openStatus: (x, y) => {
-        const a = x !== undefined && y !== undefined ? { x, y } : anchorBelow('[data-town-me]', { x: 300, y: 60 });
+        const a =
+          x !== undefined && y !== undefined ? { x, y } : anchorBelow('[data-town-me]', { x: 300, y: 60 });
         setPopover({ kind: 'status', x: a.x, y: a.y });
       },
       openBubble: (bubbleId, x, y) => setPopover({ kind: 'bubble', bubbleId, x, y }),
@@ -231,7 +236,8 @@ export function TownShell({
 
   // The camera fits the overview into the canvas minus the top bar and the docked rail (spec §5.2).
   useEffect(() => {
-    const emit = () => bus.emit('camera:insets', { top: TOP_BAR_PX, right: docked ? RAIL_PX : 0, bottom: 0, left: 0 });
+    const emit = () =>
+      bus.emit('camera:insets', { top: TOP_BAR_PX, right: docked ? RAIL_PX : 0, bottom: 0, left: 0 });
     emit();
     const off = bus.on('game:ready', emit);
     if (docked) setSheet((cur) => (cur?.kind === 'people' ? null : cur));
@@ -256,7 +262,9 @@ export function TownShell({
       }),
       bus.on('camera:changed', (c) => setCamera(c)),
       bus.on('pet:clicked', () => ui.openMyPet()),
-      bus.on('pet:bubble-clicked', ({ bubbleId, screenX, screenY }) => ui.openBubble(bubbleId, screenX, screenY)),
+      bus.on('pet:bubble-clicked', ({ bubbleId, screenX, screenY }) =>
+        ui.openBubble(bubbleId, screenX, screenY),
+      ),
     ];
     return () => offs.forEach((off) => off());
   }, [bus, ui, me.userId]);
@@ -300,7 +308,10 @@ export function TownShell({
         toast({ text: t.waved(nameOf(m.fromUserId)), ttlMs: 3500 });
       }),
       session.on('server:error', (e) => {
-        if (e.code === 'RATE_LIMITED' && (e.type === 'social:ping' || e.type === 'social:wave' || e.type === 'status:set')) {
+        if (
+          e.code === 'RATE_LIMITED' &&
+          (e.type === 'social:ping' || e.type === 'social:wave' || e.type === 'status:set')
+        ) {
           toast({ text: t.rateLimited, ttlMs: 3000, tone: 'warn' });
         } else if (e.type === 'social:ping' && e.code === 'NOT_ONLINE') {
           toast({ text: t.notOnline, ttlMs: 3000, tone: 'warn' });
@@ -350,7 +361,9 @@ export function TownShell({
   const tb = ko.townUi.topBar;
   const online = onlineCount(roster);
   const mine = currentChoice(myPlayer, officeOpen, activeManual(manual, now));
-  const chip = statusChipLabel(mine.choice, mine.until, (ms) => formatLocalHm(new Date(ms), me.officeTimeZone));
+  const chip = statusChipLabel(mine.choice, mine.until, (ms) =>
+    formatLocalHm(new Date(ms), me.officeTimeZone),
+  );
   const peopleOpen = docked || sheet?.kind === 'people';
 
   return (
@@ -492,14 +505,25 @@ export function TownShell({
         )}
         {sheet?.kind === 'people' && !docked && <PeopleDirectory />}
         {sheet?.kind === 'myPet' && <MyPetPanel />}
-        {sheet?.kind === 'dm' && <DmDrawer key={sheet.draftNonce} peerId={sheet.peerId} draft={sheet.draft} />}
+        {sheet?.kind === 'dm' && (
+          <DmDrawer key={sheet.draftNonce} peerId={sheet.peerId} draft={sheet.draft} />
+        )}
 
         {popover?.kind === 'menu' && (
-          <AvatarContextMenu key={`${popover.userId}:${popover.x}:${popover.y}`} userId={popover.userId} x={popover.x} y={popover.y} />
+          <AvatarContextMenu
+            key={`${popover.userId}:${popover.x}:${popover.y}`}
+            userId={popover.userId}
+            x={popover.x}
+            y={popover.y}
+          />
         )}
-        {popover?.kind === 'workRequest' && <WorkRequestMenu userId={popover.userId} x={popover.x} y={popover.y} />}
+        {popover?.kind === 'workRequest' && (
+          <WorkRequestMenu userId={popover.userId} x={popover.x} y={popover.y} />
+        )}
         {popover?.kind === 'status' && <StatusMenu x={popover.x} y={popover.y} />}
-        {popover?.kind === 'bubble' && <PetBubbleActions bubbleId={popover.bubbleId} x={popover.x} y={popover.y} />}
+        {popover?.kind === 'bubble' && (
+          <PetBubbleActions bubbleId={popover.bubbleId} x={popover.x} y={popover.y} />
+        )}
         {popover?.kind === 'group' && (
           <GroupPopover key={popover.groupId} groupId={popover.groupId} x={popover.x} y={popover.y} />
         )}

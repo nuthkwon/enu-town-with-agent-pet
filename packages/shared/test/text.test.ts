@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { containsUrl, detectPii, graphemeLength, normalizeLine, normalizeText, truncateGraphemes } from '../src/text/index';
+import {
+  containsUrl,
+  detectPii,
+  graphemeLength,
+  normalizeLine,
+  normalizeText,
+  truncateGraphemes,
+} from '../src/text/index';
 
 describe('text', () => {
   it('normalizes without changing meaning', () => {

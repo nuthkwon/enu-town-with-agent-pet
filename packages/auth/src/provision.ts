@@ -19,9 +19,15 @@ export function choosePetSpecies(preset: PetSpecies | null, taken: readonly PetS
  * species only while no other active member has it, see choosePetSpecies).
  * Idempotent: an existing profile is left untouched.
  */
-export async function provisionProfile(db: Db, u: { id: string; name: string; email: string }): Promise<void> {
+export async function provisionProfile(
+  db: Db,
+  u: { id: string; name: string; email: string },
+): Promise<void> {
   await db.transaction(async (tx) => {
-    const [existing] = await tx.select({ userId: profiles.userId }).from(profiles).where(eq(profiles.userId, u.id));
+    const [existing] = await tx
+      .select({ userId: profiles.userId })
+      .from(profiles)
+      .where(eq(profiles.userId, u.id));
     if (existing) return;
 
     const name = u.name.trim();
@@ -73,5 +79,8 @@ export async function provisionProfile(db: Db, u: { id: string; name: string; em
 
 /** Stores the Google `sub` once the Google account row exists (stable key, unlike email). */
 export async function recordGoogleSub(db: Db, userId: string, sub: string): Promise<void> {
-  await db.update(user).set({ googleSub: sub }).where(and(eq(user.id, userId), isNull(user.googleSub)));
+  await db
+    .update(user)
+    .set({ googleSub: sub })
+    .where(and(eq(user.id, userId), isNull(user.googleSub)));
 }

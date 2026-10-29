@@ -54,15 +54,22 @@ export class PreloadScene extends Phaser.Scene {
     const manifest = this.cache.json.get(TEX.manifest) as { avatars?: unknown } | undefined;
     // The generator writes `avatars` as { key: path }; older manifests used a list of keys.
     const raw = manifest?.avatars;
-    const listed: unknown[] = Array.isArray(raw) ? raw : raw && typeof raw === 'object' ? Object.keys(raw) : [];
-    const staticKeys = new Set<string>(listed.filter((k): k is string => typeof k === 'string' && isAvatarKey(k)));
+    const listed: unknown[] = Array.isArray(raw)
+      ? raw
+      : raw && typeof raw === 'object'
+        ? Object.keys(raw)
+        : [];
+    const staticKeys = new Set<string>(
+      listed.filter((k): k is string => typeof k === 'string' && isAvatarKey(k)),
+    );
     this.registry.set(STATIC_AVATARS_REGISTRY_KEY, staticKeys);
 
     const wanted = new Set<string>([bridge.me.avatarKey]);
     for (const p of bridge.directory.people) wanted.add(p.avatarKey);
     for (const p of bridge.session.allPlayers()) wanted.add(p.avatar);
     for (const key of wanted) {
-      if (isAvatarKey(key) && !this.textures.exists(TEX.avatar(key))) loadAvatarSheet(this.load, key, staticKeys);
+      if (isAvatarKey(key) && !this.textures.exists(TEX.avatar(key)))
+        loadAvatarSheet(this.load, key, staticKeys);
     }
     this.load.once('complete', () => {
       ensureEffectAnims(this);

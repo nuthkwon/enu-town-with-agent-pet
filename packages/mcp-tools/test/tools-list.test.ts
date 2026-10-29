@@ -18,18 +18,30 @@ function propertyNames(schema: unknown): string[] {
   if (!schema || typeof schema !== 'object') return [];
   const node = schema as Record<string, unknown>;
   const own = node.properties && typeof node.properties === 'object' ? Object.keys(node.properties) : [];
-  return [...own, ...Object.values(node).flatMap((v) => (Array.isArray(v) ? v.flatMap(propertyNames) : propertyNames(v)))];
+  return [
+    ...own,
+    ...Object.values(node).flatMap((v) => (Array.isArray(v) ? v.flatMap(propertyNames) : propertyNames(v))),
+  ];
 }
 
 describe('callerFromAuthInfo', () => {
   it('reads extra.userId and clientId only', () => {
     expect(
-      callerFromAuthInfo({ token: 't', clientId: 'client-1', scopes: ['mcp'], extra: { userId: 'u1', email: 'a@b' } }),
+      callerFromAuthInfo({
+        token: 't',
+        clientId: 'client-1',
+        scopes: ['mcp'],
+        extra: { userId: 'u1', email: 'a@b' },
+      }),
     ).toEqual({ userId: 'u1', clientId: 'client-1' });
     expect(callerFromAuthInfo(undefined)).toBeUndefined();
     expect(callerFromAuthInfo({ token: 't', clientId: 'client-1', scopes: [] })).toBeUndefined();
-    expect(callerFromAuthInfo({ token: 't', clientId: '', scopes: [], extra: { userId: 'u1' } })).toBeUndefined();
-    expect(callerFromAuthInfo({ token: 't', clientId: 'c', scopes: [], extra: { userId: 42 } })).toBeUndefined();
+    expect(
+      callerFromAuthInfo({ token: 't', clientId: '', scopes: [], extra: { userId: 'u1' } }),
+    ).toBeUndefined();
+    expect(
+      callerFromAuthInfo({ token: 't', clientId: 'c', scopes: [], extra: { userId: 42 } }),
+    ).toBeUndefined();
   });
 });
 
@@ -92,13 +104,22 @@ describe.each(MODES)('tools/list (%s negotiation)', (mode) => {
 
   it('publishes input and output schemas from @enu/shared', () => {
     const byName = new Map(tools.map((t) => [t.name, t]));
-    const required = (name: string) => (byName.get(name)?.inputSchema as { required?: string[] }).required ?? [];
-    const props = (name: string) => Object.keys((byName.get(name)?.inputSchema as { properties?: object }).properties ?? {});
+    const required = (name: string) =>
+      (byName.get(name)?.inputSchema as { required?: string[] }).required ?? [];
+    const props = (name: string) =>
+      Object.keys((byName.get(name)?.inputSchema as { properties?: object }).properties ?? {});
     expect(required(MCP_TOOL_NAMES.getMyContext)).toEqual([]);
     expect(props(MCP_TOOL_NAMES.getMyContext)).toEqual(expect.arrayContaining(['include', 'since']));
     expect(required(MCP_TOOL_NAMES.postWorkLog)).toContain('summary');
     expect(props(MCP_TOOL_NAMES.postWorkLog)).toEqual(
-      expect.arrayContaining(['summary', 'tasks', 'blockers', 'claude_chat_summary', 'visibility', 'source_hint']),
+      expect.arrayContaining([
+        'summary',
+        'tasks',
+        'blockers',
+        'claude_chat_summary',
+        'visibility',
+        'source_hint',
+      ]),
     );
     expect(required(MCP_TOOL_NAMES.upsertTodos)).toContain('items');
     expect(required(MCP_TOOL_NAMES.postPetNudges)).toContain('nudges');
@@ -111,11 +132,14 @@ describe.each(MODES)('tools/list (%s negotiation)', (mode) => {
       expect(JSON.stringify(t.inputSchema)).not.toMatch(/user_?id/i);
       // ... and no tool lets Claude name a colleague.
       const names = propertyNames(t.inputSchema);
-      for (const banned of ['user_id', 'userId', 'email', 'with']) expect(names, t.name).not.toContain(banned);
+      for (const banned of ['user_id', 'userId', 'email', 'with'])
+        expect(names, t.name).not.toContain(banned);
     }
-    const nudgeItems = (byName.get(MCP_TOOL_NAMES.postPetNudges)?.inputSchema as unknown as {
-      properties: { nudges: { items: { required?: string[] } } };
-    }).properties.nudges.items;
+    const nudgeItems = (
+      byName.get(MCP_TOOL_NAMES.postPetNudges)?.inputSchema as unknown as {
+        properties: { nudges: { items: { required?: string[] } } };
+      }
+    ).properties.nudges.items;
     expect(nudgeItems.required).toContain('text');
   });
 
@@ -176,7 +200,14 @@ describe.each(MODES)('authentication and rate limiting without a database (%s)',
     // Refs must look like scheme:id (no spaces), and at most 16 blocks are accepted.
     for (const args of [
       { now: { kind: 'work', ref: 'jira ENU-1' } },
-      { now: null, schedule: Array.from({ length: 17 }, () => ({ start_at: '2026-10-29T01:00:00Z', end_at: '2026-10-29T02:00:00Z', kind: 'focus' })) },
+      {
+        now: null,
+        schedule: Array.from({ length: 17 }, () => ({
+          start_at: '2026-10-29T01:00:00Z',
+          end_at: '2026-10-29T02:00:00Z',
+          kind: 'focus',
+        })),
+      },
       { now: { kind: 'sleeping' } },
     ]) {
       const bad = await callTool(client, MCP_TOOL_NAMES.postActivity, args);

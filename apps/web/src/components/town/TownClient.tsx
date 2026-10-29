@@ -53,20 +53,33 @@ export default function TownClient({ me }: { me: MeDto }) {
     return () => ctrl.abort();
   }, [directory]);
 
-  // People's names/teams change rarely; refresh the directory when someone new shows up.
+  // People's names/teams/desks change rarely; refresh the directory (debounced) when someone new shows up,
+  // someone leaves the roster, or a Player's desk or name changes (desks_changed, profile edits).
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const off = session.on('player:add', (p) => {
-      if (directory.person(p.id) || timer) return;
+    const refetch = () => {
+      if (timer) return;
       timer = setTimeout(() => {
         timer = null;
         getJson<PersonDto[]>(api.people())
           .then((people) => directory.setPeople(people ?? []))
           .catch(() => undefined);
+        getJson<DeskDto[]>(api.desks())
+          .then((desks) => directory.setDesks(desks ?? []))
+          .catch(() => undefined);
       }, 1500);
-    });
+    };
+    const offs = [
+      session.on('player:add', (p) => {
+        if (!directory.person(p.id)) refetch();
+      }),
+      session.on('player:remove', () => refetch()),
+      session.on('player:change', ({ player, prev }) => {
+        if (player.deskId !== prev.deskId || player.name !== prev.name) refetch();
+      }),
+    ];
     return () => {
-      off();
+      for (const off of offs) off();
       if (timer) clearTimeout(timer);
     };
   }, [session, directory]);

@@ -6,9 +6,10 @@ import { createDb, type DbHandle } from '../src/client';
 import { defaultMigrationsDir, runMigrations } from '../src/migrate';
 
 /**
- * 0002_town_visualization on a database that already holds 0001-era data: nearby chat (with
- * recipients), a zoned room message and a stored position. Runs in a scratch database derived from
- * DATABASE_URL_TEST (`<name>_migrate_test`) so the shared test database is never reset.
+ * 0002_town_visualization and 0003_no_presence_traces on a database that already holds 0001-era data:
+ * nearby chat (with recipients), a zoned room message, a stored position, a UUIDv7 work log and a bubble
+ * delivery with its trigger. Runs in a scratch database derived from DATABASE_URL_TEST
+ * (`<name>_migrate_test`) so the shared test database is never reset.
  */
 
 const TEST_URL = process.env.DATABASE_URL_TEST ?? 'postgres://enu:enu@127.0.0.1:5432/enu_town_test';
@@ -71,7 +72,7 @@ afterAll(async () => {
   if (tmp) fs.rmSync(tmp, { recursive: true, force: true });
 });
 
-describe('migration 0002_town_visualization', () => {
+describe('migrations 0002_town_visualization and 0003_no_presence_traces', () => {
   it('drops nearby chat, recipients, positions and zone ids, keeping room chat and profiles', async () => {
     const q = (sql: string, params: unknown[] = []) => h.pool.query(sql, params);
     for (const id of ['u-a', 'u-b']) {
@@ -93,11 +94,34 @@ describe('migration 0002_town_visualization', () => {
     );
     await q(`insert into privacy_consents (id, user_id, notice_version, scope)
              values ('00000000-0000-7000-8000-0000000000c1', 'u-a', '2026-10', 'service')`);
+    // A UUIDv7 work log (its first 48 bits are the write time) and a delivery that recorded its trigger.
+    const v7LogId = '019a2c4e-8000-7000-8000-000000000001';
+    await q(
+      `insert into work_logs (id, user_id, period_key, period_start, period_end, visibility, source,
+                                    claude_written_at)
+             values ($1, 'u-a', '2026-10-28', now(), now(), 'company', 'cowork_scheduled', now())`,
+      [v7LogId],
+    );
+    await q(`insert into nudge_deliveries (user_id, trigger, due_key, shown_at)
+             values ('u-a', 'glance', null, now()), ('u-a', 'due', 't1:5', now())`);
 
     await runMigrations(scratchUrl);
 
     const applied = await q('select count(*)::int as n from drizzle.__drizzle_migrations');
-    expect(applied.rows[0]?.n).toBe(3);
+    expect(applied.rows[0]?.n).toBe(4);
+    // 0003: no trigger column any more (rows stay), and work logs are re-keyed with random v4 ids.
+    const trigger = await q(
+      `select 1 from information_schema.columns where table_name = 'nudge_deliveries' and column_name = 'trigger'`,
+    );
+    expect(trigger.rowCount).toBe(0);
+    expect((await q('select due_key from nudge_deliveries order by id')).rows).toEqual([
+      { due_key: null },
+      { due_key: 't1:5' },
+    ]);
+    const logs = (await q('select id from work_logs')).rows as { id: string }[];
+    expect(logs).toHaveLength(1);
+    expect(logs[0]?.id).not.toBe(v7LogId);
+    expect(logs[0]?.id.charAt(14)).toBe('4');
     const chat = await q('select id, kind, body from chat_messages order by id');
     expect(chat.rows).toEqual([
       { id: '00000000-0000-7000-8000-000000000002', kind: 'room', body: '전체 대화' },

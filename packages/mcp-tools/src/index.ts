@@ -33,7 +33,13 @@ export {
   type ToolProblem,
 } from './result';
 export { activeOwnerStatus, findOwnerContext, loadOwnerContext, type OwnerContext } from './owner';
-export { lockOwnerScope, markLinkedAfterWorkLog, recordLinkWrite, touchClaudeLink, type TouchLinkResult } from './links';
+export {
+  lockOwnerScope,
+  markLinkedAfterWorkLog,
+  recordLinkWrite,
+  touchClaudeLink,
+  type TouchLinkResult,
+} from './links';
 export { MANUAL_STATUS_KO, NOW_KIND_KO, formatLocalIso } from './format';
 export { activityRefHash, postActivity, type PostActivityOptions } from './services/activity';
 export {

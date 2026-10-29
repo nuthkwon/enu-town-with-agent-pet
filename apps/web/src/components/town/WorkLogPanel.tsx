@@ -89,7 +89,8 @@ export function NowCard({ userId }: { userId: string }) {
   const form = player ? displayForm(player, tz) : '';
   const icon = player && player.note === PlateNote.None ? activityIcon(player.activity) : null;
   const group = player?.groupId ? groupsOf(roster).find((g) => g.id === player.groupId) : undefined;
-  const nameOf = (id: string) => roster.find((p) => p.id === id)?.name || directory.person(id)?.displayName || '';
+  const nameOf = (id: string) =>
+    roster.find((p) => p.id === id)?.name || directory.person(id)?.displayName || '';
   return (
     <section className={s.nowCard} aria-label={t.nowTitle}>
       <div className={s.nowHead}>
@@ -112,7 +113,10 @@ export function NowCard({ userId }: { userId: string }) {
           {player?.statusText && <p className={s.nowStatusText}>{player.statusText}</p>}
           {group && (
             <p className={s.nowGroup}>
-              {t.nowGroup(group.family === 'meeting' ? ko.townUi.group.meetingTitle : ko.townUi.group.workTitle, group.members.length)}
+              {t.nowGroup(
+                group.family === 'meeting' ? ko.townUi.group.meetingTitle : ko.townUi.group.workTitle,
+                group.members.length,
+              )}
               {' · '}
               {group.members.map((m) => nameOf(m.id)).join(', ')}
             </p>

@@ -15,7 +15,12 @@ export type TouchLinkResult = { ok: true; created: boolean } | { ok: false; reas
  * consent hook missed it (consentedAt = now). A revoked link is left untouched and reported,
  * so the tool can refuse (defense in depth; the token gate should already have refused).
  */
-export async function touchClaudeLink(db: Db, caller: CallerInfo, toolName: string, now: Date): Promise<TouchLinkResult> {
+export async function touchClaudeLink(
+  db: Db,
+  caller: CallerInfo,
+  toolName: string,
+  now: Date,
+): Promise<TouchLinkResult> {
   return db.transaction(async (tx) => {
     const rows = await tx
       .insert(claudeLinks)
@@ -69,7 +74,11 @@ export async function recordLinkWrite(tx: DbOrTx, caller: CallerInfo, now: Date)
 /** Recomputes the owner's link state from active links (used when a link was created by a tool call). */
 async function refreshLinkStateInTx(tx: DbOrTx, userId: string, now: Date): Promise<void> {
   const [profile] = await tx
-    .select({ timezone: profiles.timezone, lastWorkLogAt: profiles.lastWorkLogAt, linkState: profiles.linkState })
+    .select({
+      timezone: profiles.timezone,
+      lastWorkLogAt: profiles.lastWorkLogAt,
+      linkState: profiles.linkState,
+    })
     .from(profiles)
     .where(eq(profiles.userId, userId))
     .for('update');
@@ -101,7 +110,11 @@ async function refreshLinkStateInTx(tx: DbOrTx, userId: string, now: Date): Prom
  * A Claude work-log write proves the link is alive: sets last_work_log_at and link_state='linked'
  * and publishes link_state_changed when the state actually changes. Returns the previous state.
  */
-export async function markLinkedAfterWorkLog(tx: DbOrTx, userId: string, now: Date): Promise<{ changed: boolean; previous: LinkState | null }> {
+export async function markLinkedAfterWorkLog(
+  tx: DbOrTx,
+  userId: string,
+  now: Date,
+): Promise<{ changed: boolean; previous: LinkState | null }> {
   const [profile] = await tx
     .select({ linkState: profiles.linkState })
     .from(profiles)

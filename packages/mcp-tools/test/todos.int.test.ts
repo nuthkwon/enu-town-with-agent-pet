@@ -4,7 +4,16 @@ import { createTestUser, setupTestDb, truncateAll } from '@enu/testing';
 import { and, eq } from 'drizzle-orm';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { MODES, callTool, errorPayload } from './harness';
-import { THU_14, auditFor, linkRow, listen, makeHarness, settle, type Harness, type Listener } from './int-helpers';
+import {
+  THU_14,
+  auditFor,
+  linkRow,
+  listen,
+  makeHarness,
+  settle,
+  type Harness,
+  type Listener,
+} from './int-helpers';
 
 let handle: DbHandle;
 beforeAll(async () => {
@@ -39,13 +48,28 @@ describe.each(MODES)('upsert_todos (%s)', (mode) => {
   const rowsOf = async (userId: string) =>
     handle.db.select().from(todos).where(eq(todos.userId, userId)).orderBy(todos.externalRef);
   const rowByRef = async (userId: string, ref: string) =>
-    (await handle.db.select().from(todos).where(and(eq(todos.userId, userId), eq(todos.externalRef, ref))))[0];
+    (
+      await handle.db
+        .select()
+        .from(todos)
+        .where(and(eq(todos.userId, userId), eq(todos.externalRef, ref)))
+    )[0];
 
   it('creates new to-dos, then updates and counts unchanged ones', async () => {
     const me = await createTestUser(handle.db);
     const first = await upsertOk(me.id, [
-      { external_ref: 'gcal:evt1', title: '주간 회의 자료  준비', due_at: '2026-10-29T16:00:00+09:00', priority: 1 },
-      { external_ref: 'jira:ENU-7', title: '배포 스크립트 정리', due_date: '2026-10-30', note: '참고: https://wiki.example/deploy' },
+      {
+        external_ref: 'gcal:evt1',
+        title: '주간 회의 자료  준비',
+        due_at: '2026-10-29T16:00:00+09:00',
+        priority: 1,
+      },
+      {
+        external_ref: 'jira:ENU-7',
+        title: '배포 스크립트 정리',
+        due_date: '2026-10-30',
+        note: '참고: https://wiki.example/deploy',
+      },
       { external_ref: 'gmail:th-9', title: '견적서 회신', status: 'done' },
     ]);
     expect(first).toMatchObject({ created: 3, updated: 0, unchanged: 0, skipped_user_controlled: 0 });
@@ -67,7 +91,11 @@ describe.each(MODES)('upsert_todos (%s)', (mode) => {
     });
     expect(evt?.dueAt?.toISOString()).toBe('2026-10-29T07:00:00.000Z');
     expect(evt?.lastSeenByClaudeAt?.toISOString()).toBe(THU_14);
-    expect(await rowByRef(me.id, 'jira:ENU-7')).toMatchObject({ dueDate: '2026-10-30', dueAt: null, note: '참고: https://wiki.example/deploy' });
+    expect(await rowByRef(me.id, 'jira:ENU-7')).toMatchObject({
+      dueDate: '2026-10-30',
+      dueAt: null,
+      note: '참고: https://wiki.example/deploy',
+    });
     expect((await rowByRef(me.id, 'gmail:th-9'))?.completedAt?.toISOString()).toBe(THU_14);
     await listener.waitFor(() => listener.forUser(me.id).some((e) => e.type === 'todos_changed'));
 
@@ -75,8 +103,19 @@ describe.each(MODES)('upsert_todos (%s)', (mode) => {
     listener.events.length = 0;
     const before = await rowByRef(me.id, 'jira:ENU-7');
     const second = await upsertOk(me.id, [
-      { external_ref: 'gcal:evt1', title: '주간 회의 자료 준비', due_at: '2026-10-29T16:00:00+09:00', priority: 1, status: 'done' },
-      { external_ref: 'jira:ENU-7', title: '배포 스크립트 정리', due_date: '2026-10-30', note: '참고: https://wiki.example/deploy' },
+      {
+        external_ref: 'gcal:evt1',
+        title: '주간 회의 자료 준비',
+        due_at: '2026-10-29T16:00:00+09:00',
+        priority: 1,
+        status: 'done',
+      },
+      {
+        external_ref: 'jira:ENU-7',
+        title: '배포 스크립트 정리',
+        due_date: '2026-10-30',
+        note: '참고: https://wiki.example/deploy',
+      },
       { external_ref: 'gmail:th-9', title: '견적서 회신', status: 'open' },
     ]);
     expect(second).toMatchObject({ created: 0, updated: 2, unchanged: 1, skipped_user_controlled: 0 });
@@ -98,9 +137,9 @@ describe.each(MODES)('upsert_todos (%s)', (mode) => {
     await settle();
     expect(listener.forUser(me.id)).toEqual([]);
 
-    expect((await linkRow(handle.db, me.id, 'https://claude.ai/oauth/client'))?.lastWriteAt?.toISOString()).toBe(
-      '2026-10-29T05:30:00.000Z',
-    );
+    expect(
+      (await linkRow(handle.db, me.id, 'https://claude.ai/oauth/client'))?.lastWriteAt?.toISOString(),
+    ).toBe('2026-10-29T05:30:00.000Z');
     const audit = (await auditFor(handle.db, me.id)).filter((a) => a.action === 'todos.upsert');
     expect(audit).toHaveLength(3);
     expect(JSON.stringify(audit.map((a) => a.metadata))).not.toContain('견적서');
@@ -109,10 +148,38 @@ describe.each(MODES)('upsert_todos (%s)', (mode) => {
   it("applies Claude's status only to Claude-controlled rows and never resurrects dismissed ones", async () => {
     const me = await createTestUser(handle.db);
     await handle.db.insert(todos).values([
-      { id: newId(), userId: me.id, externalRef: 'jira:ENU-1', title: '사용자가 완료', status: 'done', statusSource: 'user' },
-      { id: newId(), userId: me.id, externalRef: 'jira:ENU-2', title: '사용자가 닫음', status: 'dismissed', statusSource: 'user' },
-      { id: newId(), userId: me.id, externalRef: 'jira:ENU-3', title: '미룸', status: 'snoozed', statusSource: 'user' },
-      { id: newId(), userId: me.id, externalRef: 'jira:ENU-4', title: '클로드가 닫음', status: 'dismissed', statusSource: 'claude' },
+      {
+        id: newId(),
+        userId: me.id,
+        externalRef: 'jira:ENU-1',
+        title: '사용자가 완료',
+        status: 'done',
+        statusSource: 'user',
+      },
+      {
+        id: newId(),
+        userId: me.id,
+        externalRef: 'jira:ENU-2',
+        title: '사용자가 닫음',
+        status: 'dismissed',
+        statusSource: 'user',
+      },
+      {
+        id: newId(),
+        userId: me.id,
+        externalRef: 'jira:ENU-3',
+        title: '미룸',
+        status: 'snoozed',
+        statusSource: 'user',
+      },
+      {
+        id: newId(),
+        userId: me.id,
+        externalRef: 'jira:ENU-4',
+        title: '클로드가 닫음',
+        status: 'dismissed',
+        statusSource: 'claude',
+      },
     ]);
     const out = await upsertOk(me.id, [
       { external_ref: 'jira:ENU-1', title: '사용자가 완료 (제목 변경)', status: 'open' },

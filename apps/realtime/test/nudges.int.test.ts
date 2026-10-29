@@ -1,8 +1,17 @@
-import { notifyTown, newId, nudgeDeliveries, petNudges, todos } from '@enu/db';
+import { notifyTown, newId, nudgeDeliveries, petNudges, profiles, todos } from '@enu/db';
 import { BubbleKind, Indicator } from '@enu/protocol';
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { joinAs, kst, makeUser, sleep, startHarness, waitFor, type Harness } from './helpers/server';
+import {
+  joinAs,
+  kst,
+  makeUser,
+  serverRoom,
+  sleep,
+  startHarness,
+  waitFor,
+  type Harness,
+} from './helpers/server';
 
 const PORT = 3314;
 const MIN = 60_000;
@@ -39,7 +48,7 @@ async function insertNudge(
 }
 
 describe('pet bubbles (nudges)', () => {
-  it('shows a linked owner their Claude text; others only see the indicator; the DB records the delivery', async () => {
+  it('shows a linked owner their Claude text; others see nothing; the DB records the delivery (no trigger)', async () => {
     const owner = await makeUser(h, { linkState: 'linked', deskId: 'L1a' });
     const other = await makeUser(h, { linkState: 'linked', deskId: 'L1b' });
     const text = '오후 2시 SQA 검토 회의 자료를 미리 열어 두면 좋겠어요.';
@@ -52,14 +61,13 @@ describe('pet bubbles (nudges)', () => {
     expect(ownPet().bubbleId).toBe(nudgeId);
     expect(ownPet().bubbleKind).toBe(BubbleKind.Nudge);
     expect(ownPet().bubbleDueAt).toBe(0);
-    expect(ownPet().indicator).toBe(Indicator.Dots);
+    expect(ownPet().indicator).toBe(Indicator.None); // shared: never `…`
     expect(ownPet().bubbleUntil).toBeGreaterThan(h.clock.now().getTime());
 
-    // StateView isolation: the other client sees the "..." indicator but never the text.
+    // StateView isolation: the other client gets neither the text nor any sign that a bubble is up.
     const seenByOther = () => jx.room.state.pets.get(owner.id);
-    await waitFor(() => seenByOther()?.indicator === Indicator.Dots, {
-      message: 'indicator at other client',
-    });
+    await sleep(300);
+    expect(seenByOther().indicator).toBe(Indicator.None);
     expect(seenByOther().bubbleText ?? '').toBe('');
     expect(seenByOther().bubbleId ?? '').toBe('');
     expect(seenByOther().bubbleText).toBeUndefined();
@@ -75,7 +83,9 @@ describe('pet bubbles (nudges)', () => {
     );
     const deliveries = await h.db.select().from(nudgeDeliveries).where(eq(nudgeDeliveries.userId, owner.id));
     expect(deliveries).toHaveLength(1);
-    expect(deliveries[0]).toMatchObject({ nudgeId, trigger: 'join', todoId: null });
+    expect(deliveries[0]).toMatchObject({ nudgeId, todoId: null, dueKey: null });
+    // No trigger is stored: join / glance rows would say when the owner opened the town or came back to it.
+    expect(deliveries[0]).not.toHaveProperty('trigger');
 
     // Acked via REST elsewhere -> NOTIFY -> the bubble is taken down.
     await h.db
@@ -140,7 +150,7 @@ describe('pet bubbles (nudges)', () => {
         (await h.db.select().from(nudgeDeliveries).where(eq(nudgeDeliveries.todoId, todoId))).length === 1,
     );
     const [d] = await h.db.select().from(nudgeDeliveries).where(eq(nudgeDeliveries.todoId, todoId));
-    expect(d).toMatchObject({ trigger: 'due', dueKey: `${todoId}:5` });
+    expect(d).toMatchObject({ dueKey: `${todoId}:5` });
 
     await h.db.update(todos).set({ status: 'done', statusSource: 'user' }).where(eq(todos.id, todoId));
     await notifyTown(h.db, { v: 1, type: 'todos_changed', user_id: owner.id });
@@ -157,4 +167,54 @@ describe('pet bubbles (nudges)', () => {
     jo.room.send('presence', { visible: true, uiBusy: false });
     await waitFor(() => jo.room.state.pets.get(owner.id).bubbleText === '탭이 보일 때만 말해요');
   });
+  for (const how of ['leave', 'second tab'] as const) {
+    it(`a bubble on screen when the owner's session ends (${how}) is taken down, also after an ack`, async () => {
+      const owner = await makeUser(h, { linkState: 'linked', deskId: 'L4a' });
+      const other = await makeUser(h, { linkState: 'linked', deskId: 'L4b' });
+      // A manual status keeps the owner shown after the session ends (the long-lived Pet stays drawn).
+      await h.db
+        .update(profiles)
+        .set({ manualStatus: 'available', manualStatusUntil: new Date(h.clock.now().getTime() + 120 * MIN) })
+        .where(eq(profiles.userId, owner.id));
+      const text = `세션이 끝나도 남으면 안 되는 말풍선 (${how})`;
+      const nudgeId = await insertNudge(owner.id, text);
+      const jx = await joinAs(h, other.id);
+      const jo = await joinAs(h, owner.id);
+      await waitFor(() => jo.room.state.pets.get(owner.id)?.bubbleText === text, { message: 'owner bubble' });
+      const room = serverRoom(h, jo);
+      const serverPet = () => room.townDirector.pet(owner.id)!;
+      expect(serverPet().bubbleId).toBe(nudgeId);
+
+      let rejoined: Awaited<ReturnType<typeof joinAs>> | null = null;
+      if (how === 'leave') {
+        await jo.room.leave();
+        await waitFor(() => !room.connectedUserIds.includes(owner.id), { message: 'owner left' });
+      } else {
+        rejoined = await joinAs(h, owner.id);
+        expect(await jo.leaveCode).toBe(4101); // SessionReplaced
+      }
+      expect(serverPet()).toMatchObject({
+        bubbleId: '',
+        bubbleText: '',
+        bubbleUntil: 0,
+        indicator: Indicator.None,
+      });
+      expect(room.townDirector.player(owner.id)?.shown).toBe(true);
+
+      await h.db
+        .update(petNudges)
+        .set({ status: 'acked', ackedAt: new Date() })
+        .where(eq(petNudges.id, nudgeId));
+      await notifyTown(h.db, { v: 1, type: 'nudges_changed', user_id: owner.id });
+      await sleep(400);
+      expect(serverPet()).toMatchObject({ bubbleId: '', bubbleText: '', indicator: Indicator.None });
+      expect(jx.room.state.pets.get(owner.id).indicator).toBe(Indicator.None);
+      if (rejoined) {
+        // (c) the new tab never got the old (now acked) text
+        const pet = rejoined.room.state.pets.get(owner.id);
+        expect(pet.bubbleText).toBe('');
+        expect(pet.bubbleId).toBe('');
+      }
+    });
+  }
 });

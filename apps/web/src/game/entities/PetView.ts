@@ -241,7 +241,9 @@ export class PetView {
       if (iconFrame === EFFECT_FRAMES.dots) {
         this.icon.setPosition(0, -26 + Math.round(wobble)).setAlpha(0.75 + 0.25 * wobble);
       } else if (iconFrame === EFFECT_FRAMES.zzz) {
-        this.icon.setPosition(9 + Math.round(wobble), -24 + Math.round(Math.sin(now / 600) * 2)).setAlpha(0.9);
+        this.icon
+          .setPosition(9 + Math.round(wobble), -24 + Math.round(Math.sin(now / 600) * 2))
+          .setAlpha(0.9);
       } else {
         this.icon.setPosition(10, -22).setAlpha(1);
       }

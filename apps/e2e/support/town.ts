@@ -40,6 +40,24 @@ interface DebugHook {
   officeOpen(): boolean | null;
   avatarCount(): number;
   fxDrawn(): { wave: number; plane: number };
+  petBubble(): PetBubbleState | null;
+  petState(ownerId: string): PetState | null;
+}
+
+/** The viewer's own pet bubble as drawn on the canvas. */
+export interface PetBubbleState {
+  bubbleId: string;
+  text: string;
+  kind: number;
+  dueAt: number;
+}
+
+/** Someone's pet as the viewer's client decoded it. */
+export interface PetState {
+  bubbleId: string;
+  bubbleText: string;
+  bubbleUntil: number;
+  indicator: number;
 }
 
 declare global {
@@ -50,7 +68,19 @@ declare global {
 
 /** Waits until the scene is up and the room state has arrived (the 14 roster actors are always there). */
 export async function waitForTownState(page: Page): Promise<void> {
-  await page.waitForFunction(() => window.__ENU_TOWN_DEBUG__?.officeOpen() === true, null, { timeout: 90_000 });
+  await page.waitForFunction(() => window.__ENU_TOWN_DEBUG__?.officeOpen() === true, null, {
+    timeout: 90_000,
+  });
+}
+
+/** My own pet's bubble as drawn on the canvas (null while none is visible). */
+export function petBubble(page: Page): Promise<PetBubbleState | null> {
+  return page.evaluate(() => window.__ENU_TOWN_DEBUG__?.petBubble() ?? null);
+}
+
+/** Someone's pet as this page decoded it from the room state. */
+export function petState(page: Page, ownerId: string): Promise<PetState | null> {
+  return page.evaluate((id) => window.__ENU_TOWN_DEBUG__?.petState(id) ?? null, ownerId);
 }
 
 export function playerState(page: Page, userId: string): Promise<PlayerState | null> {

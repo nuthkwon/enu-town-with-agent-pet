@@ -43,12 +43,18 @@ function snap(userId: string, deskId: string | null, over: Partial<ActorSnapshot
   };
 }
 
-function make(actors: ActorSnapshot[]) {
+function make(actors: ActorSnapshot[], opts: { pulseStep?: () => number } = {}) {
   const state = new OfficeState();
   const warnings: string[] = [];
-  const d = new Director({ world, state, timeZone: TZ, warn: (msg) => warnings.push(msg) });
+  const d = new Director({ world, state, timeZone: TZ, warn: (msg) => warnings.push(msg), ...opts });
   for (const a of actors) d.upsertActor(a);
-  return { d, state, warnings, p: (id: string) => state.players.get(id)!, pet: (id: string) => state.pets.get(id)! };
+  return {
+    d,
+    state,
+    warnings,
+    p: (id: string) => state.players.get(id)!,
+    pet: (id: string) => state.pets.get(id)!,
+  };
 }
 
 function steps(d: Director, fromMs: number, toMs: number): void {
@@ -59,7 +65,11 @@ const meetingSignals = (start: Date, end: Date, ref: string | null): ActorSignal
   report: { now: null, schedule: [{ start, end, kind: 'meeting', refHash: ref }] },
   todayLog: null,
 });
-const nowSignals = (kind: 'work' | 'review' | 'docs' | 'collab', ref: string | null, until: Date): ActorSignals => ({
+const nowSignals = (
+  kind: 'work' | 'review' | 'docs' | 'collab',
+  ref: string | null,
+  until: Date,
+): ActorSignals => ({
   report: { now: { kind, refHash: ref, until }, schedule: [] },
   todayLog: null,
 });
@@ -81,7 +91,10 @@ describe('Director placement', () => {
     t.d.setManual('b', { status: 'focus', until: at(T10, H) });
     t.d.evaluate(T10, 0, { snap: true });
     expect(t.state.officeOpen).toBe(true);
-    for (const [id, desk] of [['a', 'L1a'], ['b', 'R1']] as const) {
+    for (const [id, desk] of [
+      ['a', 'L1a'],
+      ['b', 'R1'],
+    ] as const) {
       const p = t.p(id);
       expect({ x: p.x, y: p.y, dir: p.dir, anim: p.anim }).toEqual({ ...seatOf(desk), anim: Anim.Sit });
       expect(p.shown).toBe(true);
@@ -89,10 +102,20 @@ describe('Director placement', () => {
       expect(Math.abs(pet.x - p.x) + Math.abs(pet.y - p.y)).toBe(1);
     }
     expect(t.p('a')).toMatchObject({ online: true, activity: ActivityCode.None, source: SourceCode.Town });
-    expect(t.p('b')).toMatchObject({ online: false, activity: ActivityCode.Focus, source: SourceCode.Manual });
+    expect(t.p('b')).toMatchObject({
+      online: false,
+      activity: ActivityCode.Focus,
+      source: SourceCode.Manual,
+    });
     expect(t.p('b').until).toBe(at(T10, H).getTime());
     // c: no signal -> hidden, name only; the pet rests on the desk surface the seat faces
-    expect(t.p('c')).toMatchObject({ shown: false, online: false, note: PlateNote.None, activity: 0, source: 0 });
+    expect(t.p('c')).toMatchObject({
+      shown: false,
+      online: false,
+      note: PlateNote.None,
+      activity: 0,
+      source: 0,
+    });
     const perch = world.spots.perch('L4b');
     expect({ x: t.pet('c').x, y: t.pet('c').y, dir: t.pet('c').dir }).toEqual({
       x: perch.x,
@@ -124,7 +147,11 @@ describe('Director placement', () => {
       t.d.setSignals(id, meetingSignals(T10, T11, hash('m')));
     }
     t.d.evaluate(T0950, 0, { snap: true });
-    for (const [id, desk] of [['a', 'L1a'], ['b', 'L2b'], ['c', 'R2a']] as const) {
+    for (const [id, desk] of [
+      ['a', 'L1a'],
+      ['b', 'L2b'],
+      ['c', 'R2a'],
+    ] as const) {
       expect({ x: t.p(id).x, y: t.p(id).y }).toEqual({ x: seatOf(desk).x, y: seatOf(desk).y });
     }
 
@@ -161,9 +188,14 @@ describe('Director placement', () => {
     expect(tiles.size).toBe(3);
 
     t.d.evaluate(T11, 13_000);
-    for (const id of ['a', 'b', 'c']) expect(t.p(id)).toMatchObject({ groupId: '', activity: 0, source: SourceCode.Town });
+    for (const id of ['a', 'b', 'c'])
+      expect(t.p(id)).toMatchObject({ groupId: '', activity: 0, source: SourceCode.Town });
     steps(t.d, 13_000, 26_000);
-    for (const [id, desk] of [['a', 'L1a'], ['b', 'L2b'], ['c', 'R2a']] as const) {
+    for (const [id, desk] of [
+      ['a', 'L1a'],
+      ['b', 'L2b'],
+      ['c', 'R2a'],
+    ] as const) {
       expect({ x: t.p(id).x, y: t.p(id).y, dir: t.p(id).dir, anim: t.p(id).anim }).toEqual({
         ...seatOf(desk),
         anim: Anim.Sit,
@@ -176,7 +208,10 @@ describe('Director placement', () => {
     const t = make([snap('a', 'L1a'), snap('b', 'L1b')]);
     for (const id of ['a', 'b']) t.d.setSignals(id, meetingSignals(T10, T11, hash('m')));
     t.d.evaluate(T10, 0, { snap: true });
-    for (const [id, desk] of [['a', 'L1a'], ['b', 'L1b']] as const) {
+    for (const [id, desk] of [
+      ['a', 'L1a'],
+      ['b', 'L1b'],
+    ] as const) {
       expect(t.p(id)).toMatchObject({
         shown: true,
         activity: ActivityCode.Meeting,
@@ -253,7 +288,10 @@ describe('Director visibility rules', () => {
       expect(t.pet(id).indicator).toBe(Indicator.None);
     }
     steps(t.d, 1000, 12_000);
-    for (const [id, desk] of [['a', 'L1a'], ['b', 'L2a']] as const) {
+    for (const [id, desk] of [
+      ['a', 'L1a'],
+      ['b', 'L2a'],
+    ] as const) {
       const perch = world.spots.perch(desk);
       expect({ x: t.pet(id).x, y: t.pet(id).y, anim: t.pet(id).anim }).toEqual({
         x: perch.x,
@@ -293,7 +331,10 @@ describe('Director visibility rules', () => {
   it('a calendar away block hides the person as 부재: until 0, source None (beats an open town)', () => {
     const t = make([snap('a', 'L1a')]);
     t.d.setSession('a', 'open', T10);
-    t.d.setSignals('a', { report: { now: null, schedule: [{ start: T0950, end: T11, kind: 'away', refHash: null }] }, todayLog: null });
+    t.d.setSignals('a', {
+      report: { now: null, schedule: [{ start: T0950, end: T11, kind: 'away', refHash: null }] },
+      todayLog: null,
+    });
     t.d.evaluate(T10, 0, { snap: true });
     expect(t.p('a')).toMatchObject({
       shown: false,
@@ -323,54 +364,157 @@ describe('Director visibility rules', () => {
     expect(t.p('a')).toMatchObject({ shown: false, activity: 0, source: 0, until: 0 });
   });
 
-  it('the `…` indicator is Dots only while the owner is shown and drops when they become hidden mid-bubble', () => {
-    const t = make([snap('a', 'L1a')]);
+  it('the shared indicator is never Dots: a bubble (owner-only) changes nothing colleagues decode', () => {
+    // a: shown and online; b: 접속 표시 off but drawn through a manual status (no online dot).
+    const t = make([snap('a', 'L1a'), snap('b', 'L1b', { showLive: false })]);
     t.d.setSession('a', 'open', T10);
+    t.d.setSession('b', 'open', T10);
+    t.d.setManual('b', { status: 'available', until: at(T10, 2 * H) });
     t.d.evaluate(T10, 0, { snap: true });
-    const pet = t.pet('a');
-    pet.bubbleId = 'n1';
-    pet.bubbleText = '주인만 보는 글';
-    pet.indicator = Indicator.Dots;
+    expect(t.p('a')).toMatchObject({ shown: true, online: true });
+    expect(t.p('b')).toMatchObject({ shown: true, online: false });
+    for (const id of ['a', 'b']) {
+      const pet = t.pet(id);
+      pet.bubbleId = `n-${id}`;
+      pet.bubbleText = '주인만 보는 글';
+      pet.indicator = Indicator.Dots; // even a stray Dots is put back
+    }
     t.d.evaluate(T10, 1000);
-    expect(pet.indicator).toBe(Indicator.Dots);
+    for (const id of ['a', 'b']) {
+      expect(t.pet(id).indicator).toBe(Indicator.None);
+      expect(t.pet(id).bubbleText).toBe('주인만 보는 글'); // the owner still has their bubble
+    }
     t.d.setManual('a', { status: 'away', until: at(T10, H) });
     t.d.evaluate(T10, 2000);
-    expect(t.p('a').shown).toBe(false);
-    expect(pet.indicator).toBe(Indicator.None);
-    expect(pet.bubbleText).toBe('주인만 보는 글'); // the owner still has their bubble
-    t.d.setManual('a', null);
-    t.d.evaluate(T10, 3000);
-    expect(pet.indicator).toBe(Indicator.Dots);
-    pet.bubbleId = '';
-    t.d.evaluate(T10, 4000);
-    expect(pet.indicator).toBe(Indicator.None);
+    expect(t.pet('a').indicator).toBe(Indicator.None);
   });
 
   it('logPulse: only a Claude write, office open, owner shown, sharing and a colleague-visible log', () => {
-    const t = make([snap('a', 'L1a'), snap('p', 'L1b'), snap('n', 'L2a', { shareActivity: false })]);
+    const t = make([snap('a', 'L1a'), snap('p', 'L1b'), snap('n', 'L2a', { shareActivity: false })], {
+      pulseStep: () => 200,
+    });
     for (const id of ['a', 'p', 'n']) t.d.setSession(id, 'open', T10);
-    t.d.setSignals('a', { report: null, todayLog: { ...companyLog!, log: { ...companyLog!.log, ownerId: 'a' } } });
+    t.d.setSignals('a', {
+      report: null,
+      todayLog: { ...companyLog!, log: { ...companyLog!.log, ownerId: 'a' } },
+    });
     t.d.setSignals('p', {
       report: null,
-      todayLog: { log: { ownerId: 'p', visibility: 'private', chatSummaryVisibility: 'private', deletedAt: null }, hasWorkTask: true },
+      todayLog: {
+        log: { ownerId: 'p', visibility: 'private', chatSummaryVisibility: 'private', deletedAt: null },
+        hasWorkTask: true,
+      },
     });
-    t.d.setSignals('n', { report: null, todayLog: { ...companyLog!, log: { ...companyLog!.log, ownerId: 'n' } } });
+    t.d.setSignals('n', {
+      report: null,
+      todayLog: { ...companyLog!, log: { ...companyLog!.log, ownerId: 'n' } },
+    });
     t.d.evaluate(T10, 0, { snap: true });
     expect(t.p('a')).toMatchObject({ activity: ActivityCode.Today, source: SourceCode.WorkLog });
     expect(t.d.noteLogWrite('a', 'user')).toBe(false);
     expect(t.p('a').logPulse).toBe(0);
     expect(t.d.noteLogWrite('a', 'claude')).toBe(true);
-    expect(t.p('a').logPulse).toBe(1);
+    const pulsed = t.p('a').logPulse;
+    expect(pulsed).not.toBe(0); // changed (that is all the client looks at) ...
+    expect(pulsed).not.toBe(1); // ... and not a count of writes
     expect(t.d.noteLogWrite('p', 'claude')).toBe(false);
     expect(t.d.noteLogWrite('n', 'claude')).toBe(false);
     t.d.setSession('a', 'ended', at(T10, -120_000));
     t.d.evaluate(T10, 1000);
     expect(t.p('a').shown).toBe(false);
     expect(t.d.noteLogWrite('a', 'claude')).toBe(false);
+    expect(t.p('a').logPulse).toBe(pulsed); // unchanged
     t.d.setSession('a', 'open', T20);
     t.d.evaluate(T20, 2000);
     expect(t.d.noteLogWrite('a', 'claude')).toBe(false);
-    expect(t.p('a').logPulse).toBe(1);
+    expect(t.p('a').logPulse).toBe(0); // the closed phase resets it: no value survives the night
+  });
+
+  it('logPulse never counts writes: every step moves it by 1..255 (mod 256)', () => {
+    const steps = [255, 1, 128, 7];
+    let i = 0;
+    const t = make([snap('a', 'L1a')], { pulseStep: () => steps[i++ % steps.length]! });
+    t.d.setSession('a', 'open', T10);
+    t.d.setSignals('a', {
+      report: null,
+      todayLog: { ...companyLog!, log: { ...companyLog!.log, ownerId: 'a' } },
+    });
+    t.d.evaluate(T10, 0, { snap: true });
+    const seen: number[] = [t.p('a').logPulse];
+    for (let n = 0; n < steps.length; n++) {
+      expect(t.d.noteLogWrite('a', 'claude')).toBe(true);
+      seen.push(t.p('a').logPulse);
+    }
+    expect(seen).toEqual([0, 255, 0, 128, 135]);
+    for (let n = 1; n < seen.length; n++) expect(seen[n]).not.toBe(seen[n - 1]);
+  });
+
+  it('at closing every Player is parked at its seat (or guestSpots[0]) with Idle, whatever it was doing', () => {
+    const T1929 = kst(2026, 10, 28, 19, 29);
+    const T1930 = kst(2026, 10, 28, 19, 30);
+    const t = make([
+      snap('brk', 'L5b'),
+      snap('m1', 'L1a'),
+      snap('m2', 'L2b'),
+      snap('m3', 'R2a'),
+      snap('desk', 'L3a'),
+      snap('none', 'L4a'),
+      snap('guest', null),
+    ]);
+    t.d.setManual('brk', { status: 'break', until: at(T1929, H) });
+    for (const id of ['m1', 'm2', 'm3']) {
+      t.d.setSession(id, 'open', T1929);
+      t.d.setSignals(id, meetingSignals(at(T1929, -H), at(T1929, H), hash('m')));
+    }
+    t.d.setSession('desk', 'open', T1929);
+    t.d.setSession('guest', 'open', T1929);
+    t.d.evaluate(T1929, 0, { snap: true });
+    // control: the 19:29 state tells what everyone was doing
+    expect(world.zoneAt(t.p('brk').x, t.p('brk').y)?.zoneId).toBe('pantry');
+    for (const id of ['m1', 'm2', 'm3']) expect(isMeetingSeat(t.p(id).x, t.p(id).y)).toBe(true);
+    expect(t.p('desk').anim).toBe(Anim.Sit);
+
+    const guest = world.spots.guestSpots[0]!;
+    const parked = (id: string, deskId: string | null) =>
+      deskId
+        ? { ...seatOf(deskId), anim: Anim.Idle }
+        : { x: guest.x, y: guest.y, dir: facingToDir(guest.facing), anim: Anim.Idle };
+    const desks: [string, string | null][] = [
+      ['brk', 'L5b'],
+      ['m1', 'L1a'],
+      ['m2', 'L2b'],
+      ['m3', 'R2a'],
+      ['desk', 'L3a'],
+      ['none', 'L4a'],
+      ['guest', null],
+    ];
+    for (const [when, ms] of [
+      [T1930, 1000],
+      [T20, 2000],
+    ] as const) {
+      t.d.evaluate(when, ms);
+      steps(t.d, ms, ms + 3000);
+      expect(t.state.officeOpen).toBe(false);
+      for (const [id, deskId] of desks) {
+        const p = t.p(id);
+        expect({ x: p.x, y: p.y, dir: p.dir, anim: p.anim }, id).toEqual(parked(id, deskId));
+      }
+    }
+    // A room created after hours (a fresh actor) looks exactly the same.
+    const fresh = make([snap('brk', 'L5b'), snap('desk', 'L3a')]);
+    fresh.d.setManual('brk', { status: 'break', until: at(T20, H) });
+    fresh.d.setSession('desk', 'open', T20);
+    fresh.d.evaluate(T20, 0, { snap: true });
+    for (const id of ['brk', 'desk']) {
+      const a = t.p(id);
+      const b = fresh.p(id);
+      expect({ x: b.x, y: b.y, dir: b.dir, anim: b.anim }).toEqual({
+        x: a.x,
+        y: a.y,
+        dir: a.dir,
+        anim: a.anim,
+      });
+    }
   });
 });
 
@@ -381,7 +525,9 @@ describe('Director state discipline', () => {
     t.d.evaluate(T10, 0, { snap: true });
     const player = t.p('a');
     const pet = t.pet('a');
-    const r = t.d.upsertActor(snap('a', 'L5a', { displayName: '새이름', petName: '모찌', linkState: 'not_linked' }));
+    const r = t.d.upsertActor(
+      snap('a', 'L5a', { displayName: '새이름', petName: '모찌', linkState: 'not_linked' }),
+    );
     expect(r).toEqual({ created: false, linkChanged: true });
     expect(t.state.players.get('a')).toBe(player);
     expect(t.state.pets.get('a')).toBe(pet);

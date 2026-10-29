@@ -22,7 +22,9 @@ async function parse<T>(res: Response): Promise<T> {
   }
   if (!res.ok) {
     if (res.status === 401 && typeof window !== 'undefined') {
-      window.location.assign(new URL(`/sign-in?next=${encodeURIComponent('/town')}`, window.location.origin).href);
+      window.location.assign(
+        new URL(`/sign-in?next=${encodeURIComponent('/town')}`, window.location.origin).href,
+      );
     }
     throw new ApiFailure(res.status, (body as ApiError | null) ?? null);
   }
@@ -39,12 +41,19 @@ export async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> 
   return parse<T>(res);
 }
 
-export async function sendJson<T>(method: 'POST' | 'PATCH' | 'DELETE', url: string, body?: unknown): Promise<T> {
+export async function sendJson<T>(
+  method: 'POST' | 'PATCH' | 'DELETE',
+  url: string,
+  body?: unknown,
+): Promise<T> {
   const res = await fetch(url, {
     method,
     credentials: 'same-origin',
     cache: 'no-store',
-    headers: { accept: 'application/json', ...(body === undefined ? {} : { 'content-type': 'application/json' }) },
+    headers: {
+      accept: 'application/json',
+      ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+    },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   return parse<T>(res);
@@ -72,6 +81,7 @@ export const api = {
   dmConversation: (peerId: string, before?: string | null) =>
     withQuery(`/api/v1/dm/${encodeURIComponent(peerId)}`, { before }),
   me: () => '/api/v1/me',
+  myProfile: () => '/api/v1/me/profile',
   myPet: () => '/api/v1/me/pet',
   myTodo: (id: string) => `/api/v1/me/todos/${encodeURIComponent(id)}`,
   myWorkLog: (id: string) => `/api/v1/me/work-logs/${encodeURIComponent(id)}`,

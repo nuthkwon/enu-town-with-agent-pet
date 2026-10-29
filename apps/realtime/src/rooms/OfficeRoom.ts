@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import {
   CloseCode,
   ErrorCode,
@@ -73,6 +74,14 @@ const NO_RECONNECT_CODES: ReadonlySet<number> = new Set<number>([
 
 const WORK_LOG_PUBLISHED_TEXT = '새 업무 로그가 전사 공개되었어요';
 
+/**
+ * Whether this process already has its one office room. Claimed synchronously at the top of onCreate, so a
+ * second room (a client `create`, or `joinOrCreate` while the room is locked) is refused before it does any
+ * work: every instance would hold its own LISTEN connection and timers forever (autoDispose is off) and
+ * split the town in two.
+ */
+let officeRoomClaimed = false;
+
 /** A connection of one roster member. The avatar itself belongs to the director, not to the session. */
 interface Session {
   userId: string;
@@ -119,6 +128,8 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
   private dayReload: Promise<void> | null = null;
   /** Per-key load sequence, so a slow, stale load never overwrites a newer one. */
   private readonly seqs = new Map<string, number>();
+  /** This instance holds `officeRoomClaimed`. */
+  private claimed = false;
 
   /**
    * Runs on the HTTP matchmake request only (not on the WebSocket connect or on reconnect):
@@ -154,6 +165,20 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
   }
 
   override async onCreate(): Promise<void> {
+    if (officeRoomClaimed) throw new ServerError(ErrorCode.MATCHMAKE_UNHANDLED, 'office_room_exists');
+    officeRoomClaimed = true;
+    this.claimed = true;
+    try {
+      await this.setup();
+    } catch (err) {
+      this.release();
+      await this.events?.stop().catch(() => undefined);
+      this.events = null;
+      throw err;
+    }
+  }
+
+  private async setup(): Promise<void> {
     this.ctx = getRealtimeContext();
     const { env, db, logger, clock } = this.ctx;
     const map = loadOfficeMap(env.MAPS_DIR);
@@ -174,6 +199,8 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
       timeZone: env.APP_TIMEZONE,
       ignoreOfficeHours: env.TOWN_IGNORE_OFFICE_HOURS,
       warn: (msg, data) => logger.warn(data, msg),
+      // logPulse only has to change; a random step keeps it from counting anyone's log writes.
+      pulseStep: () => randomInt(1, 256),
     });
 
     const timing: PolicyTiming = {
@@ -224,24 +251,29 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
   }
 
   override async onDispose(): Promise<void> {
+    this.release();
     await this.events?.stop();
     this.events = null;
+  }
+
+  /** Gives up the per-process office room claim (a failed onCreate, or dispose). */
+  private release(): void {
+    if (!this.claimed) return;
+    this.claimed = false;
+    officeRoomClaimed = false;
   }
 
   /**
    * Colyseus reports every error thrown from a room method here, attaching the client, the join options
    * and the auth data to the exception. A ServerError thrown on purpose (e.g. protocol_mismatch,
-   * not_on_roster in onJoin) is an expected refusal, not a failure. Everything else is logged without the
-   * exception object itself, so no person's data ends up in the logs.
+   * not_on_roster in onJoin) is an expected refusal, not a failure. Everything else is logged through
+   * `safeErr` (no message bodies or query params), so no person's data ends up in the logs.
    */
   override onUncaughtException(error: Error, methodName: string): void {
     const cause = (error as { cause?: unknown }).cause;
     if (cause instanceof ServerError) return;
     const inner = cause instanceof Error ? cause : error;
-    this.ctx?.logger.error(
-      { methodName, error: { name: inner.name, message: inner.message, stack: inner.stack } },
-      'uncaught room exception',
-    );
+    this.ctx?.logger.error({ methodName, err: inner }, 'uncaught room exception');
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -447,7 +479,8 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
     let text: string | undefined;
     if (m.text !== undefined) {
       text = normalizeLine(m.text);
-      if (graphemeLength(text) > LIMITS.statusTextMax) return this.sendError(s, MSG.statusSet, 'INVALID_PAYLOAD');
+      if (graphemeLength(text) > LIMITS.statusTextMax)
+        return this.sendError(s, MSG.statusSet, 'INVALID_PAYLOAD');
     }
     const manual: ManualIn | null =
       m.status === 'auto'
@@ -561,7 +594,10 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
     if (!s.limits.ping.take(nowMs) || !s.limits.pingTarget.take(toUserId, nowMs)) {
       return this.sendError(s, MSG.ping, 'RATE_LIMITED');
     }
-    target.client.send(MSG.pinged, { fromUserId: s.userId, fromName: this.nameOf(s.userId) } satisfies PingedMsg);
+    target.client.send(MSG.pinged, {
+      fromUserId: s.userId,
+      fromName: this.nameOf(s.userId),
+    } satisfies PingedMsg);
   }
 
   // ---------------------------------------------------------------------------------------------

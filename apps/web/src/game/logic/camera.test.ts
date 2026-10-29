@@ -81,7 +81,9 @@ describe('focus, zoom around a point and panning', () => {
     expect(after.x).toBeCloseTo(before.x, 6);
     expect(after.y).toBeCloseTo(before.y, 6);
     // Buttons and keys zoom around the free-area centre: the focus does not move.
-    expect(zoomAround({ x: 200, y: 300 }, 1, 3, { x: free.x + free.w / 2, y: free.y + free.h / 2 }, free)).toEqual({
+    expect(
+      zoomAround({ x: 200, y: 300 }, 1, 3, { x: free.x + free.w / 2, y: free.y + free.h / 2 }, free),
+    ).toEqual({
       x: 200,
       y: 300,
     });

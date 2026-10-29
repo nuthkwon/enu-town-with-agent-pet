@@ -43,7 +43,11 @@ export function PetBubbleActions({ bubbleId, x, y }: { bubbleId: string; x: numb
 
   const nudge = (action: 'ack' | 'dismiss' | 'snooze') =>
     run(() =>
-      sendJson('POST', api.nudgeAction(bubbleId), action === 'snooze' ? { action, snooze_minutes: 30 } : { action }),
+      sendJson(
+        'POST',
+        api.nudgeAction(bubbleId),
+        action === 'snooze' ? { action, snooze_minutes: 30 } : { action },
+      ),
     );
   const todo = (body: Record<string, unknown>) => run(() => sendJson('PATCH', api.myTodo(bubbleId), body));
 
@@ -53,14 +57,21 @@ export function PetBubbleActions({ bubbleId, x, y }: { bubbleId: string; x: numb
         <div className={s.popoverTitle}>{t.title}</div>
       </div>
       {live?.bubbleText && <p className={s.bubbleQuote}>{live.bubbleText}</p>}
-      {live && live.bubbleDueAt > 0 && <span className={s.dueLine}>⏰ {t.due(formatHm(live.bubbleDueAt))}</span>}
+      {live && live.bubbleDueAt > 0 && (
+        <span className={s.dueLine}>⏰ {t.due(formatHm(live.bubbleDueAt))}</span>
+      )}
       <div className={s.cardActions}>
         {isTodo ? (
           <>
             <Button size="sm" disabled={busy} onClick={() => todo({ status: 'done' })} data-autofocus>
               {t.done}
             </Button>
-            <Button size="sm" variant="secondary" disabled={busy} onClick={() => todo({ snoozed_until: snoozeUntilIso(30) })}>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busy}
+              onClick={() => todo({ snoozed_until: snoozeUntilIso(30) })}
+            >
               {t.snooze30}
             </Button>
             <Button

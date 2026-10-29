@@ -64,7 +64,7 @@ function setup(
   const pet = emptyPet();
   const records: DeliveryRecord[] = [];
   let showable = opts.showable ?? true;
-  const flags = { officeOpen: true, shown: true, dnd: opts.dnd ?? false };
+  const flags = { officeOpen: true, dnd: opts.dnd ?? false };
   const loader = {
     load: async (): Promise<OwnerSnapshot> => ({
       candidates: (opts.candidates ?? ((n) => [nudge('n1', n)]))(clock.now()),
@@ -91,7 +91,6 @@ function setup(
       pet: () => pet,
       doNotDisturb: () => flags.dnd,
       officeOpen: () => flags.officeOpen,
-      indicatorAllowed: () => flags.shown,
       ...opts.hooks?.(pet),
     },
   });
@@ -117,7 +116,7 @@ describe('NudgeScheduler', () => {
     t.clock.advance(8000);
     await t.scheduler.tick();
     expect(t.pet.bubbleText).toBe('넛지 n1');
-    expect(t.pet.indicator).toBe(Indicator.Dots);
+    expect(t.pet.indicator).toBe(Indicator.None); // shared: never `…`
     expect(t.records).toHaveLength(1);
     expect(t.records[0]?.trigger).toBe('join');
     expect(t.scheduler.state('u1')?.flags.joinFired).toBe(true);
@@ -254,14 +253,37 @@ describe('NudgeScheduler', () => {
     expect(u.scheduler.evaluate('u1')).toEqual({ show: false, reason: 'quiet' });
   });
 
-  it('indicatorAllowed=false shows the owner the text but keeps the shared indicator at None', async () => {
+  it('leave takes the bubble down on the long-lived pet (nothing would expire it later)', async () => {
     const t = setup();
-    t.flags.shown = false;
     await t.scheduler.join('u1', { linkState: 'linked' });
     t.clock.advance(8000);
     await t.scheduler.tick();
     expect(t.pet.bubbleText).toBe('넛지 n1');
-    expect(t.pet.indicator).toBe(Indicator.None);
+    t.scheduler.leave('u1');
+    expect(t.pet).toMatchObject({ bubbleId: '', bubbleText: '', bubbleUntil: 0, indicator: Indicator.None });
+    expect(t.scheduler.state('u1')).toBeUndefined();
+  });
+
+  it('join clears a bubble a replaced session left on the pet', async () => {
+    const t = setup();
+    Object.assign(t.pet, {
+      bubbleId: 'old',
+      bubbleKind: 1,
+      bubbleText: '지난 세션의 말풍선',
+      bubbleDueAt: 123,
+      bubbleUntil: t.clock.now().getTime() - 1000,
+      indicator: Indicator.Dots,
+    });
+    await t.scheduler.join('u1', { linkState: 'linked' });
+    expect(t.pet).toMatchObject({
+      bubbleId: '',
+      bubbleKind: 0,
+      bubbleText: '',
+      bubbleDueAt: 0,
+      bubbleUntil: 0,
+      indicator: Indicator.None,
+    });
+    expect(t.scheduler.state('u1')?.active).toBeNull();
   });
 });
 
@@ -291,18 +313,72 @@ describe('NudgeScheduler hooks from the director', () => {
     return { t, director, state };
   }
 
-  it('a shown owner: bubble with `…`; the pet is the director-owned Pet', async () => {
+  it('a shown owner: the bubble goes on the director-owned Pet, and the shared indicator stays None', async () => {
     const { t, director } = withDirector(null, WED_10);
     await t.scheduler.join('u1', { linkState: 'linked' });
     t.clock.advance(8000);
     await t.scheduler.tick();
     const pet = director.pet('u1')!;
     expect(pet.bubbleText).toBe('넛지 n1');
-    expect(pet.indicator).toBe(Indicator.Dots);
+    expect(pet.indicator).toBe(Indicator.None);
+    director.evaluate(t.clock.now(), 9000);
+    expect(pet.indicator).toBe(Indicator.None);
     expect(t.pet.bubbleText).toBe('');
   });
 
-  it('a manual focus status is do-not-disturb; a manual away owner gets the text without `…`', async () => {
+  it('a glance (tab visible again after >= glanceHiddenMs) changes no field a colleague decodes', async () => {
+    const { t, director, state } = withDirector(null, WED_10);
+    /** Every synced field except the owner-only `.view()` bubble fields. */
+    const shared = () => {
+      const p = state.players.get('u1')!;
+      const pet = state.pets.get('u1')!;
+      return {
+        player: {
+          x: p.x,
+          y: p.y,
+          dir: p.dir,
+          anim: p.anim,
+          shown: p.shown,
+          online: p.online,
+          activity: p.activity,
+          source: p.source,
+          until: p.until,
+          note: p.note,
+          groupId: p.groupId,
+          statusText: p.statusText,
+          logPulse: p.logPulse,
+        },
+        pet: {
+          x: pet.x,
+          y: pet.y,
+          dir: pet.dir,
+          anim: pet.anim,
+          indicator: pet.indicator,
+          linkState: pet.linkState,
+        },
+      };
+    };
+    let ms = 0;
+    const step = (dt: number) => {
+      t.clock.advance(dt);
+      ms += dt;
+      director.evaluate(t.clock.now(), ms);
+      director.step(ms);
+    };
+    await afterJoinBubble(t);
+    step(30 * MIN);
+    t.scheduler.setPresence('u1', false, false);
+    step(GLANCE);
+    const before = shared();
+    t.scheduler.setPresence('u1', true, false);
+    await t.scheduler.tick();
+    expect(t.records.at(-1)?.trigger).toBe('glance');
+    expect(director.pet('u1')!.bubbleText).toBe('넛지 n1'); // the owner does get the bubble
+    step(1000);
+    expect(shared()).toEqual(before);
+  });
+
+  it('a manual focus status is do-not-disturb; a manual away owner still gets the text', async () => {
     const focus = withDirector({ status: 'focus', until: new Date(WED_10.getTime() + 60 * MIN) }, WED_10);
     await focus.t.scheduler.join('u1', { linkState: 'linked' });
     focus.t.clock.advance(9000);

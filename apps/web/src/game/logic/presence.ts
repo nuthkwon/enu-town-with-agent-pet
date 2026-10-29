@@ -134,7 +134,9 @@ export function groupsOf(players: Iterable<PlayerSnap>): GroupView[] {
   const out: GroupView[] = [];
   for (const [id, members] of byId) {
     if (members.length < 2) continue;
-    members.sort((a, b) => deskRank(a.deskId) - deskRank(b.deskId) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    members.sort(
+      (a, b) => deskRank(a.deskId) - deskRank(b.deskId) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+    );
     out.push({
       id,
       family: members.some((m) => m.activity === ActivityCode.Meeting) ? 'meeting' : 'work',

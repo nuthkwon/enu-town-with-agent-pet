@@ -8,8 +8,20 @@ import tseslint from 'typescript-eslint';
 /** Pet text must come only from each employee's own Claude: no LLM SDKs anywhere in this repo. */
 const LLM_SDK_BAN = {
   patterns: [
-    { group: ['@anthropic-ai/*', 'openai', 'openai/*', '@ai-sdk/*', 'ai', '@google/genai', '@google/generative-ai', 'langchain', '@langchain/*'],
-      message: 'ENU Town never calls an LLM server-side (see docs/adr/0002-pet-text-source.md).' },
+    {
+      group: [
+        '@anthropic-ai/*',
+        'openai',
+        'openai/*',
+        '@ai-sdk/*',
+        'ai',
+        '@google/genai',
+        '@google/generative-ai',
+        'langchain',
+        '@langchain/*',
+      ],
+      message: 'ENU Town never calls an LLM server-side (see docs/adr/0002-pet-text-source.md).',
+    },
   ],
 };
 
@@ -27,7 +39,8 @@ export default tseslint.config(
       '**/public/assets/**',
       '**/migrations/**',
       'apps/web/next-env.d.ts',
-      'playwright-report/**',
+      '**/playwright-report/**',
+      '**/test-results/**',
     ],
   },
   js.configs.recommended,
@@ -59,7 +72,10 @@ export default tseslint.config(
         {
           patterns: [
             ...LLM_SDK_BAN.patterns,
-            { group: ['@enu/db', '@enu/db/*', '@enu/auth', '@enu/mcp-tools', 'pg'], message: 'server-only module in client code' },
+            {
+              group: ['@enu/db', '@enu/db/*', '@enu/auth', '@enu/mcp-tools', 'pg'],
+              message: 'server-only module in client code',
+            },
           ],
         },
       ],
@@ -72,7 +88,12 @@ export default tseslint.config(
     rules: {
       'no-restricted-imports': [
         'error',
-        { patterns: [...LLM_SDK_BAN.patterns, { group: ['@enu/realtime', '@enu/realtime/*'], message: 'use @enu/protocol' }] },
+        {
+          patterns: [
+            ...LLM_SDK_BAN.patterns,
+            { group: ['@enu/realtime', '@enu/realtime/*'], message: 'use @enu/protocol' },
+          ],
+        },
       ],
     },
   },

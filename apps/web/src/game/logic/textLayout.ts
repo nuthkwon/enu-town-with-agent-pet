@@ -9,7 +9,9 @@ export type Measure = (text: string) => number;
 export const ELLIPSIS = String.fromCharCode(0x2026);
 
 const segmenter =
-  typeof Intl !== 'undefined' && 'Segmenter' in Intl ? new Intl.Segmenter('ko', { granularity: 'grapheme' }) : null;
+  typeof Intl !== 'undefined' && 'Segmenter' in Intl
+    ? new Intl.Segmenter('ko', { granularity: 'grapheme' })
+    : null;
 
 /** User-perceived characters (Hangul syllables, emoji ZWJ sequences and flags stay whole). */
 export function graphemes(text: string): string[] {

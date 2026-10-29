@@ -60,10 +60,19 @@ function contains(haystack: Uint8Array, needle: Uint8Array): boolean {
   return false;
 }
 
-const NEUTRAL = { shown: false, online: false, activity: 0, source: 0, until: 0, note: 0, groupId: '', statusText: '' };
+const NEUTRAL = {
+  shown: false,
+  online: false,
+  activity: 0,
+  source: 0,
+  until: 0,
+  note: 0,
+  groupId: '',
+  statusText: '',
+};
 
 describe('pet bubbles stay owner-only', () => {
-  it("B decodes no bubble fields of A's pet, and A's text bytes never appear in B's frames", async () => {
+  it("B decodes no bubble fields of A's pet (not even `…`), and A's text bytes never appear in B's frames", async () => {
     const a = await makeUser(h, { deskId: 'L1a', linkState: 'linked' });
     const b = await makeUser(h, { deskId: 'L1b' });
     const text = '비밀 넛지 문구 SQA-4242 확인';
@@ -74,7 +83,6 @@ describe('pet bubbles stay owner-only', () => {
     const seen = watchIndicator(jb, a.id);
     const ja = await joinAs(h, a.id, { frames: aFrames });
     await waitFor(() => ja.room.state.pets.get(a.id)?.bubbleText === text, { message: 'owner bubble' });
-    await waitFor(() => jb.room.state.pets.get(a.id)?.indicator === Indicator.Dots, { message: '… for B' });
     await sleep(400);
     const otherPet = jb.room.state.pets.get(a.id);
     expect(otherPet.bubbleText ?? '').toBe('');
@@ -84,7 +92,64 @@ describe('pet bubbles stay owner-only', () => {
     expect(aFrames.some((f) => contains(f, bytes))).toBe(true); // control: the owner did receive it
     expect(bFrames.length).toBeGreaterThan(0);
     expect(bFrames.some((f) => contains(f, bytes))).toBe(false);
-    expect(seen).toContain(Indicator.Dots); // control: the recorder sees the shared indicator
+    // The shared indicator never moves: a bubble starts only while A's tab is visible (ADR 0004 D2).
+    expect(seen.length).toBeGreaterThan(0); // control: the recorder sees A's pet
+    expect(seen).not.toContain(Indicator.Dots);
+  });
+
+  it('A with 접속 표시 off and a manual 대화 가능: B never decodes `…`, so B cannot tell A has the town open', async () => {
+    const a = await makeUser(h, { deskId: 'L1a', linkState: 'linked', showLive: false });
+    const b = await makeUser(h, { deskId: 'L1b' });
+    await h.db
+      .update(profiles)
+      .set({ manualStatus: 'available', manualStatusUntil: new Date(h.clock.now().getTime() + 120 * MIN) })
+      .where(eq(profiles.userId, a.id));
+    const text = '접속 표시를 끈 사람의 넛지';
+    await nudgeFor(a.id, text);
+    const jb = await joinAs(h, b.id);
+    const seen = watchIndicator(jb, a.id);
+    const ja = await joinAs(h, a.id);
+    await waitFor(() => ja.room.state.pets.get(a.id)?.bubbleText === text, { message: 'owner bubble' });
+    await sleep(600);
+    expect(jb.room.state.players.get(a.id)).toMatchObject({ shown: true, online: false });
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen).not.toContain(Indicator.Dots);
+  });
+
+  it('A leaves while a bubble is up (manual 대화 가능 keeps A shown): no `…` afterwards, and no old text at 20:00', async () => {
+    const a = await makeUser(h, { deskId: 'L2a', linkState: 'linked' });
+    const b = await makeUser(h, { deskId: 'L2b' });
+    await h.db
+      .update(profiles)
+      .set({ manualStatus: 'available', manualStatusUntil: new Date(h.clock.now().getTime() + 120 * MIN) })
+      .where(eq(profiles.userId, a.id));
+    const text = '떠난 뒤에 남으면 안 되는 넛지';
+    await nudgeFor(a.id, text);
+    const jb = await joinAs(h, b.id);
+    const ja = await joinAs(h, a.id);
+    await waitFor(() => ja.room.state.pets.get(a.id)?.bubbleText === text, { message: 'owner bubble' });
+    const seen = watchIndicator(jb, a.id);
+    const room = serverRoom(h, jb);
+    await ja.room.leave();
+    await waitFor(() => !room.connectedUserIds.includes(a.id), { message: 'A left' });
+    room.evaluateNow();
+    await sleep(600);
+    expect(jb.room.state.players.get(a.id).shown).toBe(true); // still drawn through the manual status
+    expect(seen).not.toContain(Indicator.Dots);
+    expect(room.townDirector.pet(a.id)).toMatchObject({
+      bubbleId: '',
+      bubbleText: '',
+      indicator: Indicator.None,
+    });
+
+    h.clock.set(AFTER_HOURS);
+    room.evaluateNow();
+    const again = await joinAs(h, a.id);
+    await sleep(400);
+    const pet = again.room.state.pets.get(a.id);
+    expect(pet.bubbleText).toBe('');
+    expect(pet.bubbleId).toBe('');
+    expect(pet.bubbleUntil).toBe(0);
   });
 
   for (const [label, prepare] of [
@@ -173,7 +238,9 @@ describe('pet bubbles stay owner-only', () => {
     const a = await makeUser(h, { deskId: 'L4a', shareActivity: true });
     const b = await makeUser(h, { deskId: 'L4b' });
     await setReport(h, a.id, {
-      schedule: [{ start: kst(2026, 10, 28, 9, 0), end: kst(2026, 10, 28, 15, 0), kind: 'away', refHash: null }],
+      schedule: [
+        { start: kst(2026, 10, 28, 9, 0), end: kst(2026, 10, 28, 15, 0), kind: 'away', refHash: null },
+      ],
     });
     await joinAs(h, a.id);
     const jb = await joinAs(h, b.id);
@@ -213,7 +280,14 @@ describe('interactions never leak who is connected or who talks to whom', () => 
     await waitFor(() => js.room.state.players.get(grace.id)?.online === false, { message: 'grace' });
     expect(js.room.state.players.get(grace.id).shown).toBe(true);
 
-    const targets = [hidden.id, noLive.id, offline.id, '0190ffff-0000-7000-8000-00000000dead', grace.id, sender.id];
+    const targets = [
+      hidden.id,
+      noLive.id,
+      offline.id,
+      '0190ffff-0000-7000-8000-00000000dead',
+      grace.id,
+      sender.id,
+    ];
     for (const toUserId of targets) js.room.send('social:ping', { toUserId });
     await waitFor(() => js.inbox.of<ErrorMsg>('error').length === targets.length, { message: 'answers' });
     const answers = js.inbox.of<ErrorMsg>('error');
@@ -224,7 +298,10 @@ describe('interactions never leak who is connected or who talks to whom', () => 
     expect(jn.inbox.of('social:pinged')).toHaveLength(0);
 
     js.room.send('social:ping', { toUserId: online.id });
-    expect(await jo.inbox.waitFor('social:pinged')).toEqual({ fromUserId: sender.id, fromName: '보내는 사람' });
+    expect(await jo.inbox.waitFor('social:pinged')).toEqual({
+      fromUserId: sender.id,
+      fromName: '보내는 사람',
+    });
   });
 
   it('a wave to (or from) someone hidden answers NOT_SHOWN and reaches nobody', async () => {

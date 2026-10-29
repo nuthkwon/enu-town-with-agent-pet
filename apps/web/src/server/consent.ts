@@ -1,6 +1,6 @@
 import { verifyOAuthQueryParams } from '@better-auth/oauth-provider';
 import { recordConsent } from '@enu/auth';
-import { audit, oauthClient } from '@enu/db';
+import { audit, oauthClient, safeErr } from '@enu/db';
 import { eq } from 'drizzle-orm';
 import { signedOAuthQuery } from '@/lib/oauth-query';
 import { getAuth } from './auth';
@@ -97,7 +97,7 @@ export async function performConsent(input: {
     }
     url = res.url;
   } catch (e) {
-    console.error('[enu-town] oauth2 consent failed', e);
+    console.error('[enu-town] oauth2 consent failed', safeErr(e));
     return { kind: 'failed' };
   }
 
@@ -128,7 +128,7 @@ export async function performConsent(input: {
     }
   } catch (e) {
     // The provider already decided; the first MCP call re-creates a missing link row.
-    console.error('[enu-town] recording consent failed', e);
+    console.error('[enu-town] recording consent failed', safeErr(e));
   }
   return { kind: 'redirect', url };
 }

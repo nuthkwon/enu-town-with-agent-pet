@@ -12,7 +12,7 @@ const csvOf = (fallback: string) =>
     .string()
     .default(fallback)
     .transform((v) =>
-    v
+      v
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean),
@@ -55,27 +55,30 @@ export const webEnvSchema = z
       ctx.addIssue({ code: 'custom', message: 'PUBLIC_URL must be https in production' });
     }
     if (!env.DEV_LOGIN_ENABLED && (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET)) {
-      ctx.addIssue({ code: 'custom', message: 'GOOGLE_CLIENT_ID/SECRET are required unless DEV_LOGIN_ENABLED' });
+      ctx.addIssue({
+        code: 'custom',
+        message: 'GOOGLE_CLIENT_ID/SECRET are required unless DEV_LOGIN_ENABLED',
+      });
     }
   });
 export type WebEnv = z.infer<typeof webEnvSchema>;
 
 export const realtimeEnvSchema = z
   .object({
-  ...common,
-  REALTIME_PORT: z.coerce.number().int().default(2567),
-  REALTIME_TICKET_SECRET: z.string().min(32),
-  ALLOWED_ORIGINS: csv,
-  MAPS_DIR: z.string().min(1),
-  ALLOWED_GOOGLE_HD: z.string().default(ALLOWED_GOOGLE_HD_DEFAULT),
-  NUDGE_TICK_MS: z.coerce.number().int().positive().default(1000),
-  NUDGE_JOIN_DELAY_MS: z.coerce.number().int().nonnegative().optional(),
-  NUDGE_MIN_INTERVAL_MIN: z.coerce.number().nonnegative().optional(),
-  /** Development/e2e only: pet bubbles ignore quiet hours, weekends and holidays. */
-  NUDGE_IGNORE_QUIET_HOURS: bool.default(false),
-  /** Development/e2e only: the town treats every moment as office hours (colleagues' state is shown). */
-  TOWN_IGNORE_OFFICE_HOURS: bool.default(false),
-})
+    ...common,
+    REALTIME_PORT: z.coerce.number().int().default(2567),
+    REALTIME_TICKET_SECRET: z.string().min(32),
+    ALLOWED_ORIGINS: csv,
+    MAPS_DIR: z.string().min(1),
+    ALLOWED_GOOGLE_HD: z.string().default(ALLOWED_GOOGLE_HD_DEFAULT),
+    NUDGE_TICK_MS: z.coerce.number().int().positive().default(1000),
+    NUDGE_JOIN_DELAY_MS: z.coerce.number().int().nonnegative().optional(),
+    NUDGE_MIN_INTERVAL_MIN: z.coerce.number().nonnegative().optional(),
+    /** Development/e2e only: pet bubbles ignore quiet hours, weekends and holidays. */
+    NUDGE_IGNORE_QUIET_HOURS: bool.default(false),
+    /** Development/e2e only: the town treats every moment as office hours (colleagues' state is shown). */
+    TOWN_IGNORE_OFFICE_HOURS: bool.default(false),
+  })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === 'production' && env.NUDGE_IGNORE_QUIET_HOURS) {
       ctx.addIssue({ code: 'custom', message: 'NUDGE_IGNORE_QUIET_HOURS must never be set in production' });
@@ -98,7 +101,10 @@ export const workerEnvSchema = z.object({
 export type WorkerEnv = z.infer<typeof workerEnvSchema>;
 
 /** Parses env with a readable error; throws so the process refuses to boot on bad config. */
-export function loadEnv<S extends z.ZodType>(schema: S, source: Record<string, string | undefined> = process.env): z.infer<S> {
+export function loadEnv<S extends z.ZodType>(
+  schema: S,
+  source: Record<string, string | undefined> = process.env,
+): z.infer<S> {
   const result = schema.safeParse(source);
   if (!result.success) {
     const lines = result.error.issues.map((i) => `  - ${i.path.join('.') || '(env)'}: ${i.message}`);

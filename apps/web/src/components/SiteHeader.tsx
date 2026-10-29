@@ -21,7 +21,7 @@ export function SiteHeader({ viewer }: { viewer: { name: string; isAdmin: boolea
     <header className={s.header}>
       <div className={s.headerInner}>
         <Logo />
-        <nav className={s.nav} aria-label="주요 메뉴">
+        <nav className={s.nav} aria-label={ko.nav.mainMenu}>
           {viewer ? (
             <>
               <Link href="/town" className={s.navLink}>
@@ -39,7 +39,7 @@ export function SiteHeader({ viewer }: { viewer: { name: string; isAdmin: boolea
             </>
           ) : (
             <Link href="/sign-in" className={buttonClass('secondary', 'sm')}>
-              로그인
+              {ko.nav.signIn}
             </Link>
           )}
         </nav>

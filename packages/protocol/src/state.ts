@@ -6,7 +6,7 @@ import { schema, t, type SchemaType } from '@colyseus/schema';
  * (`projectForColleagues`) and positions from the server director, so every client, the owner
  * included, decodes the same values.
  * Pet bubble fields are `.view()`-tagged: only the owner's StateView contains their own pet,
- * so nobody else ever receives the Claude-authored text (they only see `indicator`).
+ * so nobody else ever receives the Claude-authored text. The shared `indicator` is never set by a bubble.
  */
 
 /** A roster member (NOT a connected player): placed by the server director; nobody steers it. */
@@ -36,7 +36,10 @@ export const Player = schema(
     note: t.uint8().default(0),
     /** Opaque 'g…' group id, '' = none; the family is a meeting when activity is Meeting, otherwise work. */
     groupId: t.string().default(''),
-    /** +1 (wrapping) per Claude work-log write while shown during office hours (the client sparkles). */
+    /**
+     * Changes (by a random 1..255, mod 256) on each Claude work-log write while shown during office hours: the
+     * client sparkles on a change; the value itself counts nothing. 0 while the office is closed.
+     */
     logPulse: t.uint8().default(0),
   },
   'Player',
@@ -53,7 +56,10 @@ export const Pet = schema(
     dir: t.uint8().default(0),
     anim: t.uint8().default(0),
     linkState: t.uint8().default(1),
-    /** Shared with everyone: Dots only while a bubble is active and the owner is shown. */
+    /**
+     * Shared with everyone, so the server keeps it at None: bubbles start only while the owner's tab is visible,
+     * and a shared `…` would reveal when the owner looks at the town. Kept so the protocol does not change.
+     */
     indicator: t.uint8().default(0),
     bubbleId: t.string().default('').view(),
     bubbleKind: t.uint8().default(0).view(),

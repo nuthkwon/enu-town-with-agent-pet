@@ -75,7 +75,7 @@ describe('LISTEN enu_town_events', () => {
     await waitFor(() => pet().linkState === PetLink.Linked, { message: 'linked' });
     await waitFor(() => pet().anim === Anim.Idle, { message: 'awake' });
     await waitFor(() => pet().bubbleText === '이제 연결됐어요', { message: 'bubble after linking' });
-    expect(pet().indicator).toBe(Indicator.Dots);
+    expect(pet().indicator).toBe(Indicator.None); // shared: never `…`
 
     await h.db.update(profiles).set({ linkState: 'not_linked' }).where(eq(profiles.userId, u.id));
     await notifyTown(h.db, { v: 1, type: 'link_state_changed', user_id: u.id, state: 'not_linked' });

@@ -75,7 +75,11 @@ export async function findOwnerContext(db: DbOrTx, userId: string): Promise<Owne
     .innerJoin(user, eq(user.id, profiles.userId))
     .where(eq(profiles.userId, userId));
   if (!row) return null;
-  const [desk] = await db.select({ deskId: desks.deskId }).from(desks).where(eq(desks.userId, userId)).limit(1);
+  const [desk] = await db
+    .select({ deskId: desks.deskId })
+    .from(desks)
+    .where(eq(desks.userId, userId))
+    .limit(1);
   const holidays = await loadHolidays(db);
   return {
     userId,
@@ -91,14 +95,18 @@ export async function findOwnerContext(db: DbOrTx, userId: string): Promise<Owne
     shareDmsWithMyClaude: row.shareDmsWithMyClaude,
     shareActivity: row.shareActivity,
     manualStatus:
-      row.manualStatus && row.manualStatusUntil && (MANUAL_STATUSES as readonly string[]).includes(row.manualStatus)
+      row.manualStatus &&
+      row.manualStatusUntil &&
+      (MANUAL_STATUSES as readonly string[]).includes(row.manualStatus)
         ? { status: row.manualStatus as ManualStatus, until: row.manualStatusUntil }
         : null,
     nudgesEnabled: row.nudgesEnabled,
     nudgeMinIntervalMin: row.nudgeMinIntervalMin,
     quietStart: row.quietStart,
     quietEnd: row.quietEnd,
-    linkState: (LINK_STATES as readonly string[]).includes(row.linkState) ? (row.linkState as LinkState) : 'not_linked',
+    linkState: (LINK_STATES as readonly string[]).includes(row.linkState)
+      ? (row.linkState as LinkState)
+      : 'not_linked',
     lastWorkLogAt: row.lastWorkLogAt,
     holidays,
   };
@@ -117,7 +125,10 @@ export async function loadOwnerContext(db: DbOrTx, userId: string): Promise<Owne
 }
 
 /** The owner's hand-set status while it lasts, as Claude sees it (`owner_status`); expired values are never returned. */
-export function activeOwnerStatus(owner: OwnerContext, now: Date): { status: ManualStatus; until: string } | null {
+export function activeOwnerStatus(
+  owner: OwnerContext,
+  now: Date,
+): { status: ManualStatus; until: string } | null {
   const m = owner.manualStatus;
   return m && m.until > now ? { status: m.status, until: m.until.toISOString() } : null;
 }

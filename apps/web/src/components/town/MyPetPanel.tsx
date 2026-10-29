@@ -1,6 +1,12 @@
 'use client';
 
-import { PET_SPECIES_LABEL_KO, type MyPetDto, type NudgeDto, type PetSpecies, type TodoDto } from '@enu/shared';
+import {
+  PET_SPECIES_LABEL_KO,
+  type MyPetDto,
+  type NudgeDto,
+  type PetSpecies,
+  type TodoDto,
+} from '@enu/shared';
 import Link from 'next/link';
 import { useState } from 'react';
 import { CopyButton } from '@/components/CopyButton';
@@ -109,10 +115,20 @@ export function MyPetPanel() {
               <Button size="sm" disabled={busy !== null} onClick={() => nudgeAction(n, 'ack')}>
                 {ko.townUi.bubble.ack}
               </Button>
-              <Button size="sm" variant="secondary" disabled={busy !== null} onClick={() => nudgeAction(n, 'snooze', 30)}>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={busy !== null}
+                onClick={() => nudgeAction(n, 'snooze', 30)}
+              >
                 {t.later30}
               </Button>
-              <Button size="sm" variant="ghost" disabled={busy !== null} onClick={() => nudgeAction(n, 'dismiss')}>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={busy !== null}
+                onClick={() => nudgeAction(n, 'dismiss')}
+              >
                 {t.dismiss}
               </Button>
             </div>
@@ -131,10 +147,16 @@ export function MyPetPanel() {
             {td.note && <p className={s.explain}>{td.note}</p>}
             <div className={s.cardMeta}>
               {td.dueAt ? t.due(formatAbsolute(td.dueAt, now)) : td.dueDate ? t.due(td.dueDate) : ''}
-              {td.status === 'snoozed' && td.snoozedUntil ? ` · ${t.snoozedUntil(formatAbsolute(td.snoozedUntil, now))}` : ''}
+              {td.status === 'snoozed' && td.snoozedUntil
+                ? ` · ${t.snoozedUntil(formatAbsolute(td.snoozedUntil, now))}`
+                : ''}
             </div>
             <div className={s.cardActions} style={{ marginTop: 6 }}>
-              <Button size="sm" disabled={busy !== null} onClick={() => todoPatch(td, 'done', { status: 'done' })}>
+              <Button
+                size="sm"
+                disabled={busy !== null}
+                onClick={() => todoPatch(td, 'done', { status: 'done' })}
+              >
                 {t.done}
               </Button>
               <Button
@@ -153,7 +175,12 @@ export function MyPetPanel() {
               >
                 {t.later60}
               </Button>
-              <Button size="sm" variant="ghost" disabled={busy !== null} onClick={() => todoPatch(td, 'dismiss', { status: 'dismissed' })}>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={busy !== null}
+                onClick={() => todoPatch(td, 'dismiss', { status: 'dismissed' })}
+              >
                 {t.dismiss}
               </Button>
             </div>

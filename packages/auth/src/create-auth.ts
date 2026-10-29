@@ -73,7 +73,8 @@ function devLoginPlugin(cfg: AuthConfig) {
 export function createAuth(cfg: AuthConfig) {
   const { db, policy } = cfg;
   const resource = mcpResourceUrl(cfg.publicUrl);
-  const isAdminEmail = (email: string) => cfg.adminEmails.map((e) => e.toLowerCase()).includes(email.toLowerCase());
+  const isAdminEmail = (email: string) =>
+    cfg.adminEmails.map((e) => e.toLowerCase()).includes(email.toLowerCase());
   const isAdminUser = (u: { role?: unknown; email?: unknown } | undefined) =>
     !!u && (u.role === 'admin' || (typeof u.email === 'string' && isAdminEmail(u.email)));
 
@@ -146,7 +147,12 @@ export function createAuth(cfg: AuthConfig) {
             const r = checkEmailAllowed(u.email, policy);
             if (!r.ok) return false;
             return {
-              data: { ...u, hd: policy.allowedHd, status: 'active', role: isAdminEmail(u.email) ? 'admin' : 'member' },
+              data: {
+                ...u,
+                hd: policy.allowedHd,
+                status: 'active',
+                role: isAdminEmail(u.email) ? 'admin' : 'member',
+              },
             };
           },
           after: async (u) => {

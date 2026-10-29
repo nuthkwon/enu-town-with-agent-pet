@@ -12,8 +12,6 @@ export interface SchedulerHooks {
   doNotDisturb(userId: string): boolean;
   /** The town's office hours (`state.officeOpen`); while closed every pet is quiet. */
   officeOpen(): boolean;
-  /** The owner is shown in the shared state, so colleagues may see the `…` indicator. */
-  indicatorAllowed(userId: string): boolean;
 }
 
 export interface OwnerState {
@@ -64,6 +62,10 @@ export class NudgeScheduler {
 
   async join(userId: string, init: { linkState: LinkState }): Promise<void> {
     const now = this.deps.clock.now();
+    // The Pet outlives sessions: a replaced (or crashed) session may have left a bubble on it, and a fresh
+    // OwnerState (active = null) would never expire it, so the old text would play again.
+    const pet = this.deps.hooks.pet(userId);
+    if (pet) this.deps.presenter.hide(pet);
     this.owners.set(userId, {
       userId,
       joinedAt: now,
@@ -81,7 +83,9 @@ export class NudgeScheduler {
     await this.reload(userId);
   }
 
+  /** The owner's last session ended: take any bubble down first (the Pet stays in the room). */
   leave(userId: string): void {
+    this.hide(userId); // needs the owner entry, so it runs before the delete
     this.owners.delete(userId);
   }
 
@@ -232,7 +236,6 @@ export class NudgeScheduler {
           candidate,
           trigger: sel.trigger,
           dueKey: sel.dueKey ?? null,
-          indicatorAllowed: this.deps.hooks.indicatorAllowed(s.userId),
         },
         (bubble) => {
           if (this.owners.get(s.userId) === s) s.active = bubble;

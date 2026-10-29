@@ -183,7 +183,8 @@ export class WorldScene extends Phaser.Scene {
     this.font = (this.registry.get(FONT_REGISTRY_KEY) as string | undefined) ?? this.font;
     this.measure = canvasMeasure(`${PIXEL_FONT_SIZE}px ${this.font}`);
     this.measureSmall = canvasMeasure(`${SMALL_PIXEL_FONT_SIZE}px ${SMALL_PIXEL_FONT}`);
-    const staticKeys = (this.registry.get(STATIC_AVATARS_REGISTRY_KEY) as Set<string> | undefined) ?? new Set();
+    const staticKeys =
+      (this.registry.get(STATIC_AVATARS_REGISTRY_KEY) as Set<string> | undefined) ?? new Set();
     this.sheetLoader = new AvatarSheetLoader(this, staticKeys);
     const seats = this.officeWorld.spots.meetingSeats;
     this.meetingSeats = new Set(seats.map((s) => `${s.x},${s.y}`));
@@ -296,7 +297,14 @@ export class WorldScene extends Phaser.Scene {
       this.zoom = zoom;
       this.focus = clamped;
     } else {
-      this.anim = { fromZoom: this.zoom, toZoom: zoom, from: { ...this.focus }, to: clamped, start: this.time.now, duration: durationMs };
+      this.anim = {
+        fromZoom: this.zoom,
+        toZoom: zoom,
+        from: { ...this.focus },
+        to: clamped,
+        start: this.time.now,
+        duration: durationMs,
+      };
     }
     this.input?.setDefaultCursor(canPan(zoom, this.fit) ? 'grab' : 'default');
     const key = `${zoom}|${this.fit}|${this.atFit}`;
@@ -346,7 +354,10 @@ export class WorldScene extends Phaser.Scene {
     this.scrollY = snapToScreenPixel(s.y, this.zoom);
     this.mainCam.setZoom(this.zoom);
     // centerOn() with origin 0.5: the visible rect's top-left lands exactly on (scrollX, scrollY).
-    this.mainCam.centerOn(this.scrollX + this.viewWidth / (2 * this.zoom), this.scrollY + this.viewHeight / (2 * this.zoom));
+    this.mainCam.centerOn(
+      this.scrollX + this.viewWidth / (2 * this.zoom),
+      this.scrollY + this.viewHeight / (2 * this.zoom),
+    );
   }
 
   /* ------------------------------------------------------------------ realtime -> views */
@@ -388,7 +399,12 @@ export class WorldScene extends Phaser.Scene {
       this.night.setVisible(true);
       this.tweens.add({ targets: this.night, alpha: 1, duration: 600 });
     } else if (this.night.visible) {
-      this.tweens.add({ targets: this.night, alpha: 0, duration: 600, onComplete: () => this.night.setVisible(false) });
+      this.tweens.add({
+        targets: this.night,
+        alpha: 0,
+        duration: 600,
+        onComplete: () => this.night.setVisible(false),
+      });
     }
     this.dirty = true;
   }
@@ -435,7 +451,8 @@ export class WorldScene extends Phaser.Scene {
   private changeAvatar(p: PlayerSnap, prev: PlayerSnap | null): void {
     const view = this.avatars.get(p.id);
     if (!view) return;
-    if (!prev || prev.avatar !== p.avatar) this.sheetLoader.request(p.avatar, () => view.setAvatarKey(p.avatar));
+    if (!prev || prev.avatar !== p.avatar)
+      this.sheetLoader.request(p.avatar, () => view.setAvatarKey(p.avatar));
     view.setName(p.name || this.bridge.directory.person(p.id)?.displayName || '');
     if (p.shown !== view.isShown) {
       if (!p.shown) this.fx.sparkle({ x: view.feet.x, y: view.feet.y - 10 });
@@ -465,7 +482,8 @@ export class WorldScene extends Phaser.Scene {
     ensurePetAnims(this, p.species);
     const isMine = p.ownerId === this.bridge.me.userId;
     const view = new PetView(this.stage, p, isMine, {
-      onPetClick: (_v, pointer) => this.bridge.bus.emit('pet:clicked', { screenX: pointer.x, screenY: pointer.y }),
+      onPetClick: (_v, pointer) =>
+        this.bridge.bus.emit('pet:clicked', { screenX: pointer.x, screenY: pointer.y }),
       onBubbleClick: (c: PetBubbleClick) =>
         this.bridge.bus.emit('pet:bubble-clicked', {
           bubbleId: c.bubbleId,
@@ -517,18 +535,27 @@ export class WorldScene extends Phaser.Scene {
   private anchorOf(userId: string): WorldPoint | null {
     const view = this.avatars.get(userId);
     if (view?.isShown) return view.chest;
-    const deskId = this.bridge.session.getPlayer(userId)?.deskId || this.bridge.directory.person(userId)?.deskId;
+    const deskId =
+      this.bridge.session.getPlayer(userId)?.deskId || this.bridge.directory.person(userId)?.deskId;
     const plate = deskId ? this.plateByDesk.get(deskId) : undefined;
     return plate?.visible ? plate.worldAnchor : null;
   }
 
   /* ------------------------------------------------------------------ plates, presence, groups */
 
+  /**
+   * Who sits at a desk. The live state wins once it has arrived: every roster member is a Player and
+   * `Player.deskId` follows `desks_changed`, so no Player on a desk means vacant. The REST desk list
+   * (fetched once) only bridges the moment before the first state.
+   */
   private deskOwner(deskId: string): string | null {
-    const fromDirectory = this.bridge.directory.desk(deskId)?.userId;
-    if (fromDirectory) return fromDirectory;
-    for (const p of this.bridge.session.allPlayers()) if (p.deskId === deskId) return p.id;
-    return null;
+    let anyPlayer = false;
+    for (const p of this.bridge.session.allPlayers()) {
+      anyPlayer = true;
+      if (p.deskId === deskId) return p.id;
+    }
+    if (anyPlayer) return null;
+    return this.bridge.directory.desk(deskId)?.userId ?? null;
   }
 
   private atOwnSeat(p: PlayerSnap): boolean {
@@ -546,13 +573,27 @@ export class WorldScene extends Phaser.Scene {
         continue;
       }
       const player = session.getPlayer(ownerId);
-      const name = player?.name || directory.person(ownerId)?.displayName || directory.desk(plate.desk.deskId)?.displayName || '';
+      const name =
+        player?.name ||
+        directory.person(ownerId)?.displayName ||
+        directory.desk(plate.desk.deskId)?.displayName ||
+        '';
       const base = { name, teamColor: this.teamColorOf(ownerId), isMe: ownerId === me.userId };
       let model: PlateModel;
       if (player?.shown) {
-        model = { kind: this.atOwnSeat(player) ? 'seated' : 'elsewhere', ...base, online: player.online, plate: null };
+        model = {
+          kind: this.atOwnSeat(player) ? 'seated' : 'elsewhere',
+          ...base,
+          online: player.online,
+          plate: null,
+        };
       } else {
-        model = { kind: 'hidden', ...base, online: false, plate: player ? hiddenPlate(player, this.timeZone) : null };
+        model = {
+          kind: 'hidden',
+          ...base,
+          online: false,
+          plate: player ? hiddenPlate(player, this.timeZone) : null,
+        };
       }
       plate.set(model);
     }
@@ -560,7 +601,10 @@ export class WorldScene extends Phaser.Scene {
     // In a gathered meeting the chip on the table already says 회의 중: no headset over every head.
     const seated = new Set<string>();
     for (const g of this.groupViews) {
-      if (g.family === 'meeting' && g.members.every((m) => m.shown && this.meetingSeats.has(`${m.x},${m.y}`))) {
+      if (
+        g.family === 'meeting' &&
+        g.members.every((m) => m.shown && this.meetingSeats.has(`${m.x},${m.y}`))
+      ) {
         for (const m of g.members) seated.add(m.id);
       }
     }
@@ -596,7 +640,8 @@ export class WorldScene extends Phaser.Scene {
         gathered = allShown && g.members.every((m) => this.meetingSeats.has(`${m.x},${m.y}`));
       } else if (allShown) {
         let far = 0;
-        for (const a of g.members) for (const b of g.members) far = Math.max(far, Math.abs(a.x - b.x) + Math.abs(a.y - b.y));
+        for (const a of g.members)
+          for (const b of g.members) far = Math.max(far, Math.abs(a.x - b.x) + Math.abs(a.y - b.y));
         gathered = far <= 3;
       }
       // Gathered meeting: the chip sits on the table; same work at a desk: under the pair's feet.
@@ -640,7 +685,9 @@ export class WorldScene extends Phaser.Scene {
       view.pulse(this.time.now, 60 * 60 * 1000);
       this.hoverPulsed = id;
     }
-    const deskId = id ? this.bridge.session.getPlayer(id)?.deskId || this.bridge.directory.person(id)?.deskId : null;
+    const deskId = id
+      ? this.bridge.session.getPlayer(id)?.deskId || this.bridge.directory.person(id)?.deskId
+      : null;
     for (const plate of this.plates) plate.setHighlight(!shown && !!deskId && deskId === plate.desk.deskId);
   }
 
@@ -725,7 +772,9 @@ export class WorldScene extends Phaser.Scene {
   private bindBus(): void {
     const { bus } = this.bridge;
     this.offs.push(
-      bus.on('pet:bubble-hide', ({ bubbleId }) => this.pets.get(this.bridge.me.userId)?.dismissBubble(bubbleId)),
+      bus.on('pet:bubble-hide', ({ bubbleId }) =>
+        this.pets.get(this.bridge.me.userId)?.dismissBubble(bubbleId),
+      ),
       bus.on('camera:view-user', ({ userId }) => this.viewUser(userId)),
       bus.on('camera:zoom', ({ delta }) => this.zoomBy(delta, null)),
       bus.on('camera:insets', (insets) => {
@@ -765,7 +814,12 @@ export class WorldScene extends Phaser.Scene {
   private onDeskClicked(deskId: string, pointer: Phaser.Input.Pointer): void {
     const ownerId = this.deskOwner(deskId);
     if (!ownerId) return;
-    this.bridge.bus.emit('entity:clicked', { userId: ownerId, source: 'desk', screenX: pointer.x, screenY: pointer.y });
+    this.bridge.bus.emit('entity:clicked', {
+      userId: ownerId,
+      source: 'desk',
+      screenX: pointer.x,
+      screenY: pointer.y,
+    });
   }
 
   /** A click on the floor: a group link opens the group popover, a desk its member's menu, else nothing. */
@@ -817,7 +871,8 @@ export class WorldScene extends Phaser.Scene {
         })),
     );
     const chatAllowed = this.officeOpen === true;
-    for (const v of this.avatars.values()) v.placeOverlays(now, placements.get(v.userId) ?? TAG_DEFAULT, chatAllowed);
+    for (const v of this.avatars.values())
+      v.placeOverlays(now, placements.get(v.userId) ?? TAG_DEFAULT, chatAllowed);
   }
 
   /**
@@ -869,7 +924,15 @@ export class WorldScene extends Phaser.Scene {
       fitZoom: () => this.fit,
       officeOpen: () => this.officeOpen,
       avatarCount: () => [...this.avatars.values()].filter((v) => v.isShown).length,
+      /** My own pet's bubble as drawn on the canvas (null while none is visible). */
       petBubble: () => this.pets.get(this.bridge.me.userId)?.activeBubble ?? null,
+      /** Someone's pet as this client decoded it (bubble fields are '' / 0 for everyone but the owner). */
+      petState: (ownerId: string) => {
+        const p = this.bridge.session.getPet(ownerId);
+        if (!p) return null;
+        const { bubbleId, bubbleText, bubbleUntil, indicator } = p;
+        return { bubbleId, bubbleText, bubbleUntil, indicator };
+      },
     };
     (window as unknown as { __ENU_TOWN_DEBUG__?: typeof hook }).__ENU_TOWN_DEBUG__ = hook;
     this.offs.push(() => {

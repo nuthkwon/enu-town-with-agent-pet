@@ -77,7 +77,11 @@ export async function postPetNudges(
   input.nudges.forEach((n, index) => {
     const prepared = prepareNudgeText(n.text);
     if ('problem' in prepared) {
-      rejected.push({ index, reason: prepared.problem.reason, ...(prepared.problem.detail ? { detail: prepared.problem.detail } : {}) });
+      rejected.push({
+        index,
+        reason: prepared.problem.reason,
+        ...(prepared.problem.detail ? { detail: prepared.problem.detail } : {}),
+      });
       return;
     }
     const times = resolveNudgeTimes(
@@ -130,7 +134,13 @@ export async function postPetNudges(
     const [countRow] = await tx
       .select({ n: sql<number>`count(*)::int` })
       .from(petNudges)
-      .where(and(eq(petNudges.userId, caller.userId), gte(petNudges.createdAt, dayStart), lt(petNudges.createdAt, dayEnd)));
+      .where(
+        and(
+          eq(petNudges.userId, caller.userId),
+          gte(petNudges.createdAt, dayStart),
+          lt(petNudges.createdAt, dayEnd),
+        ),
+      );
     let createdToday = Number(countRow?.n ?? 0);
 
     const actions: Action[] = [];
@@ -249,7 +259,14 @@ export async function postPetNudges(
     accepted: result.actions.length,
     superseded: result.superseded,
     rejected,
-    delivery_note: deliveryNote(owner, now, result.actions, result.superseded, result.blockedByOwner, rejected.length),
+    delivery_note: deliveryNote(
+      owner,
+      now,
+      result.actions,
+      result.superseded,
+      result.blockedByOwner,
+      rejected.length,
+    ),
   };
 }
 
@@ -270,7 +287,10 @@ function deliveryNote(
     parts.push(
       `조용한 시간(${owner.quietStart}–${owner.quietEnd})과 주말·공휴일에는 보여 주지 않고, 여러 개는 최소 ${owner.nudgeMinIntervalMin}분 간격을 두고 하나씩 보여 줘요. 각 메시지는 만료 시각 전까지 최대 ${NUDGE_POLICY.maxShows}번까지 보여요.`,
     );
-    const visible = actions.map((a) => ({ a, at: firstVisibleTime(a.cand.showAfter, a.cand.expiresAt, prefs) }));
+    const visible = actions.map((a) => ({
+      a,
+      at: firstVisibleTime(a.cand.showAfter, a.cand.expiresAt, prefs),
+    }));
     const never = visible.filter((v) => v.at === null).map((v) => `nudges[${v.a.cand.index}]`);
     const earliest = visible
       .flatMap((v) => (v.at ? [v.at] : []))
@@ -287,14 +307,17 @@ function deliveryNote(
   } else {
     parts.push('새로 등록된 펫 메시지가 없어요.');
   }
-  if (superseded > 0) parts.push(`아직 보여 주지 않은 이전 메시지 ${superseded}개는 이번 메시지로 대체했어요.`);
+  if (superseded > 0)
+    parts.push(`아직 보여 주지 않은 이전 메시지 ${superseded}개는 이번 메시지로 대체했어요.`);
   if (blockedByOwner.length) {
     parts.push(
       `${blockedByOwner.map((i) => `nudges[${i}]`).join(', ')}은(는) 주인이 이미 확인했거나 닫은 알림(같은 dedupe_key)이라 다시 보여 주지 않아요.`,
     );
   }
   if (rejectedCount > 0) {
-    parts.push(`거절된 메시지 ${rejectedCount}개는 rejected의 reason을 보고 다시 써서 보내 주세요(ENU Town은 문구를 고치지 않아요).`);
+    parts.push(
+      `거절된 메시지 ${rejectedCount}개는 rejected의 reason을 보고 다시 써서 보내 주세요(ENU Town은 문구를 고치지 않아요).`,
+    );
   }
   return parts.join(' ');
 }

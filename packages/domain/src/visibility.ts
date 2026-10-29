@@ -45,13 +45,23 @@ export function canViewChatSummary(viewer: Viewer, log: LogVisibilityFields, aut
  * Claude may lower visibility but never raise it above the owner's default.
  * An unset chat-summary default means the owner has not opted in -> private.
  */
-export function effectiveVisibility(requested: Visibility | undefined, ownerDefault: Visibility | null): Visibility {
+export function effectiveVisibility(
+  requested: Visibility | undefined,
+  ownerDefault: Visibility | null,
+): Visibility {
   const base: Visibility = ownerDefault ?? 'private';
   return requested ? minVisibility(requested, base) : base;
 }
 
 /** Viewer that is "any active colleague" (never equals an owner id). */
 export const ANY_COLLEAGUE: Viewer = { userId: '' };
+
+/**
+ * The SQL pre-filter for logs `ANY_COLLEAGUE` may see: not deleted and this visibility. Aggregates over
+ * other people's logs (the admin console's "last log" date: admins see what colleagues see) use it and
+ * then still pass `canViewLog(ANY_COLLEAGUE, …)` for the author's account state.
+ */
+export const COLLEAGUE_VISIBLE_LOG_VISIBILITY: Visibility = 'company';
 
 /**
  * Claude-derived activity (calendar blocks, now reports, log-derived labels and sparkle) may be shown.

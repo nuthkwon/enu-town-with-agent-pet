@@ -31,25 +31,29 @@ export interface AuthCleanupSummary {
  * holding UTC wall-clock values; comparisons go through drizzle column encoders, which
  * write the same UTC representation, so `now` compares correctly whatever the DB TimeZone.
  */
-export async function cleanupAuth(db: DbOrTx, now: Date, opts: { batchSize?: number } = {}): Promise<AuthCleanupSummary> {
+export async function cleanupAuth(
+  db: DbOrTx,
+  now: Date,
+  opts: { batchSize?: number } = {},
+): Promise<AuthCleanupSummary> {
   const batch = opts.batchSize ?? AUTH_CLEANUP_BATCH_SIZE;
   const graceCutoff = new Date(now.getTime() - REFRESH_TOKEN_GRACE_DAYS * DAY_MS);
 
   // Refresh tokens first: their access tokens cascade (refresh_id ... on delete cascade).
   const refreshTokens = await inBatches(batch, async (limit) =>
     affected(
-      await db
-        .delete(oauthRefreshToken)
-        .where(
-          inArray(
-            oauthRefreshToken.id,
-            db
-              .select({ id: oauthRefreshToken.id })
-              .from(oauthRefreshToken)
-              .where(or(lt(oauthRefreshToken.expiresAt, graceCutoff), lt(oauthRefreshToken.revoked, graceCutoff)))
-              .limit(limit),
-          ),
+      await db.delete(oauthRefreshToken).where(
+        inArray(
+          oauthRefreshToken.id,
+          db
+            .select({ id: oauthRefreshToken.id })
+            .from(oauthRefreshToken)
+            .where(
+              or(lt(oauthRefreshToken.expiresAt, graceCutoff), lt(oauthRefreshToken.revoked, graceCutoff)),
+            )
+            .limit(limit),
         ),
+      ),
     ),
   );
 
@@ -90,7 +94,11 @@ export async function cleanupAuth(db: DbOrTx, now: Date, opts: { batchSize?: num
         .where(
           inArray(
             verification.id,
-            db.select({ id: verification.id }).from(verification).where(lt(verification.expiresAt, now)).limit(limit),
+            db
+              .select({ id: verification.id })
+              .from(verification)
+              .where(lt(verification.expiresAt, now))
+              .limit(limit),
           ),
         ),
     ),

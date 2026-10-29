@@ -10,9 +10,9 @@ const realtime = {
 describe('realtime env', () => {
   it('treats office hours as real unless a development run overrides them', () => {
     expect(loadEnv(realtimeEnvSchema, realtime).TOWN_IGNORE_OFFICE_HOURS).toBe(false);
-    expect(loadEnv(realtimeEnvSchema, { ...realtime, TOWN_IGNORE_OFFICE_HOURS: 'true' }).TOWN_IGNORE_OFFICE_HOURS).toBe(
-      true,
-    );
+    expect(
+      loadEnv(realtimeEnvSchema, { ...realtime, TOWN_IGNORE_OFFICE_HOURS: 'true' }).TOWN_IGNORE_OFFICE_HOURS,
+    ).toBe(true);
   });
 
   it('refuses the office-hours and quiet-hours overrides in production', () => {

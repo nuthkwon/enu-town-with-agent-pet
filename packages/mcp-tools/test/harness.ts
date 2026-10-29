@@ -37,7 +37,11 @@ export function createTestHandler(deps: McpDeps): McpHttpHandler {
   });
 }
 
-export async function connectClient(handler: McpHttpHandler, identity: TestIdentity | null, mode: Mode): Promise<Client> {
+export async function connectClient(
+  handler: McpHttpHandler,
+  identity: TestIdentity | null,
+  mode: Mode,
+): Promise<Client> {
   const route = (req: Request): Promise<Response> => {
     if (req.method !== 'POST' || !identity) return handler.fetch(req);
     const authInfo: AuthInfo = {
@@ -67,7 +71,11 @@ export interface ToolCallOutcome {
   raw: unknown;
 }
 
-export async function callTool(client: Client, name: string, args: Record<string, unknown> = {}): Promise<ToolCallOutcome> {
+export async function callTool(
+  client: Client,
+  name: string,
+  args: Record<string, unknown> = {},
+): Promise<ToolCallOutcome> {
   const res = (await client.callTool({ name, arguments: args })) as {
     isError?: boolean;
     content?: { type: string; text?: string }[];
@@ -75,7 +83,9 @@ export async function callTool(client: Client, name: string, args: Record<string
   };
   return {
     isError: res.isError === true,
-    texts: (res.content ?? []).flatMap((c) => (c.type === 'text' && typeof c.text === 'string' ? [c.text] : [])),
+    texts: (res.content ?? []).flatMap((c) =>
+      c.type === 'text' && typeof c.text === 'string' ? [c.text] : [],
+    ),
     structured: res.structuredContent as Record<string, unknown> | undefined,
     raw: res,
   };

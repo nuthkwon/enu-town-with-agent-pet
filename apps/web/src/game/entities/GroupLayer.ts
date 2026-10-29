@@ -59,17 +59,24 @@ class Chip {
   constructor(stage: Stage, onClick: (pointer: Phaser.Input.Pointer) => void) {
     const scene = stage.scene;
     this.bg = scene.add.graphics();
-    this.text = scene.add.text(0, 0, '', { fontFamily: stage.font, fontSize: `${PIXEL_FONT_SIZE}px`, color: '#ffffff' });
+    this.text = scene.add.text(0, 0, '', {
+      fontFamily: stage.font,
+      fontSize: `${PIXEL_FONT_SIZE}px`,
+      color: '#ffffff',
+    });
     this.text.setOrigin(0, 0);
     this.container = stage.overlay(scene.add.container(0, 0, [this.bg, this.text]));
     this.container.setDepth(DEPTH.overlayGroup);
     this.bg.setInteractive(new Phaser.Geom.Rectangle(0, 0, 1, 1), Phaser.Geom.Rectangle.Contains);
     if (this.bg.input) this.bg.input.cursor = 'pointer';
-    this.bg.on('pointerdown', (pointer: Phaser.Input.Pointer, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => {
-      if (pointer.button !== 0) return;
-      ev.stopPropagation();
-      onClick(pointer);
-    });
+    this.bg.on(
+      'pointerdown',
+      (pointer: Phaser.Input.Pointer, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => {
+        if (pointer.button !== 0) return;
+        ev.stopPropagation();
+        onClick(pointer);
+      },
+    );
   }
 
   set(text: string, colors: number[]): void {
@@ -97,7 +104,8 @@ class Chip {
       g.fillCircle(cx, top + CHIP_H / 2, 2.5);
     }
     this.text.setPosition(left + 8 + dotsW, top + Math.round((CHIP_H - this.text.height) / 2) + 1);
-    if (this.bg.input) (this.bg.input.hitArea as Phaser.Geom.Rectangle).setTo(left - 2, top - 2, w + 4, CHIP_H + 4);
+    if (this.bg.input)
+      (this.bg.input.hitArea as Phaser.Geom.Rectangle).setTo(left - 2, top - 2, w + 4, CHIP_H + 4);
   }
 
   destroy(): void {

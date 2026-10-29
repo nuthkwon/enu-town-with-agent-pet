@@ -1,8 +1,9 @@
 import http from 'node:http';
+import { matchMaker } from '@colyseus/core';
 import { MatchMakeError } from '@colyseus/sdk';
 import { privacyConsents } from '@enu/db';
 import { CloseCodes, Dir, PROTOCOL_VERSION } from '@enu/protocol';
-import { DESK_IDS } from '@enu/shared';
+import { DESK_IDS, OFFICE_ROOM_NAME } from '@enu/shared';
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -11,6 +12,7 @@ import {
   makeUser,
   mintTicket,
   officeRoom,
+  sdkClient,
   serverRoom,
   sleep,
   startHarness,
@@ -54,7 +56,9 @@ describe('onAuth', () => {
     const none = await rejection(joinAs(h, u.id, { options: {} }));
     expect(none.code).toBe(CloseCodes.ProtocolMismatch);
     expect(none.message).toBe('protocol_mismatch');
-    const old = await rejection(joinAs(h, u.id, { options: { mapHash: 'x', protocol: PROTOCOL_VERSION - 1 } }));
+    const old = await rejection(
+      joinAs(h, u.id, { options: { mapHash: 'x', protocol: PROTOCOL_VERSION - 1 } }),
+    );
     expect(old.code).toBe(4111);
     // a refused client never became a session
     const room = await officeRoom(h);
@@ -110,7 +114,10 @@ describe('onAuth', () => {
     const oldNotice = await makeUser(h, { noticeVersion: '2026-10' });
     expect((await rejection(joinAs(h, oldNotice.id))).message).toBe('notice_required');
     const withdrawn = await makeUser(h);
-    await h.db.update(privacyConsents).set({ withdrawnAt: new Date() }).where(eq(privacyConsents.userId, withdrawn.id));
+    await h.db
+      .update(privacyConsents)
+      .set({ withdrawnAt: new Date() })
+      .where(eq(privacyConsents.userId, withdrawn.id));
     expect((await rejection(joinAs(h, withdrawn.id))).message).toBe('notice_required');
   });
 
@@ -193,7 +200,9 @@ describe('sessions', () => {
     expect(watcher.room.state.players.get(u.id)).toMatchObject({ shown: true, x: 6, y: 10 });
     h.clock.set(new Date(h.clock.now().getTime() + 61_000));
     room.evaluateNow();
-    await waitFor(() => watcher.room.state.players.get(u.id)?.shown === false, { message: 'hidden after grace' });
+    await waitFor(() => watcher.room.state.players.get(u.id)?.shown === false, {
+      message: 'hidden after grace',
+    });
     expect(room.state.players.has(u.id)).toBe(true);
   });
 });
@@ -230,5 +239,36 @@ describe('HTTP + WebSocket guards', () => {
       req.end();
     });
     expect(status).toBe(403);
+  });
+});
+
+describe('one persistent room', () => {
+  it('clients can only join: create / joinOrCreate are refused and no second room ever exists', async () => {
+    const u = await makeUser(h, { deskId: 'L1a' });
+    const room = await officeRoom(h);
+    for (const method of ['create', 'joinOrCreate'] as const) {
+      const client = sdkClient(PORT);
+      client.auth.token = await mintTicket(u.id);
+      const err = await rejection(client[method](OFFICE_ROOM_NAME, { protocol: PROTOCOL_VERSION }));
+      expect(err.message).toContain('invalid method');
+    }
+    // The raw matchmake route, as a script on the /town page would call it.
+    const raw = await fetch(`http://127.0.0.1:${PORT}/matchmake/create/${OFFICE_ROOM_NAME}`, {
+      method: 'POST',
+      headers: {
+        Origin: ORIGIN,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${await mintTicket(u.id)}`,
+      },
+      body: JSON.stringify({ protocol: PROTOCOL_VERSION }),
+    });
+    expect(raw.ok).toBe(false);
+    // Server side, a second OfficeRoom refuses itself before doing any work (no LISTEN, no timers).
+    await expect(matchMaker.createRoom(OFFICE_ROOM_NAME, {})).rejects.toThrow('office_room_exists');
+    expect(await matchMaker.query({ name: OFFICE_ROOM_NAME })).toHaveLength(1);
+    // Joining still lands in the one room.
+    const j = await joinAs(h, u.id);
+    expect(serverRoom(h, j)).toBe(room);
+    expect(await matchMaker.query({ name: OFFICE_ROOM_NAME })).toHaveLength(1);
   });
 });

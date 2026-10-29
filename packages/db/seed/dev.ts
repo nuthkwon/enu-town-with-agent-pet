@@ -13,7 +13,7 @@ import {
 } from '@enu/shared';
 import { like, sql } from 'drizzle-orm';
 import { createDb } from '../src/client';
-import { newId } from '../src/ids';
+import { newId, newOpaqueId } from '../src/ids';
 import {
   chatMessages,
   claudeLinks,
@@ -42,7 +42,8 @@ export const devEmail = (deskId: string) => `dev.${deskId.toLowerCase()}@${HD}`;
 
 const SAMPLES = [
   {
-    summary: '고객사 A 견적서 초안을 검토하고 수정 요청 사항을 정리했습니다. 오후에는 배포 체크리스트를 업데이트했습니다.',
+    summary:
+      '고객사 A 견적서 초안을 검토하고 수정 요청 사항을 정리했습니다. 오후에는 배포 체크리스트를 업데이트했습니다.',
     tasks: [
       { title: '고객사 A 견적서 검토', status: 'done' },
       { title: '배포 체크리스트 업데이트', status: 'in_progress', ref: 'ENU-142' },
@@ -164,7 +165,7 @@ await db.transaction(async (tx) => {
       ...(stale ? [] : [[today, now] as const]),
     ] as const) {
       await tx.insert(workLogs).values({
-        id: newId(),
+        id: newOpaqueId(),
         userId: id,
         periodKey: day,
         periodStart: atLocalTime(when, TZ, '09:00'),

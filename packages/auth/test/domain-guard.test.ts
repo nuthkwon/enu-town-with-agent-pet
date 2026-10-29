@@ -22,17 +22,29 @@ describe('domain guard', () => {
   });
 
   it('requires the verified hd claim and email_verified on Google profiles', () => {
-    expect(checkGoogleProfile({ hd: 'enu-tech.co.kr', email: 'a@enu-tech.co.kr', email_verified: true }, policy).ok).toBe(true);
+    expect(
+      checkGoogleProfile({ hd: 'enu-tech.co.kr', email: 'a@enu-tech.co.kr', email_verified: true }, policy)
+        .ok,
+    ).toBe(true);
     expect(checkGoogleProfile({ email: 'a@enu-tech.co.kr', email_verified: true }, policy).ok).toBe(false);
-    expect(checkGoogleProfile({ hd: 'other.com', email: 'a@enu-tech.co.kr', email_verified: true }, policy).ok).toBe(false);
-    expect(checkGoogleProfile({ hd: 'enu-tech.co.kr', email: 'a@enu-tech.co.kr', email_verified: false }, policy).ok).toBe(false);
+    expect(
+      checkGoogleProfile({ hd: 'other.com', email: 'a@enu-tech.co.kr', email_verified: true }, policy).ok,
+    ).toBe(false);
+    expect(
+      checkGoogleProfile({ hd: 'enu-tech.co.kr', email: 'a@enu-tech.co.kr', email_verified: false }, policy)
+        .ok,
+    ).toBe(false);
   });
 });
 
 describe('client helpers', () => {
   it('classifies Claude clients', () => {
-    expect(classifyClient('https://claude.ai/oauth/x', 'https://claude.ai/api/mcp/auth_callback')).toBe('claude_ai');
-    expect(classifyClient('https://claude.ai/oauth/claude-code', 'http://localhost:51234/callback')).toBe('claude_code');
+    expect(classifyClient('https://claude.ai/oauth/x', 'https://claude.ai/api/mcp/auth_callback')).toBe(
+      'claude_ai',
+    );
+    expect(classifyClient('https://claude.ai/oauth/claude-code', 'http://localhost:51234/callback')).toBe(
+      'claude_code',
+    );
     expect(classifyClient('https://example.com/c', 'https://example.com/cb')).toBe('other');
   });
 

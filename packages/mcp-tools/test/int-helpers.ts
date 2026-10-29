@@ -76,9 +76,13 @@ export async function listen(handle: DbHandle): Promise<Listener> {
   return {
     events,
     forUser,
-    waitFor: (pred) => vi.waitFor(() => {
-      if (!pred(events)) throw new Error(`events so far: ${JSON.stringify(events)}`);
-    }, { timeout: 3000, interval: 20 }),
+    waitFor: (pred) =>
+      vi.waitFor(
+        () => {
+          if (!pred(events)) throw new Error(`events so far: ${JSON.stringify(events)}`);
+        },
+        { timeout: 3000, interval: 20 },
+      ),
     stop: async () => {
       await conn.query('UNLISTEN *');
       conn.off('notification', onNotification);

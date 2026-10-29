@@ -23,7 +23,12 @@ afterEach(async () => {
   await listener.close();
 });
 
-async function link(userId: string, consentedAt: Date, revokedAt: Date | null = null, clientId = `client-${newId()}`) {
+async function link(
+  userId: string,
+  consentedAt: Date,
+  revokedAt: Date | null = null,
+  clientId = `client-${newId()}`,
+) {
   await h.db.insert(claudeLinks).values({ id: newId(), userId, clientId, consentedAt, revokedAt });
 }
 

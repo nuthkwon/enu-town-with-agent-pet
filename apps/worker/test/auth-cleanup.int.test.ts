@@ -31,13 +31,21 @@ beforeEach(async () => {
 const NOW = kst(2026, 10, 29, 3, 47);
 const CLIENT = 'https://claude.ai/oauth/mcp-client-metadata.json';
 
-const ids = async (table: typeof session | typeof verification | typeof oauthAccessToken | typeof oauthRefreshToken | typeof oauthClientAssertion) =>
-  (await h.db.select({ id: table.id }).from(table)).map((r) => r.id).sort();
+const ids = async (
+  table:
+    | typeof session
+    | typeof verification
+    | typeof oauthAccessToken
+    | typeof oauthRefreshToken
+    | typeof oauthClientAssertion,
+) => (await h.db.select({ id: table.id }).from(table)).map((r) => r.id).sort();
 
 describe('auth.cleanup', () => {
   it('deletes expired sessions, verifications, access tokens and client assertions', async () => {
     const u = await createTestUser(h.db);
-    await h.db.insert(oauthClient).values({ id: newId(), clientId: CLIENT, redirectUris: ['https://claude.ai/api/mcp/auth_callback'] });
+    await h.db
+      .insert(oauthClient)
+      .values({ id: newId(), clientId: CLIENT, redirectUris: ['https://claude.ai/api/mcp/auth_callback'] });
 
     await h.db.insert(session).values([
       { id: 's-expired', token: 't1', userId: u.id, expiresAt: plus(NOW, -SEC) },
@@ -48,8 +56,24 @@ describe('auth.cleanup', () => {
       { id: 'v-valid', identifier: 'state', value: 'y', expiresAt: plus(NOW, 10 * 60 * SEC) },
     ]);
     await h.db.insert(oauthAccessToken).values([
-      { id: 'a-expired', token: 'at1', clientId: CLIENT, userId: u.id, sessionId: 's-expired', expiresAt: plus(NOW, -SEC), scopes: ['openid'] },
-      { id: 'a-valid', token: 'at2', clientId: CLIENT, userId: u.id, sessionId: 's-expired', expiresAt: plus(NOW, HOUR), scopes: ['openid'] },
+      {
+        id: 'a-expired',
+        token: 'at1',
+        clientId: CLIENT,
+        userId: u.id,
+        sessionId: 's-expired',
+        expiresAt: plus(NOW, -SEC),
+        scopes: ['openid'],
+      },
+      {
+        id: 'a-valid',
+        token: 'at2',
+        clientId: CLIENT,
+        userId: u.id,
+        sessionId: 's-expired',
+        expiresAt: plus(NOW, HOUR),
+        scopes: ['openid'],
+      },
       { id: 'a-no-expiry', token: 'at3', clientId: CLIENT, userId: u.id, scopes: ['openid'] },
     ]);
     await h.db.insert(oauthClientAssertion).values([
@@ -58,20 +82,31 @@ describe('auth.cleanup', () => {
     ]);
 
     const s = await cleanupAuth(h.db, NOW);
-    expect(s).toEqual({ sessions: 1, verifications: 1, accessTokens: 1, refreshTokens: 0, clientAssertions: 1 });
+    expect(s).toEqual({
+      sessions: 1,
+      verifications: 1,
+      accessTokens: 1,
+      refreshTokens: 0,
+      clientAssertions: 1,
+    });
     expect(await ids(session)).toEqual(['s-valid']);
     expect(await ids(verification)).toEqual(['v-valid']);
     expect(await ids(oauthAccessToken)).toEqual(['a-no-expiry', 'a-valid']);
     expect(await ids(oauthClientAssertion)).toEqual(['c-valid']);
 
     // The surviving token lost its (deleted) session link instead of being removed.
-    const [valid] = await h.db.select().from(oauthAccessToken).where(sql`${oauthAccessToken.id} = 'a-valid'`);
+    const [valid] = await h.db
+      .select()
+      .from(oauthAccessToken)
+      .where(sql`${oauthAccessToken.id} = 'a-valid'`);
     expect(valid!.sessionId).toBeNull();
   });
 
   it('keeps expired or revoked refresh tokens for 7 days, then deletes them (and their access tokens)', async () => {
     const u = await createTestUser(h.db);
-    await h.db.insert(oauthClient).values({ id: newId(), clientId: CLIENT, redirectUris: ['https://claude.ai/api/mcp/auth_callback'] });
+    await h.db
+      .insert(oauthClient)
+      .values({ id: newId(), clientId: CLIENT, redirectUris: ['https://claude.ai/api/mcp/auth_callback'] });
     const rt = (id: string, extra: Partial<typeof oauthRefreshToken.$inferInsert>) => ({
       id,
       token: `tok-${id}`,
@@ -80,16 +115,34 @@ describe('auth.cleanup', () => {
       scopes: ['openid', 'offline_access'],
       ...extra,
     });
-    await h.db.insert(oauthRefreshToken).values([
-      rt('r-expired-8d', { expiresAt: plus(NOW, -8 * DAY) }),
-      rt('r-expired-6d', { expiresAt: plus(NOW, -6 * DAY) }),
-      rt('r-revoked-8d', { expiresAt: plus(NOW, 20 * DAY), revoked: plus(NOW, -(7 * DAY + SEC)) }),
-      rt('r-revoked-1d', { expiresAt: plus(NOW, 20 * DAY), revoked: plus(NOW, -DAY) }),
-      rt('r-valid', { expiresAt: plus(NOW, 20 * DAY) }),
-    ]);
+    await h.db
+      .insert(oauthRefreshToken)
+      .values([
+        rt('r-expired-8d', { expiresAt: plus(NOW, -8 * DAY) }),
+        rt('r-expired-6d', { expiresAt: plus(NOW, -6 * DAY) }),
+        rt('r-revoked-8d', { expiresAt: plus(NOW, 20 * DAY), revoked: plus(NOW, -(7 * DAY + SEC)) }),
+        rt('r-revoked-1d', { expiresAt: plus(NOW, 20 * DAY), revoked: plus(NOW, -DAY) }),
+        rt('r-valid', { expiresAt: plus(NOW, 20 * DAY) }),
+      ]);
     await h.db.insert(oauthAccessToken).values([
-      { id: 'a-of-revoked', token: 'at-r', clientId: CLIENT, userId: u.id, refreshId: 'r-revoked-8d', expiresAt: plus(NOW, HOUR), scopes: ['openid'] },
-      { id: 'a-of-valid', token: 'at-v', clientId: CLIENT, userId: u.id, refreshId: 'r-valid', expiresAt: plus(NOW, HOUR), scopes: ['openid'] },
+      {
+        id: 'a-of-revoked',
+        token: 'at-r',
+        clientId: CLIENT,
+        userId: u.id,
+        refreshId: 'r-revoked-8d',
+        expiresAt: plus(NOW, HOUR),
+        scopes: ['openid'],
+      },
+      {
+        id: 'a-of-valid',
+        token: 'at-v',
+        clientId: CLIENT,
+        userId: u.id,
+        refreshId: 'r-valid',
+        expiresAt: plus(NOW, HOUR),
+        scopes: ['openid'],
+      },
     ]);
 
     const s = await cleanupAuth(h.db, NOW, { batchSize: 1 });

@@ -47,13 +47,19 @@ describe('selectBubble', () => {
   });
 
   it('never speaks for an unlinked pet', () => {
-    expect(run({ presence: { ...presence, linkState: 'not_linked' } })).toEqual({ show: false, reason: 'not_linked' });
+    expect(run({ presence: { ...presence, linkState: 'not_linked' } })).toEqual({
+      show: false,
+      reason: 'not_linked',
+    });
   });
 
   it('respects quiet hours, weekends and the daily cap', () => {
     expect(run({ now: new Date('2026-10-29T11:00:00Z') })).toMatchObject({ show: false, reason: 'quiet' });
     expect(run({ now: new Date('2026-10-31T03:00:00Z') })).toMatchObject({ show: false, reason: 'quiet' });
-    expect(run({ history: { lastShownAt: null, shownToday: 8 } })).toMatchObject({ show: false, reason: 'daily_cap' });
+    expect(run({ history: { lastShownAt: null, shownToday: 8 } })).toMatchObject({
+      show: false,
+      reason: 'daily_cap',
+    });
   });
 
   it('can ignore quiet hours for development and e2e runs', () => {
@@ -61,7 +67,12 @@ describe('selectBubble', () => {
     const at = {
       now: night,
       presence: { ...presence, joinedAt: new Date(night.getTime() - 60_000) },
-      candidates: [nudge({ eligibleAt: new Date(night.getTime() - 1000), expiresAt: new Date(night.getTime() + 3600_000) })],
+      candidates: [
+        nudge({
+          eligibleAt: new Date(night.getTime() - 1000),
+          expiresAt: new Date(night.getTime() + 3600_000),
+        }),
+      ],
     };
     expect(run(at)).toMatchObject({ show: false, reason: 'quiet' });
     expect(run({ ...at, prefs: { ...prefs, ignoreQuietHours: true } })).toMatchObject({ show: true });
@@ -70,14 +81,25 @@ describe('selectBubble', () => {
   it('enforces the interval but lets urgent items through after 10 minutes', () => {
     const recent = { lastShownAt: new Date(now.getTime() - 12 * 60_000), shownToday: 1 };
     expect(run({ history: recent })).toMatchObject({ show: false, reason: 'interval' });
-    expect(run({ history: recent, candidates: [nudge({ priority: 1 })] })).toMatchObject({ show: true, trigger: 'urgent' });
+    expect(run({ history: recent, candidates: [nudge({ priority: 1 })] })).toMatchObject({
+      show: true,
+      trigger: 'urgent',
+    });
   });
 
   it('fires the due window once per to-do and window', () => {
-    const todo = nudge({ kind: 'todo_due', refId: 't1', text: '견적서 회신', dueAt: new Date(now.getTime() + 4 * 60_000) });
+    const todo = nudge({
+      kind: 'todo_due',
+      refId: 't1',
+      text: '견적서 회신',
+      dueAt: new Date(now.getTime() + 4 * 60_000),
+    });
     const first = run({ candidates: [todo], flags: { ...flags, joinFired: true } });
     expect(first).toMatchObject({ show: true, trigger: 'due', dueKey: 't1:5' });
-    const again = run({ candidates: [todo], flags: { ...flags, joinFired: true, firedDueKeys: new Set(['t1:5']) } });
+    const again = run({
+      candidates: [todo],
+      flags: { ...flags, joinFired: true, firedDueKeys: new Set(['t1:5']) },
+    });
     expect(again).toMatchObject({ show: false });
   });
 
@@ -88,8 +110,14 @@ describe('selectBubble', () => {
   });
 
   it('stops repeating after max shows and when expired', () => {
-    expect(run({ candidates: [nudge({ shownCount: 2 })] })).toMatchObject({ show: false, reason: 'no_candidates' });
-    expect(run({ candidates: [nudge({ expiresAt: now })] })).toMatchObject({ show: false, reason: 'no_candidates' });
+    expect(run({ candidates: [nudge({ shownCount: 2 })] })).toMatchObject({
+      show: false,
+      reason: 'no_candidates',
+    });
+    expect(run({ candidates: [nudge({ expiresAt: now })] })).toMatchObject({
+      show: false,
+      reason: 'no_candidates',
+    });
   });
 
   it('is forced quiet while the office is closed, even with no quiet hours configured', () => {
@@ -97,13 +125,18 @@ describe('selectBubble', () => {
     const noQuiet = { ...prefs, quietStart: '00:00', quietEnd: '00:00', ignoreQuietHours: true };
     expect(run({ presence: closed, prefs: noQuiet })).toEqual({ show: false, reason: 'quiet' });
     const todo = nudge({ kind: 'todo_due', refId: 't1', dueAt: new Date(now.getTime() + 4 * 60_000) });
-    expect(run({ presence: closed, candidates: [todo, nudge({ priority: 1 })] })).toEqual({ show: false, reason: 'quiet' });
+    expect(run({ presence: closed, candidates: [todo, nudge({ priority: 1 })] })).toEqual({
+      show: false,
+      reason: 'quiet',
+    });
   });
 
   it('waits for the join delay before anything but due and urgent items', () => {
     const justJoined = { ...presence, joinedAt: new Date(now.getTime() - 2_000) };
     expect(run({ presence: justJoined })).toEqual({ show: false, reason: 'no_trigger' });
-    expect(run({ presence: justJoined, candidates: [nudge({ priority: 1 })] })).toMatchObject({ trigger: 'urgent' });
+    expect(run({ presence: justJoined, candidates: [nudge({ priority: 1 })] })).toMatchObject({
+      trigger: 'urgent',
+    });
   });
 
   it('shows a newly eligible nudge once after join, respecting the interval and DND', () => {
@@ -115,7 +148,10 @@ describe('selectBubble', () => {
     expect(run({ ...at, candidates: [seen] })).toEqual({ show: false, reason: 'no_trigger' });
     const recent = { lastShownAt: new Date(now.getTime() - 10 * 60_000), shownToday: 1 };
     expect(run({ ...at, history: recent })).toEqual({ show: false, reason: 'interval' });
-    expect(run({ ...at, presence: { ...presence, doNotDisturb: true } })).toEqual({ show: false, reason: 'do_not_disturb' });
+    expect(run({ ...at, presence: { ...presence, doNotDisturb: true } })).toEqual({
+      show: false,
+      reason: 'do_not_disturb',
+    });
     // show_after not reached yet: not eligible.
     const later = nudge({ refId: 'n3', eligibleAt: new Date(now.getTime() + 60_000) });
     expect(run({ ...at, candidates: [seen, later] })).toEqual({ show: false, reason: 'no_trigger' });
@@ -123,24 +159,39 @@ describe('selectBubble', () => {
 
   it('repeats a shown nudge only when the owner returns after being away from the tab long enough', () => {
     const seen = nudge({ shownCount: 1 });
-    const back = (hiddenMs: number, over: { armed?: boolean; dnd?: boolean; candidate?: BubbleCandidate } = {}) =>
+    const back = (
+      hiddenMs: number,
+      over: { armed?: boolean; dnd?: boolean; candidate?: BubbleCandidate } = {},
+    ) =>
       run({
         presence: { ...presence, lastHiddenMs: hiddenMs, doNotDisturb: over.dnd ?? false },
         flags: { ...afterJoin, glanceArmed: over.armed ?? true },
         history: longAgo,
         candidates: [over.candidate ?? seen],
       });
-    expect(back(600_000)).toMatchObject({ show: true, trigger: 'glance', candidate: { refId: 'n1', shownCount: 1 } });
+    expect(back(600_000)).toMatchObject({
+      show: true,
+      trigger: 'glance',
+      candidate: { refId: 'n1', shownCount: 1 },
+    });
     expect(back(599_999)).toEqual({ show: false, reason: 'no_trigger' });
     // Once per return: the scheduler disarms the flag after it fired.
     expect(back(600_000, { armed: false })).toEqual({ show: false, reason: 'no_trigger' });
     expect(back(600_000, { dnd: true })).toEqual({ show: false, reason: 'do_not_disturb' });
     // max_shows keeps its meaning.
-    expect(back(600_000, { candidate: nudge({ shownCount: 2 }) })).toEqual({ show: false, reason: 'no_candidates' });
+    expect(back(600_000, { candidate: nudge({ shownCount: 2 }) })).toEqual({
+      show: false,
+      reason: 'no_candidates',
+    });
   });
 
   it('orders triggers due > urgent > join > eligible > glance', () => {
-    const todo = nudge({ kind: 'todo_due', refId: 't1', text: '견적서 회신', dueAt: new Date(now.getTime() + 4 * 60_000) });
+    const todo = nudge({
+      kind: 'todo_due',
+      refId: 't1',
+      text: '견적서 회신',
+      dueAt: new Date(now.getTime() + 4 * 60_000),
+    });
     const urgent = nudge({ refId: 'u1', priority: 1 });
     const fresh = nudge({ refId: 'n2' });
     const seen = nudge({ refId: 'n1', shownCount: 1 });
@@ -153,7 +204,9 @@ describe('selectBubble', () => {
     expect(run(all)).toMatchObject({ trigger: 'due' });
     expect(run({ ...all, candidates: [seen, fresh, urgent] })).toMatchObject({ trigger: 'urgent' });
     expect(run({ ...all, candidates: [seen, fresh] })).toMatchObject({ trigger: 'join' });
-    expect(run({ ...all, flags: { ...all.flags, joinFired: true }, candidates: [seen, fresh] })).toMatchObject({
+    expect(
+      run({ ...all, flags: { ...all.flags, joinFired: true }, candidates: [seen, fresh] }),
+    ).toMatchObject({
       trigger: 'eligible',
     });
     expect(run({ ...all, flags: { ...all.flags, joinFired: true }, candidates: [seen] })).toMatchObject({

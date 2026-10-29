@@ -40,7 +40,12 @@ export function prepareTodoItems(items: TodoItemInput[]): { items: PreparedTodo[
     }
     const seen = firstIndexOfRef.get(item.external_ref);
     if (seen !== undefined) {
-      problems.push({ index, field: 'external_ref', reason: 'duplicate', detail: `same external_ref as items[${seen}]` });
+      problems.push({
+        index,
+        field: 'external_ref',
+        reason: 'duplicate',
+        detail: `same external_ref as items[${seen}]`,
+      });
     } else {
       firstIndexOfRef.set(item.external_ref, index);
     }
@@ -48,7 +53,12 @@ export function prepareTodoItems(items: TodoItemInput[]): { items: PreparedTodo[
       problems.push({ index, field: 'due_date', reason: 'invalid_time', detail: 'not a real calendar date' });
     }
     if (item.due_at && item.due_date) {
-      problems.push({ index, field: 'due_at', reason: 'invalid_time', detail: 'use either due_at or due_date, not both' });
+      problems.push({
+        index,
+        field: 'due_at',
+        reason: 'invalid_time',
+        detail: 'use either due_at or due_date, not both',
+      });
     }
     return {
       index,
@@ -140,7 +150,10 @@ export async function upsertTodos(
     const byRef = new Map(existingRows.map((r) => [r.externalRef, r]));
     const plans = items.map((item) => planItem(item, byRef.get(item.externalRef), now));
 
-    const delta = plans.reduce((acc, p) => acc + isOpen(p.finalStatus) - (p.existing ? isOpen(p.existing.status) : 0), 0);
+    const delta = plans.reduce(
+      (acc, p) => acc + isOpen(p.finalStatus) - (p.existing ? isOpen(p.existing.status) : 0),
+      0,
+    );
     if (delta > 0) {
       const [row] = await tx
         .select({ n: sql<number>`count(*)::int` })

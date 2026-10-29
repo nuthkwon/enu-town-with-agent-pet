@@ -8,7 +8,9 @@ import { BASE_URL, E2E_DB, ROOT, RT_PORT, TICKET_SECRET, WEB_PORT } from './env'
  * Playwright starts web servers before global setup, and the director loads the whole roster when the
  * room is created (every roster member is an actor, connected or not).
  */
-const PREPARE_DB = ['migrate', 'seed:seats', 'seed:dev'].map((script) => `pnpm --filter @enu/db ${script}`).join(' && ');
+const PREPARE_DB = ['migrate', 'seed:seats', 'seed:dev']
+  .map((script) => `pnpm --filter @enu/db ${script}`)
+  .join(' && ');
 
 /**
  * End-to-end tests against real servers: Next dev (dev login enabled) + Colyseus + Postgres (enu_town_e2e).

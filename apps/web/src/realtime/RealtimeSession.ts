@@ -38,7 +38,8 @@ export interface RoomLike {
 
 export interface ClientLike {
   auth: { token: string | undefined };
-  joinOrCreate(roomName: string, options?: Record<string, unknown>): Promise<RoomLike>;
+  /** Join only: the realtime server creates the one room itself and refuses client `create`/`joinOrCreate`. */
+  join(roomName: string, options?: Record<string, unknown>): Promise<RoomLike>;
 }
 
 /** Receives the decoded room state as plain snapshots. */
@@ -157,7 +158,8 @@ export const bindColyseusState: StateBinder = (room, sink) => {
   const offs: Unsubscribe[] = [];
   offs.push(
     cb.onAdd('players', (player, key) => {
-      const push = () => sink.playerUpsert(copyPlayer(player as unknown as Record<string, unknown>, String(key)));
+      const push = () =>
+        sink.playerUpsert(copyPlayer(player as unknown as Record<string, unknown>, String(key)));
       push();
       offs.push(cb.onChange(player, push));
     }),
@@ -222,7 +224,8 @@ export const NOTICE_REQUIRED = 'notice_required';
 /**
  * One realtime connection to `office-606` for the signed-in user.
  *
- * - ticket (GET /api/realtime-ticket) -> new Client(wsUrl) -> client.auth.token -> joinOrCreate.
+ * - ticket (GET /api/realtime-ticket) -> new Client(wsUrl) -> client.auth.token -> join (never create:
+ *   while the server is still booting, "no rooms found" is retried with the backoff below).
  * - Network drops: the SDK re-establishes the same seat by itself (status 'reconnecting').
  * - When the room really ends (expired seat, server restart, errors) we fetch a NEW ticket and
  *   join again with exponential backoff. 4101 / 4103 / 4110 / 4111 are terminal (see closeCodes.ts);
@@ -337,7 +340,7 @@ export class RealtimeSession extends TypedEmitter<SessionEvents> {
       client.auth.token = ticket.token;
       const options: JoinOptions = { protocol: PROTOCOL_VERSION };
       if (this.expectedMapHash) options.mapHash = this.expectedMapHash;
-      room = await client.joinOrCreate(OFFICE_ROOM_NAME, { ...options });
+      room = await client.join(OFFICE_ROOM_NAME, { ...options });
     } catch (err) {
       if (gen !== this.generation) return;
       if (err instanceof TicketError && (err.reason === 'unauthorized' || err.reason === 'forbidden')) {
@@ -605,8 +608,16 @@ export class RealtimeSession extends TypedEmitter<SessionEvents> {
   }
 
   private onDm(m: DmMsg): void {
-    if (m && m.toUserId === this.userId && m.fromUserId !== this.userId && m.fromUserId !== this.activeDmPeer) {
-      const byPeer = { ...this.dmUnread.byPeer, [m.fromUserId]: (this.dmUnread.byPeer[m.fromUserId] ?? 0) + 1 };
+    if (
+      m &&
+      m.toUserId === this.userId &&
+      m.fromUserId !== this.userId &&
+      m.fromUserId !== this.activeDmPeer
+    ) {
+      const byPeer = {
+        ...this.dmUnread.byPeer,
+        [m.fromUserId]: (this.dmUnread.byPeer[m.fromUserId] ?? 0) + 1,
+      };
       this.dmUnread = { total: this.dmUnread.total + 1, byPeer };
       this.emit('dm:unread', this.dmUnread);
     }

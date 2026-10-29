@@ -64,7 +64,11 @@ export function ProfileCard({ userId }: { userId: string }) {
             <div style={{ minWidth: 0 }}>
               <p className={s.profileName}>{name}</p>
               <span className={s.teamChip}>
-                <span className={s.teamSwatch} style={{ background: teamColor(person.team) }} aria-hidden="true" />
+                <span
+                  className={s.teamSwatch}
+                  style={{ background: teamColor(person.team) }}
+                  aria-hidden="true"
+                />
                 {teamLabel(person.team) || t.noTeam}
               </span>
             </div>
@@ -86,7 +90,8 @@ export function ProfileCard({ userId }: { userId: string }) {
             <dd>
               {status.online && (
                 <>
-                  <span className={s.onlineDot} aria-hidden="true" /> <span className="visually-hidden">{t.online}</span>
+                  <span className={s.onlineDot} aria-hidden="true" />{' '}
+                  <span className="visually-hidden">{t.online}</span>
                 </>
               )}
               {status.text}
@@ -132,7 +137,11 @@ export function ProfileCard({ userId }: { userId: string }) {
           </div>
           <div className={s.section}>
             <h3 className={s.sectionTitle}>{t.latestLog}</h3>
-            {data?.latestLog ? <WorkLogView log={data.latestLog} now={now} /> : <div className={s.empty}>{t.noLog}</div>}
+            {data?.latestLog ? (
+              <WorkLogView log={data.latestLog} now={now} />
+            ) : (
+              <div className={s.empty}>{t.noLog}</div>
+            )}
           </div>
         </>
       )}

@@ -1,10 +1,4 @@
-import {
-  WORK_HOURS,
-  atLocalTime,
-  isBusinessDay,
-  isWithinLocalRange,
-  nextBusinessDayAt,
-} from '@enu/shared';
+import { WORK_HOURS, atLocalTime, isBusinessDay, isWithinLocalRange, nextBusinessDayAt } from '@enu/shared';
 
 /** Scheduled check-ins outside office time are told to stop immediately (saves seat usage). */
 export function checkinSkipReason(now: Date, timeZone: string, holidays: ReadonlySet<string>): string | null {
@@ -19,9 +13,7 @@ export const NUDGE_EXPIRY_HM = '19:00';
 const MAX_SHOW_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_LIFETIME_MS = 24 * 60 * 60 * 1000;
 
-export type NudgeTimeResult =
-  | { ok: true; showAfter: Date; expiresAt: Date }
-  | { ok: false; detail: string };
+export type NudgeTimeResult = { ok: true; showAfter: Date; expiresAt: Date } | { ok: false; detail: string };
 
 /**
  * Resolves show/expiry times for a Claude-authored nudge.

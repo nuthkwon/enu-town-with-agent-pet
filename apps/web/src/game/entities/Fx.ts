@@ -59,7 +59,10 @@ export class Fx {
     this.sparkle({ x: head.x - 7, y: head.y + 2 }, 0.9);
     this.scene.time.delayedCall(120, () => this.sparkle({ x: head.x + 8, y: head.y - 4 }, 0.7));
     const icon = this.stage.world(this.scene.add.image(head.x, head.y, TEX.effects, EFFECT_FRAMES.clipboard));
-    icon.setDepth(DEPTH.entities + head.y + 41).setScale(0.4).setAlpha(0);
+    icon
+      .setDepth(DEPTH.entities + head.y + 41)
+      .setScale(0.4)
+      .setAlpha(0);
     this.scene.tweens.add({
       targets: icon,
       y: head.y - 16,
@@ -84,10 +87,20 @@ export class Fx {
       trail.fillCircle(p.x, p.y, 1.4);
     }
     trail.setAlpha(0);
-    this.scene.tweens.add({ targets: trail, alpha: 1, duration: 160, yoyo: true, hold: 900, onComplete: () => trail.destroy() });
+    this.scene.tweens.add({
+      targets: trail,
+      alpha: 1,
+      duration: 160,
+      yoyo: true,
+      hold: 900,
+      onComplete: () => trail.destroy(),
+    });
     for (let i = 0; i < 3; i++) {
       const heart = this.stage.world(this.scene.add.image(from.x, from.y, TEX.effects, EFFECT_FRAMES.heart));
-      heart.setDepth(DEPTH.night - 1).setScale(0.55).setAlpha(0);
+      heart
+        .setDepth(DEPTH.night - 1)
+        .setScale(0.55)
+        .setAlpha(0);
       const state = { t: 0 };
       this.scene.tweens.add({
         targets: state,

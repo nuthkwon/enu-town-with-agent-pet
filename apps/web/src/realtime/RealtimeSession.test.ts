@@ -78,13 +78,11 @@ function harness(opts: { mapHash?: string; joinImpl?: (n: number) => Promise<Fak
   const sinks: StateSink[] = [];
   const timers: Harness['timers'] = [];
   let tickets = 0;
-  const fetchTicket = vi.fn(
-    async (): Promise<RealtimeTicketDto> => ({
-      token: `${SECRET_TOKEN}-${++tickets}`,
-      expiresAt: new Date(Date.now() + 60_000).toISOString(),
-      wsUrl: 'ws://localhost:2567',
-    }),
-  );
+  const fetchTicket = vi.fn(async (): Promise<RealtimeTicketDto> => ({
+    token: `${SECRET_TOKEN}-${++tickets}`,
+    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    wsUrl: 'ws://localhost:2567',
+  }));
   const navigate = vi.fn();
   const reload = vi.fn();
   const session = new RealtimeSession({
@@ -103,7 +101,7 @@ function harness(opts: { mapHash?: string; joinImpl?: (n: number) => Promise<Fak
             rec.token = v;
           },
         },
-        joinOrCreate: async (name, options) => {
+        join: async (name, options) => {
           rec.joins.push([name, options]);
           const room = opts.joinImpl ? await opts.joinImpl(rooms.length) : new FakeRoom();
           rooms.push(room);
@@ -162,9 +160,21 @@ describe('closeCodes', () => {
 
   it('rejoins other closes with capped exponential backoff, rate limits wait longer', () => {
     const r = () => 0.5;
-    expect(leaveAction(1006, 1, { random: r })).toEqual({ kind: 'rejoin', delayMs: 1000, rateLimited: false });
-    expect(leaveAction(4002, 3, { random: r })).toEqual({ kind: 'rejoin', delayMs: 4000, rateLimited: false });
-    expect(leaveAction(CloseCodes.RateLimited, 1, { random: r })).toEqual({ kind: 'rejoin', delayMs: 10_000, rateLimited: true });
+    expect(leaveAction(1006, 1, { random: r })).toEqual({
+      kind: 'rejoin',
+      delayMs: 1000,
+      rateLimited: false,
+    });
+    expect(leaveAction(4002, 3, { random: r })).toEqual({
+      kind: 'rejoin',
+      delayMs: 4000,
+      rateLimited: false,
+    });
+    expect(leaveAction(CloseCodes.RateLimited, 1, { random: r })).toEqual({
+      kind: 'rejoin',
+      delayMs: 10_000,
+      rateLimited: true,
+    });
     expect(backoffMs(20, r)).toBe(30_000);
     expect(leaveAction(1006, REJOIN_MAX_ATTEMPTS + 1)).toEqual({ kind: 'failed' });
   });
@@ -265,7 +275,8 @@ describe('RealtimeSession', () => {
 
   it('4111 refused in matchmaking (onAuth) is handled the same way', async () => {
     const h = harness({
-      joinImpl: async () => Promise.reject(Object.assign(new Error('protocol_mismatch'), { code: CloseCodes.ProtocolMismatch })),
+      joinImpl: async () =>
+        Promise.reject(Object.assign(new Error('protocol_mismatch'), { code: CloseCodes.ProtocolMismatch })),
     });
     h.session.start();
     await flush();
@@ -325,7 +336,9 @@ describe('RealtimeSession', () => {
   });
 
   it('gives up after repeated join failures and offers a manual retry', async () => {
-    const h = harness({ joinImpl: async () => Promise.reject(Object.assign(new Error('nope'), { code: 525 })) });
+    const h = harness({
+      joinImpl: async () => Promise.reject(Object.assign(new Error('nope'), { code: 525 })),
+    });
     h.session.start();
     await flush();
     for (let i = 0; i < REJOIN_MAX_ATTEMPTS; i++) {
@@ -387,7 +400,9 @@ describe('RealtimeSession', () => {
     expect(onRoster).toHaveBeenCalledTimes(2);
     sink.playerUpsert(player({ x: 4, shown: true, online: true }));
     sink.playerUpsert(player({ x: 4, shown: true, online: true, activity: ActivityCode.Review }));
-    sink.playerUpsert(player({ x: 4, shown: true, online: true, activity: ActivityCode.Review, logPulse: 1 }));
+    sink.playerUpsert(
+      player({ x: 4, shown: true, online: true, activity: ActivityCode.Review, logPulse: 1 }),
+    );
     expect(onRoster).toHaveBeenCalledTimes(4);
     expect(h.session.getRoster()).toHaveLength(1);
     expect(h.session.getRoster()).toBe(h.session.getRoster());
@@ -492,10 +507,24 @@ describe('RealtimeSession', () => {
     expect(h.session.sendChat('안녕하세요')).toBe('client-msg-0001');
     expect(room.sent).toContainEqual([MSG.chatSend, { text: '안녕하세요', clientMsgId: 'client-msg-0001' }]);
     room.message(MSG.dmUnread, { total: 2, byPeer: { a: 2 } });
-    room.message(MSG.dmMsg, { id: 'd1', fromUserId: 'b', fromName: 'B', toUserId: 'u-me', text: 'x', createdAt: '' });
+    room.message(MSG.dmMsg, {
+      id: 'd1',
+      fromUserId: 'b',
+      fromName: 'B',
+      toUserId: 'u-me',
+      text: 'x',
+      createdAt: '',
+    });
     expect(h.session.getDmUnread()).toEqual({ total: 3, byPeer: { a: 2, b: 1 } });
     h.session.setActiveDmPeer('a');
-    room.message(MSG.dmMsg, { id: 'd2', fromUserId: 'a', fromName: 'A', toUserId: 'u-me', text: 'y', createdAt: '' });
+    room.message(MSG.dmMsg, {
+      id: 'd2',
+      fromUserId: 'a',
+      fromName: 'A',
+      toUserId: 'u-me',
+      text: 'y',
+      createdAt: '',
+    });
     expect(h.session.getDmUnread().byPeer.a).toBe(2);
     h.session.markDmRead('a', 'd2');
     expect(room.sent).toContainEqual([MSG.dmRead, { peerUserId: 'a', lastMessageId: 'd2' }]);

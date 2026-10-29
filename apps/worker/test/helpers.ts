@@ -9,7 +9,8 @@ export const HOUR = 60 * MIN;
 export const DAY = 24 * HOUR;
 
 /** Wall-clock time in Asia/Seoul -> instant. */
-export const kst = (y: number, mo: number, d: number, h = 0, mi = 0): Date => zonedTimeToUtc(y, mo, d, h, mi, TZ);
+export const kst = (y: number, mo: number, d: number, h = 0, mi = 0): Date =>
+  zonedTimeToUtc(y, mo, d, h, mi, TZ);
 export const plus = (d: Date, ms: number): Date => new Date(d.getTime() + ms);
 
 export function testEnv(overrides: Record<string, string> = {}): WorkerEnv {

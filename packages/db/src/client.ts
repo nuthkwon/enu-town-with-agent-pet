@@ -13,7 +13,10 @@ export interface DbHandle {
   close: () => Promise<void>;
 }
 
-export function createDb(connectionString: string, opts: { max?: number; applicationName?: string } = {}): DbHandle {
+export function createDb(
+  connectionString: string,
+  opts: { max?: number; applicationName?: string } = {},
+): DbHandle {
   const pool = new pg.Pool({
     connectionString,
     max: opts.max ?? 10,

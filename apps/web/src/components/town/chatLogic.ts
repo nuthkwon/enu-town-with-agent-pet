@@ -23,7 +23,11 @@ export function mergeLine(lines: readonly ChatLine[], incoming: ChatLine, myUser
   if (incoming.id && lines.some((l) => l.id === incoming.id)) return lines as ChatLine[];
   if (incoming.fromUserId === myUserId) {
     const i = lines.findIndex(
-      (l) => l.state === 'pending' && l.kind === incoming.kind && l.text === incoming.text && l.fromUserId === myUserId,
+      (l) =>
+        l.state === 'pending' &&
+        l.kind === incoming.kind &&
+        l.text === incoming.text &&
+        l.fromUserId === myUserId,
     );
     if (i >= 0) {
       const next = [...lines];

@@ -29,7 +29,12 @@ export interface FetchState<T> {
 
 /** GET JSON when `url` is set; aborts on change/unmount. */
 export function useFetch<T>(url: string | null): FetchState<T> {
-  const [state, setState] = useState<{ url: string | null; data: T | null; error: boolean; loading: boolean }>({
+  const [state, setState] = useState<{
+    url: string | null;
+    data: T | null;
+    error: boolean;
+    loading: boolean;
+  }>({
     url: null,
     data: null,
     error: false,
@@ -69,9 +74,13 @@ export interface PagedState<T> {
 
 /** Cursor pagination over `Paginated<T>` responses; `key` resets the list. */
 export function usePaged<T>(key: string | null, makeUrl: (cursor: string | null) => string): PagedState<T> {
-  const [state, setState] = useState<{ key: string | null; items: T[]; next: string | null; loading: boolean; error: boolean }>(
-    { key: null, items: [], next: null, loading: false, error: false },
-  );
+  const [state, setState] = useState<{
+    key: string | null;
+    items: T[];
+    next: string | null;
+    loading: boolean;
+    error: boolean;
+  }>({ key: null, items: [], next: null, loading: false, error: false });
   const makeUrlRef = useRef(makeUrl);
   useEffect(() => {
     makeUrlRef.current = makeUrl;
@@ -82,7 +91,11 @@ export function usePaged<T>(key: string | null, makeUrl: (cursor: string | null)
     ctrlRef.current?.abort();
     const ctrl = new AbortController();
     ctrlRef.current = ctrl;
-    setState((s) => (s.key === k ? { ...s, loading: true, error: false } : { key: k, items: [], next: null, loading: true, error: false }));
+    setState((s) =>
+      s.key === k
+        ? { ...s, loading: true, error: false }
+        : { key: k, items: [], next: null, loading: true, error: false },
+    );
     getJson<Paginated<T>>(makeUrlRef.current(cursor), ctrl.signal)
       .then((page) =>
         setState((s) => ({

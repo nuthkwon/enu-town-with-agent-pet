@@ -3,7 +3,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { pino } from 'pino';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { HEARTBEAT_MAX_AGE_MS, checkHeartbeat, isHeartbeatFresh, startHeartbeat, writeHeartbeat } from '../src/health';
+import {
+  HEARTBEAT_MAX_AGE_MS,
+  checkHeartbeat,
+  isHeartbeatFresh,
+  startHeartbeat,
+  writeHeartbeat,
+} from '../src/health';
 
 const NOW = Date.UTC(2026, 9, 29, 5, 0, 0);
 

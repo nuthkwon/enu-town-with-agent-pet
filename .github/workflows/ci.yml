@@ -38,6 +38,8 @@ jobs:
       - name: Policy (no server-side LLM, no committed roster)
         run: pnpm check:policy
       - run: pnpm lint
+      - name: Formatting (Prettier)
+        run: pnpm format:check
       - run: pnpm typecheck
       - run: pnpm test
       - name: Integration tests (Postgres)

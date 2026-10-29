@@ -111,7 +111,12 @@ export function ProfileTab({
       <div className={s.saveBar}>
         <Button
           onClick={save}
-          disabled={busy || !displayName.trim() || !pet.name.trim() || (isTaken(pet.species, taken) && pet.species !== me.pet.species)}
+          disabled={
+            busy ||
+            !displayName.trim() ||
+            !pet.name.trim() ||
+            (isTaken(pet.species, taken) && pet.species !== me.pet.species)
+          }
         >
           {busy ? ko.common.saving : ko.common.save}
         </Button>

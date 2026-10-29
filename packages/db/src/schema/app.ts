@@ -23,8 +23,9 @@ import { user } from './auth';
 
 /**
  * ENU Town application tables. Ids are UUIDv7 generated in the app (`newId()`), so the
- * schema stays compatible with Postgres 16+ (compose runs 18). Sets that may still grow
- * are `text` + CHECK instead of pg enums to keep migrations transactional.
+ * schema stays compatible with Postgres 16+ (compose runs 18). Exception: `work_logs.id` is a random
+ * UUIDv4 (`newOpaqueId()`), because colleagues receive it and a v7 id encodes the owner-only write time.
+ * Sets that may still grow are `text` + CHECK instead of pg enums to keep migrations transactional.
  */
 
 const tstz = (name: string) => timestamp(name, { withTimezone: true, mode: 'date' });
@@ -100,7 +101,10 @@ export const profiles = pgTable(
       'profiles_manual_status_chk',
       sql`${t.manualStatus} is null or ${t.manualStatus} in ('available','focus','meeting','break','away')`,
     ),
-    check('profiles_manual_status_pair_chk', sql`(${t.manualStatus} is null) = (${t.manualStatusUntil} is null)`),
+    check(
+      'profiles_manual_status_pair_chk',
+      sql`(${t.manualStatus} is null) = (${t.manualStatusUntil} is null)`,
+    ),
   ],
 );
 
@@ -134,7 +138,10 @@ export const privacyConsents = pgTable(
   },
   (t) => [
     uniqueIndex('privacy_consents_user_version_scope_uidx').on(t.userId, t.noticeVersion, t.scope),
-    check('privacy_consents_scope_chk', sql`${t.scope} in ('service','claude_chat_summary','activity_sharing')`),
+    check(
+      'privacy_consents_scope_chk',
+      sql`${t.scope} in ('service','claude_chat_summary','activity_sharing')`,
+    ),
   ],
 );
 
@@ -196,11 +203,22 @@ export const workLogs = pgTable(
   },
   (t) => [
     uniqueIndex('work_logs_user_period_uidx').on(t.userId, t.periodKey),
-    index('work_logs_feed_idx').on(t.visibility, t.updatedAt).where(sql`${t.deletedAt} is null`),
+    index('work_logs_feed_idx')
+      .on(t.visibility, t.updatedAt)
+      .where(sql`${t.deletedAt} is null`),
     check('work_logs_summary_len_chk', sql`${t.summary} is null or char_length(${t.summary}) <= 2000`),
-    check('work_logs_chat_summary_len_chk', sql`${t.claudeChatSummary} is null or char_length(${t.claudeChatSummary}) <= 1000`),
-    check('work_logs_set_by_chk', sql`${t.visibilitySetBy} in ('claude','user') and ${t.chatSummaryVisibilitySetBy} in ('claude','user')`),
-    check('work_logs_source_chk', sql`${t.source} in ('cowork_scheduled','claude_interactive','claude_code')`),
+    check(
+      'work_logs_chat_summary_len_chk',
+      sql`${t.claudeChatSummary} is null or char_length(${t.claudeChatSummary}) <= 1000`,
+    ),
+    check(
+      'work_logs_set_by_chk',
+      sql`${t.visibilitySetBy} in ('claude','user') and ${t.chatSummaryVisibilitySetBy} in ('claude','user')`,
+    ),
+    check(
+      'work_logs_source_chk',
+      sql`${t.source} in ('cowork_scheduled','claude_interactive','claude_code')`,
+    ),
   ],
 );
 
@@ -229,7 +247,10 @@ export const activityReports = pgTable(
   (t) => [
     primaryKey({ name: 'activity_reports_pk', columns: [t.userId, t.periodKey] }),
     index('activity_reports_period_idx').on(t.periodKey),
-    check('activity_now_kind_chk', sql`${t.nowKind} is null or ${t.nowKind} in ('work','docs','review','collab')`),
+    check(
+      'activity_now_kind_chk',
+      sql`${t.nowKind} is null or ${t.nowKind} in ('work','docs','review','collab')`,
+    ),
     check('activity_now_pair_chk', sql`(${t.nowKind} is null) = (${t.nowUntil} is null)`),
     check('activity_now_ref_chk', sql`${t.nowRefHash} is null or ${t.nowKind} is not null`),
     check(
@@ -297,7 +318,9 @@ export const petNudges = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
-    uniqueIndex('pet_nudges_user_dedupe_uidx').on(t.userId, t.dedupeKey).where(sql`${t.dedupeKey} is not null`),
+    uniqueIndex('pet_nudges_user_dedupe_uidx')
+      .on(t.userId, t.dedupeKey)
+      .where(sql`${t.dedupeKey} is not null`),
     index('pet_nudges_active_idx')
       .on(t.userId, t.status, t.showAfter)
       .where(sql`${t.status} in ('pending','shown','snoozed')`),
@@ -321,7 +344,6 @@ export const nudgeDeliveries = pgTable(
       .references(() => user.id, { onDelete: 'cascade' }),
     nudgeId: uuid('nudge_id').references(() => petNudges.id, { onDelete: 'set null' }),
     todoId: uuid('todo_id').references(() => todos.id, { onDelete: 'set null' }),
-    trigger: text('trigger').notNull(),
     dueKey: text('due_key'),
     shownAt: tstz('shown_at').notNull(),
     outcome: text('outcome'),
@@ -348,8 +370,12 @@ export const chatMessages = pgTable(
   },
   (t) => [
     uniqueIndex('chat_messages_sender_client_uidx').on(t.senderId, t.clientMsgId),
-    index('chat_messages_dm_idx').on(t.dmLow, t.dmHigh, t.createdAt).where(sql`${t.kind} = 'dm'`),
-    index('chat_messages_room_idx').on(t.createdAt).where(sql`${t.kind} = 'room'`),
+    index('chat_messages_dm_idx')
+      .on(t.dmLow, t.dmHigh, t.createdAt)
+      .where(sql`${t.kind} = 'dm'`),
+    index('chat_messages_room_idx')
+      .on(t.createdAt)
+      .where(sql`${t.kind} = 'room'`),
     index('chat_messages_sender_idx').on(t.senderId, t.createdAt),
     check('chat_messages_body_len_chk', sql`char_length(${t.body}) between 1 and 500`),
     check(

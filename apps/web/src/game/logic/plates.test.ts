@@ -4,7 +4,9 @@ import { describe, expect, it } from 'vitest';
 import { boxesOverlap, cardBox, pillBox, plateLayout, type Box } from './plates';
 
 const world = loadOfficeWorld(
-  JSON.parse(readFileSync(new URL('../../../public/assets/maps/office-606/office-606.tmj', import.meta.url), 'utf8')),
+  JSON.parse(
+    readFileSync(new URL('../../../public/assets/maps/office-606/office-606.tmj', import.meta.url), 'utf8'),
+  ),
 );
 const layouts = world.desks.map((d) => plateLayout(world, d));
 
@@ -19,7 +21,9 @@ function petBody(tx: number, ty: number, zoom: number): Box {
   return { x: (tx * 32 + 16 - 10) * zoom, y: (ty * 32 + 5) * zoom, w: 20 * zoom, h: 19 * zoom };
 }
 
-function boxes(zoom: number): { deskId: string; card: Box; smallCard: Box; pill: Box; icon: Box; perch: Box }[] {
+function boxes(
+  zoom: number,
+): { deskId: string; card: Box; smallCard: Box; pill: Box; icon: Box; perch: Box }[] {
   const s = (v: number) => v * zoom;
   return layouts.map((l) => {
     const headY = s(l.seat.y * 32 + 29 - 27);
@@ -52,7 +56,12 @@ describe('desk plate layout on the 606 map', () => {
     expect(byId.get('L1b')).toMatchObject({ minX: 160, maxX: null, pill: { align: 'left' } });
     expect(byId.get('R2a')).toMatchObject({ maxX: 544 });
     expect(byId.get('R2b')).toMatchObject({ minX: 544 });
-    expect(byId.get('R1')).toMatchObject({ minX: null, maxX: null, pill: { align: 'center' }, card: { alignY: 'bottom' } });
+    expect(byId.get('R1')).toMatchObject({
+      minX: null,
+      maxX: null,
+      pill: { align: 'center' },
+      card: { alignY: 'bottom' },
+    });
   });
 
   it("keeps R1's plate inside the CEO room (on top of the desk, not on the glass wall under the chair)", () => {

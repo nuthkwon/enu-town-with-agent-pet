@@ -1,4 +1,12 @@
-import { activityReports, desks, profiles, user, workLogs, type DbOrTx, type ScheduleBlockRow } from '@enu/db';
+import {
+  activityReports,
+  desks,
+  profiles,
+  user,
+  workLogs,
+  type DbOrTx,
+  type ScheduleBlockRow,
+} from '@enu/db';
 import { hasWorkTask, type NowIn, type ScheduleBlockIn } from '@enu/domain';
 import { NOW_KINDS, SCHEDULE_KINDS, localDateKey, type NowKind, type ScheduleKind } from '@enu/shared';
 import { and, eq, inArray, isNotNull, sql, type SQL } from 'drizzle-orm';
@@ -40,7 +48,10 @@ function toActorSnapshot(r: PersonRow): ActorSnapshot {
 
 /** Roster = active users with a profile whose onboarding is complete (spec §1.1). */
 export async function loadRoster(db: DbOrTx): Promise<ActorSnapshot[]> {
-  const rows = await selectPeople(db, and(eq(user.status, 'active'), isNotNull(profiles.onboardingCompletedAt)));
+  const rows = await selectPeople(
+    db,
+    and(eq(user.status, 'active'), isNotNull(profiles.onboardingCompletedAt)),
+  );
   return rows.map(toActorSnapshot);
 }
 
@@ -53,7 +64,8 @@ export async function loadRosterMember(db: DbOrTx, userId: string): Promise<Acto
   return row ? toActorSnapshot(row) : null;
 }
 
-const isNowKind = (v: string | null): v is NowKind => v !== null && (NOW_KINDS as readonly string[]).includes(v);
+const isNowKind = (v: string | null): v is NowKind =>
+  v !== null && (NOW_KINDS as readonly string[]).includes(v);
 const isScheduleKind = (v: string): v is ScheduleKind => (SCHEDULE_KINDS as readonly string[]).includes(v);
 
 function toBlocks(rows: readonly ScheduleBlockRow[]): ScheduleBlockIn[] {
@@ -69,7 +81,9 @@ function toBlocks(rows: readonly ScheduleBlockRow[]): ScheduleBlockIn[] {
 }
 
 function statusesOf(v: unknown): { status: string }[] {
-  return Array.isArray(v) ? v.filter((s): s is string => typeof s === 'string').map((status) => ({ status })) : [];
+  return Array.isArray(v)
+    ? v.filter((s): s is string => typeof s === 'string').map((status) => ({ status }))
+    : [];
 }
 
 /**
@@ -112,7 +126,9 @@ export async function loadSignals(
   for (const id of ids) out.set(id, { report: null, todayLog: null });
   for (const r of reports) {
     const now: NowIn | null =
-      isNowKind(r.nowKind) && r.nowUntil ? { kind: r.nowKind, refHash: r.nowRefHash ?? null, until: r.nowUntil } : null;
+      isNowKind(r.nowKind) && r.nowUntil
+        ? { kind: r.nowKind, refHash: r.nowRefHash ?? null, until: r.nowUntil }
+        : null;
     const prev = out.get(r.userId);
     if (prev) out.set(r.userId, { ...prev, report: { now, schedule: toBlocks(r.schedule ?? []) } });
   }
