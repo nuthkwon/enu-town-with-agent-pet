@@ -364,6 +364,10 @@
 }
 
 @media (max-width: 560px) {
+  .linkItem {
+    flex-wrap: wrap;
+  }
+
   .formGrid {
     grid-template-columns: 1fr;
   }

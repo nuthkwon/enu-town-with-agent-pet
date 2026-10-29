@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { ko } from '@/i18n/ko';
 import { useEscape, useFocusReturn } from './hooks';
 import s from './town.module.css';
@@ -129,7 +129,7 @@ export function Popover({
 }
 
 /** Arrow-key navigation between `[role=menuitem]` buttons inside a menu container. */
-export function onMenuKeyDown(e: React.KeyboardEvent<HTMLElement>): void {
+export function onMenuKeyDown(e: KeyboardEvent<HTMLElement>): void {
   if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Home' && e.key !== 'End') return;
   const items = [...e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])')];
   if (items.length === 0) return;
