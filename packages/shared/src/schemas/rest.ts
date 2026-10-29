@@ -88,3 +88,16 @@ export type NudgeAction = z.infer<typeof nudgeAction>;
 export const claudeLinkRevoke = z.object({ link_id: z.string().optional() });
 
 export const seatAssign = z.object({ desk_id: z.enum(DESK_IDS), user_id: z.string().nullable() });
+
+/** Seat roster file (`config/seats.local.json`, gitignored; `config/seats.example.json` committed). */
+export const rosterSchema = z.object({
+  seats: z.array(
+    z.object({
+      deskId: z.enum(DESK_IDS),
+      name: z.string().min(1).max(LIMITS.displayNameMax),
+      avatar: avatarPresetSchema,
+      pet: z.object({ species: z.enum(PET_SPECIES), name: z.string().min(1).max(LIMITS.petNameMax) }),
+    }),
+  ),
+});
+export type Roster = z.infer<typeof rosterSchema>;
