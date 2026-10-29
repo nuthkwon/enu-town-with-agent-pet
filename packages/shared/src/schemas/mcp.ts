@@ -3,22 +3,26 @@ import {
   EXTERNAL_REF_PATTERN,
   LIMITS,
   LINK_STATES,
+  MANUAL_STATUSES,
+  NOW_KINDS,
   NUDGE_KINDS,
   NUDGE_STATUSES,
+  SCHEDULE_KINDS,
   SOURCE_HINTS,
   TASK_STATUSES,
   TODO_STATUSES,
   VISIBILITIES,
+  WORK_REF_PATTERN,
 } from '../constants';
 
-/** Input/output contracts of the four ENU Town MCP tools (snake_case, as Claude sees them). */
+/** Input/output contracts of the five ENU Town MCP tools (snake_case, as Claude sees them). */
 
 export const IsoDateTime = z.iso.datetime({ offset: true });
 export const LocalDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD');
 export const VisibilitySchema = z.enum(VISIBILITIES);
 export const Priority = z.number().int().min(1).max(3);
 
-export const CONTEXT_SECTIONS = ['profile', 'today_log', 'todos', 'nudges', 'town_messages'] as const;
+export const CONTEXT_SECTIONS = ['profile', 'today_log', 'todos', 'nudges', 'town_messages', 'activity'] as const;
 
 export const getMyContextInput = z.object({
   include: z
@@ -101,10 +105,77 @@ export const postPetNudgesInput = z.object({
 });
 export type PostPetNudgesInput = z.infer<typeof postPetNudgesInput>;
 
+export const WorkRef = z
+  .string()
+  .regex(WORK_REF_PATTERN)
+  .describe(
+    'Stable id copied verbatim from a connected tool, never invented: gcal:<iCalUID>, jira:ENU-123, ' +
+      'github:<owner>/<repo>#<n>, drive:<fileId>. Never shown to anyone; ENU Town stores only a keyed daily value and ' +
+      "uses it to draw people together when colleagues' own Claudes report the same id.",
+  );
+
+export const activityNow = z.object({
+  kind: z
+    .enum(NOW_KINDS)
+    .describe(
+      'work = 개인 업무(구현·분석·디자인) | docs = 문서·설계서 작성 | ' +
+        'review = 검토·V&V·코드 리뷰 | collab = 동료와 함께 진행 중인 작업',
+    ),
+  ref: WorkRef.optional().describe('The one primary work item (ticket, PR, document) of this activity.'),
+  until: IsoDateTime.optional().describe('When this stops being current. Default now+90 min; capped at now+120 min.'),
+});
+
+export const scheduleBlock = z.object({
+  start_at: IsoDateTime,
+  end_at: IsoDateTime.describe(
+    "After start_at; the block must lie within today's office day (Asia/Seoul): " +
+      'end_at may be exactly the next midnight (24:00). Cut longer blocks there.',
+  ),
+  kind: z
+    .enum(SCHEDULE_KINDS)
+    .describe(
+      'meeting = accepted work meeting with other people | ' +
+        'focus = calendar focus time | away = out of office (외근·출장·휴가·반차·부재중); shown only as 부재, never a reason',
+    ),
+  ref: WorkRef.optional().describe(
+    "meeting only: gcal:<iCalUID> (identical on every attendee's calendar). " +
+      'Omit for 1:1 meetings and anything sensitive.',
+  ),
+});
+
+export const postActivityInput = z.object({
+  now: activityNow
+    .nullable()
+    .describe(
+      'What the owner is doing right now according to their own tools (last 60 min); ' +
+        "null = nothing clear (clears the previous report). It only labels the owner's avatar or desk plate; " +
+        'it never makes the owner appear.',
+    ),
+  schedule: z
+    .array(scheduleBlock)
+    .max(LIMITS.scheduleBlocksMax)
+    .optional()
+    .describe("ALL of today's work blocks (office date, Asia/Seoul). Replaces the previous list; [] clears it; omit to keep it."),
+  source_hint: z.enum(SOURCE_HINTS).default('scheduled_task'),
+});
+export type PostActivityInput = z.infer<typeof postActivityInput>;
+
 /* ---------- outputs (structuredContent) ---------- */
 
-export const rejectionReason = z.enum(['pii', 'url', 'too_long', 'empty', 'invalid_time', 'daily_limit', 'unknown_todo']);
+export const rejectionReason = z.enum([
+  'pii',
+  'url',
+  'too_long',
+  'empty',
+  'invalid_time',
+  'daily_limit',
+  'unknown_todo',
+  'unsupported',
+]);
 export type RejectionReason = z.infer<typeof rejectionReason>;
+
+/** A status the owner set by hand in the town; it is shown instead of Claude's report until `until`. */
+const OwnerStatus = z.object({ status: z.enum(MANUAL_STATUSES), until: IsoDateTime });
 
 export const getMyContextOutput = z.object({
   skip: z.boolean(),
@@ -167,6 +238,17 @@ export const getMyContextOutput = z.object({
       ),
     })
     .optional(),
+  activity: z
+    .object({
+      sharing: z.boolean().describe('false (off or not chosen yet): do not call post_activity.'),
+      now: z.object({ kind: z.enum(NOW_KINDS), has_ref: z.boolean(), until: IsoDateTime }).nullable(),
+      /** Today's stored list; refs are never echoed. */
+      schedule: z.array(
+        z.object({ start_at: IsoDateTime, end_at: IsoDateTime, kind: z.enum(SCHEDULE_KINDS), has_ref: z.boolean() }),
+      ),
+      owner_status: OwnerStatus.nullable(),
+    })
+    .optional(),
 });
 export type GetMyContextOutput = z.infer<typeof getMyContextOutput>;
 
@@ -196,3 +278,16 @@ export const postPetNudgesOutput = z.object({
   delivery_note: z.string(),
 });
 export type PostPetNudgesOutput = z.infer<typeof postPetNudgesOutput>;
+
+export const postActivityOutput = z.object({
+  result: z.enum(['stored', 'skipped_sharing_off']),
+  period_key: LocalDate,
+  /** Effective (defaulted and clamped) `now.until`; null when `now` is null or nothing was stored. */
+  now_until: IsoDateTime.nullable(),
+  /** Blocks stored for today after this call. */
+  schedule_blocks: z.number().int(),
+  owner_status: OwnerStatus.nullable().describe(
+    'A status the owner set by hand; it is shown instead of your report until `until`.',
+  ),
+});
+export type PostActivityOutput = z.infer<typeof postActivityOutput>;

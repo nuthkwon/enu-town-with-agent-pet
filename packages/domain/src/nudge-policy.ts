@@ -8,7 +8,8 @@ import { NUDGE_POLICY, graphemeLength, isBusinessDay, isWithinLocalRange } from 
  */
 
 export type CandidateKind = 'nudge' | 'todo_due';
-export type Trigger = 'join' | 'idle' | 'due' | 'urgent';
+/** In priority order: due > urgent > join > eligible > glance. */
+export type Trigger = 'due' | 'urgent' | 'join' | 'eligible' | 'glance';
 
 export interface BubbleCandidate {
   kind: CandidateKind;
@@ -40,10 +41,13 @@ export interface OwnerPresence {
   linkState: LinkState;
   tabVisible: boolean;
   uiBusy: boolean;
-  /** Focus status or inside the meeting room zone. */
+  /** The owner's activity is focus or meeting (from the director); only urgent items get through. */
   doNotDisturb: boolean;
+  /** The town's office hours; while closed every pet is quiet, whatever the owner's quiet hours. */
+  officeOpen: boolean;
   joinedAt: Date;
-  lastActivityAt: Date;
+  /** How long the tab was hidden before it last became visible again (0 if it has not been hidden). */
+  lastHiddenMs: number;
   hasActiveBubble: boolean;
 }
 
@@ -54,21 +58,22 @@ export interface DeliveryHistory {
 
 export interface SchedulerFlags {
   joinFired: boolean;
-  /** Idle trigger fires once per idle period; re-armed by activity. */
-  idleArmed: boolean;
+  /** Armed when the tab becomes visible again; the scheduler disarms it once `glance` fires (once per return). */
+  glanceArmed: boolean;
   firedDueKeys: ReadonlySet<string>;
 }
 
 export interface PolicyTiming {
   joinDelayMs: number;
-  idleMs: number;
+  /** Minimum hidden time before a return to the tab counts as a `glance`. */
+  glanceHiddenMs: number;
   dueWindowsMin: readonly number[];
   urgentMinIntervalMin: number;
 }
 
 export const DEFAULT_TIMING: PolicyTiming = {
   joinDelayMs: NUDGE_POLICY.joinDelayMs,
-  idleMs: NUDGE_POLICY.idleMs,
+  glanceHiddenMs: NUDGE_POLICY.glanceHiddenMs,
   dueWindowsMin: NUDGE_POLICY.dueWindowsMin,
   urgentMinIntervalMin: NUDGE_POLICY.urgentMinIntervalMin,
 };
@@ -133,7 +138,7 @@ export function selectBubble(input: {
   if (presence.linkState === 'not_linked') return { show: false, reason: 'not_linked' };
   if (presence.hasActiveBubble) return { show: false, reason: 'busy_bubble' };
   if (!presence.tabVisible || presence.uiBusy) return { show: false, reason: 'not_watching' };
-  if (isQuietTime(now, prefs)) return { show: false, reason: 'quiet' };
+  if (!presence.officeOpen || isQuietTime(now, prefs)) return { show: false, reason: 'quiet' };
   if (history.shownToday >= prefs.maxPerDay) return { show: false, reason: 'daily_cap' };
 
   const live = input.candidates.filter((c) => isLive(c, now)).sort(compareCandidates);
@@ -155,11 +160,18 @@ export function selectBubble(input: {
   const best = nudges[0];
   if (!best) return { show: false, reason: 'no_nudges' };
 
-  if (!flags.joinFired && now.getTime() - presence.joinedAt.getTime() >= timing.joinDelayMs) {
-    return { show: true, candidate: best, trigger: 'join' };
+  if (!flags.joinFired) {
+    if (now.getTime() - presence.joinedAt.getTime() >= timing.joinDelayMs) {
+      return { show: true, candidate: best, trigger: 'join' };
+    }
+    return { show: false, reason: 'no_trigger' };
   }
-  if (flags.idleArmed && now.getTime() - presence.lastActivityAt.getTime() >= timing.idleMs) {
-    return { show: true, candidate: best, trigger: 'idle' };
+  // A nudge whose show_after passed is shown once on its own; DND defers it until the meeting/focus ends.
+  const fresh = nudges.find((c) => c.shownCount === 0);
+  if (fresh) return { show: true, candidate: fresh, trigger: 'eligible' };
+  // Repeats (up to max_shows) wait for the owner to come back to the tab.
+  if (flags.glanceArmed && presence.lastHiddenMs >= timing.glanceHiddenMs) {
+    return { show: true, candidate: best, trigger: 'glance' };
   }
   return { show: false, reason: 'no_trigger' };
 }

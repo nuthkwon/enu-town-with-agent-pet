@@ -73,10 +73,15 @@ export const realtimeEnvSchema = z
   NUDGE_MIN_INTERVAL_MIN: z.coerce.number().nonnegative().optional(),
   /** Development/e2e only: pet bubbles ignore quiet hours, weekends and holidays. */
   NUDGE_IGNORE_QUIET_HOURS: bool.default(false),
+  /** Development/e2e only: the town treats every moment as office hours (colleagues' state is shown). */
+  TOWN_IGNORE_OFFICE_HOURS: bool.default(false),
 })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === 'production' && env.NUDGE_IGNORE_QUIET_HOURS) {
       ctx.addIssue({ code: 'custom', message: 'NUDGE_IGNORE_QUIET_HOURS must never be set in production' });
+    }
+    if (env.NODE_ENV === 'production' && env.TOWN_IGNORE_OFFICE_HOURS) {
+      ctx.addIssue({ code: 'custom', message: 'TOWN_IGNORE_OFFICE_HOURS must never be set in production' });
     }
   });
 export type RealtimeEnv = z.infer<typeof realtimeEnvSchema>;

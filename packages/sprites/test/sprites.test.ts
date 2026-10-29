@@ -22,6 +22,8 @@ import {
   EFFECT_COLUMNS,
   EFFECT_FRAME,
   EFFECT_FRAMES,
+  EFFECT_ROWS,
+  EFFECT_SHEET_HEIGHT,
   PET_ANIMS,
   PET_COLUMNS,
   PET_FRAME,
@@ -93,6 +95,26 @@ describe('sheet dimensions follow the spec', () => {
     expect(png.height).toBe((Math.floor(maxIndex / EFFECT_COLUMNS) + 1) * EFFECT_FRAME);
   });
 
+  it('effects: 3 rows, the activity icons fixed at 16-23 (the web client mirrors these indices)', () => {
+    const png = decodePng(renderEffects());
+    expect(EFFECT_ROWS).toBe(3);
+    expect([png.width, png.height]).toEqual([128, 48]);
+    expect(png.height).toBe(EFFECT_SHEET_HEIGHT);
+    expect(EFFECT_FRAMES).toMatchObject({
+      headset: 16,
+      focus: 17,
+      cup: 18,
+      laptop: 19,
+      magnifier: 20,
+      link: 21,
+      clipboard: 22,
+      plane: 23,
+    });
+    // every cell of the sheet is named exactly once (no gaps, no two names on one frame)
+    const indices = Object.values(EFFECT_FRAMES).sort((a, b) => a - b);
+    expect(indices).toEqual(Array.from({ length: EFFECT_ROWS * EFFECT_COLUMNS }, (_, i) => i));
+  });
+
   it('anim frame ranges are row * columns + col', () => {
     expect(avatarAnimFrames('down', 'idle')).toEqual({ start: 0, end: 3 });
     expect(avatarAnimFrames('up', 'walk')).toEqual({ start: 34, end: 39 });
@@ -148,6 +170,16 @@ describe('content', () => {
     const sheet = decodePng(renderEffects());
     for (const [name, idx] of Object.entries(EFFECT_FRAMES)) {
       expect(frame(sheet, EFFECT_FRAME, EFFECT_COLUMNS, idx).hasContent(), name).toBe(true);
+    }
+  });
+
+  it('every effect frame is a different picture', () => {
+    const sheet = decodePng(renderEffects());
+    const seen = new Map<string, string>();
+    for (const [name, idx] of Object.entries(EFFECT_FRAMES)) {
+      const bytes = Buffer.from(frame(sheet, EFFECT_FRAME, EFFECT_COLUMNS, idx).data).toString('base64');
+      expect(seen.get(bytes), name).toBeUndefined();
+      seen.set(bytes, name);
     }
   });
 

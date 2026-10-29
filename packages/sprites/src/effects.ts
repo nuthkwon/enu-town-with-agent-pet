@@ -13,7 +13,8 @@ import {
 
 /**
  * 16x16 effect icons. Keys: o ink outline, w white, y gold, Y gold shade, p pink, P pink shade,
- * b blue, B blue shade, l lilac, L lilac shade, m mint, M mint shade, r red/coral.
+ * q light pink, b blue, B blue shade, l lilac, L lilac shade, m mint, M mint shade, r red/coral,
+ * g pale grey, G grey shade, c latte, C latte shade.
  */
 const K = {
   o: INK,
@@ -32,6 +33,8 @@ const K = {
   r: hex('#ff8a80'),
   g: hex('#ece8f7'),
   G: hex('#c9c1e2'),
+  c: hex('#d9a27e'),
+  C: hex('#b07a5e'),
 } satisfies Record<string, RGBA>;
 
 const SPARKLES: Template[] = [
@@ -273,6 +276,160 @@ const QUESTION: Template = [
   '................',
 ];
 
+/* Activity icons (sheet row 2): what a person is doing, over the head or on the desk plate. */
+
+const HEADSET: Template = [
+  '................',
+  '.....oooooo.....',
+  '...oowlllllloo..',
+  '..olloooooolLo..',
+  '.ollo......oLLo.',
+  '.ollo......oLLo.',
+  'ooooo......ooooo',
+  'oqppo......oppPo',
+  'oqppo......oppPo',
+  'oppPo......oppPo',
+  'oppPo......oppPo',
+  'ooooo......ooooo',
+  '..o.....oooo....',
+  '..ooooooopPo....',
+  '........oooo....',
+  '................',
+];
+
+const FOCUS: Template = [
+  '................',
+  '.....oooooo.....',
+  '...ooppppppoo...',
+  '..opqpwwwwpppo..',
+  '.opqwwwwwwwwpPo.',
+  '.oppwwppppwwpPo.',
+  'oppwwpprrppwwPPo',
+  'oppwwprwrrpwwPPo',
+  'oppwwprrrrpwwPPo',
+  'oppwwpprrppwwPPo',
+  '.oppwwppppwwPPo.',
+  '.opppwwwwwwPPPo.',
+  '..opppwwwwPPPo..',
+  '...ooPPPPPPoo...',
+  '.....oooooo.....',
+  '................',
+];
+
+const CUP: Template = [
+  '.....l...l......',
+  '....L...L.......',
+  '....L...L.......',
+  '.....l...l......',
+  '................',
+  '..oooooooooo....',
+  '..occccccCCo....',
+  '..oqooooooPoooo.',
+  '..oqpppppPPooPPo',
+  '..oqpppppPPo.oPo',
+  '..opppppPPPo.oPo',
+  '..opppppPPPooPPo',
+  '...oppppPPPooo..',
+  '..ooPPPPPPPoo...',
+  '.oggggggggggGo..',
+  '..oooooooooooo..',
+];
+
+const LAPTOP: Template = [
+  '................',
+  '................',
+  '..oooooooooooo..',
+  '..oggggggggggo..',
+  '..ogwbbbbbbbGo..',
+  '..ogbwwwbbbbGo..',
+  '..ogbbbwwwbBGo..',
+  '..ogbwwbbbbBGo..',
+  '..ogbbbbbbBBGo..',
+  '..oGGGGGGGGGGo..',
+  '.oooooooooooooo.',
+  'oggwgwgwgwgwgggo',
+  'ogggggooooggGGGo',
+  '.oGGGGGGGGGGGGo.',
+  '..oooooooooooo..',
+  '................',
+];
+
+const MAGNIFIER: Template = [
+  '................',
+  '....oooo........',
+  '..oobbbboo......',
+  '.obwwbbbbbo.....',
+  '.obwbbbbbbo.....',
+  'obwbbbbbbbbo....',
+  'obbbbbbbbbbo....',
+  'obbbbbbbbbBo....',
+  'obbbbbbbbBBo....',
+  '.obbbbbbBBo.....',
+  '.oobbbBBBooo....',
+  '...oooooopPo....',
+  '.........opPo...',
+  '..........opPo..',
+  '...........opPo.',
+  '............ooo.',
+];
+
+const LINK: Template = [
+  '................',
+  '.........ooo....',
+  '........owbbo...',
+  '.......obboBbo..',
+  '......obbo..oBo.',
+  '.....obbo...oBo.',
+  '....ooboo..obBo.',
+  '...omobomoobBo..',
+  '..ommoobomoBo...',
+  '.ommo..ooMoo....',
+  '.omo...omMo.....',
+  '.omo..omMo......',
+  '..omoomMo.......',
+  '...omMMo........',
+  '....ooo.........',
+  '................',
+];
+
+const CLIPBOARD: Template = [
+  '.....oooooo.....',
+  '..ooooLllLoooo..',
+  '..oyyoLLLLoyYo..',
+  '..oywooooooyYo..',
+  '..oywwwwwwwwYo..',
+  '..oywLLLLwwwYo..',
+  '..oywwwwwwwwYo..',
+  '..oywLLLLLLwYo..',
+  '..oywwwwwwwwYo..',
+  '..oywLLLLLwwYo..',
+  '..oywwwwwwwwYo..',
+  '..oywLLLwwwwYo..',
+  '..oygggggggGYo..',
+  '..oyYYYYYYYYYo..',
+  '..oooooooooooo..',
+  '................',
+];
+
+const PLANE: Template = [
+  '................',
+  '..............o.',
+  '............oowo',
+  '..........oowwwo',
+  '........oowwwwbo',
+  '......oowwwwwbo.',
+  '....oowwwwwwbbo.',
+  '..oowwwwwwwbbo..',
+  '.owwwwwwwwbBBo..',
+  '..oooooobbBBo...',
+  '.......obBBBo...',
+  '.......obBBo....',
+  '........oBo.....',
+  '........oo......',
+  '................',
+  '................',
+];
+
 function shadowFrame(rx: number, ry: number): Canvas {
   const c = new Canvas(EFFECT_FRAME, EFFECT_FRAME);
   c.ellipse(8, 8, rx, ry, hex('#3b2a52', 40));
@@ -297,6 +454,14 @@ const PAINT: Record<EffectName, () => Canvas> = {
   check: () => tpl(CHECK),
   note: () => tpl(NOTE, 0, 1),
   question: () => tpl(QUESTION, 1),
+  headset: () => tpl(HEADSET),
+  focus: () => tpl(FOCUS),
+  cup: () => tpl(CUP),
+  laptop: () => tpl(LAPTOP),
+  magnifier: () => tpl(MAGNIFIER),
+  link: () => tpl(LINK),
+  clipboard: () => tpl(CLIPBOARD),
+  plane: () => tpl(PLANE),
 };
 
 function zzz(): Canvas {
@@ -322,7 +487,7 @@ export function renderEffectFrame(name: EffectName): Canvas {
   return PAINT[name]();
 }
 
-/** The effects sheet as RGBA pixels (EFFECT_COLUMNS x 2 frames of 16x16). */
+/** The effects sheet as RGBA pixels (EFFECT_COLUMNS x EFFECT_ROWS frames of 16x16). */
 export function renderEffectsImage(): Canvas {
   const sheet = new Canvas(EFFECT_SHEET_WIDTH, EFFECT_SHEET_HEIGHT);
   for (const [name, idx] of Object.entries(EFFECT_FRAMES) as [EffectName, number][]) {

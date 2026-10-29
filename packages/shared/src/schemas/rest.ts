@@ -37,6 +37,10 @@ export const profilePatch = z
     default_log_visibility: z.enum(VISIBILITIES),
     default_chat_summary_visibility: z.enum(VISIBILITIES),
     share_dms_with_my_claude: z.boolean(),
+    /** 활동 공유: Claude-derived activity may be shown to colleagues. `false` deletes today's report. */
+    share_activity: z.boolean(),
+    /** 접속 표시: having the town open may draw me and my online dot. */
+    show_live: z.boolean(),
     nudges_enabled: z.boolean(),
     nudge_min_interval_min: z.number().int().min(10).max(240),
     max_bubbles_per_day: z.number().int().min(0).max(30),
@@ -53,6 +57,8 @@ export const onboardingSubmit = z.object({
   pet_species: z.enum(PET_SPECIES),
   pet_name: z.string().min(1).max(LIMITS.petNameMax),
   default_chat_summary_visibility: z.enum(VISIBILITIES),
+  /** Explicit choice required (the wizard preselects nothing); `true` records the activity_sharing consent. */
+  share_activity: z.boolean(),
 });
 export type OnboardingSubmit = z.infer<typeof onboardingSubmit>;
 

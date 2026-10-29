@@ -85,7 +85,12 @@ export const PET_GROUND_Y = 23;
 export const PET_ORIGIN = { x: 0.5, y: PET_GROUND_Y / PET_FRAME } as const;
 
 /* ------------------------------------------------------------------------------------------------
- * Effects — `effects.png`, 16x16 frames, 8 columns x 2 rows (128 x 32 px).
+ * Effects — `effects.png`, 16x16 frames, 8 columns x 3 rows (128 x 48 px).
+ *
+ *   rows 0-1: sparkles, shadows and pet / bubble badges
+ *   row 2:    activity icons drawn over a shown avatar's head or on a hidden person's desk plate.
+ *             Their indices are fixed (the web client keeps a copy in apps/web/src/game/spriteSpec.ts);
+ *             docs (문서 작성) reuses `note`.
  * ---------------------------------------------------------------------------------------------- */
 export const EFFECT_FRAME = 16;
 export const EFFECT_COLUMNS = 8;
@@ -111,9 +116,25 @@ export const EFFECT_FRAMES = {
   check: 13,
   note: 14,
   question: 15,
+  /** Meeting (회의 중). */
+  headset: 16,
+  /** Focus (집중 모드). */
+  focus: 17,
+  /** Break (휴식). */
+  cup: 18,
+  /** Personal work (개인 업무). */
+  laptop: 19,
+  /** Review (검토 중). */
+  magnifier: 20,
+  /** Collaboration (협업 중). */
+  link: 21,
+  /** Today's work log (오늘 업무 기록). */
+  clipboard: 22,
+  /** DM / work request paper plane (drawn for the two participants only). */
+  plane: 23,
 } as const;
 export type EffectName = keyof typeof EFFECT_FRAMES;
-export const EFFECT_ROWS = 2;
+export const EFFECT_ROWS = 3;
 export const EFFECT_SHEET_WIDTH = EFFECT_COLUMNS * EFFECT_FRAME;
 export const EFFECT_SHEET_HEIGHT = EFFECT_ROWS * EFFECT_FRAME;
 export const EFFECT_ANIMS = {

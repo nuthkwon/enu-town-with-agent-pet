@@ -4,16 +4,17 @@ export const APP_TIMEZONE_DEFAULT = 'Asia/Seoul';
 export const ALLOWED_GOOGLE_HD_DEFAULT = 'enu-tech.co.kr';
 
 /** Current privacy notice version (docs/privacy-notice.ko.md); bump to require re-acceptance. */
-export const PRIVACY_NOTICE_VERSION = '2026-10';
+export const PRIVACY_NOTICE_VERSION = '2026-11';
 
 /** Version of the check-in instructions; the Claude skill compares this to its own. */
-export const INSTRUCTIONS_VERSION = '2026-10-29.1';
+export const INSTRUCTIONS_VERSION = '2026-11-02.1';
 
 export const MCP_TOOL_NAMES = {
   getMyContext: 'get_my_context',
   postWorkLog: 'post_work_log',
   upsertTodos: 'upsert_todos',
   postPetNudges: 'post_pet_nudges',
+  postActivity: 'post_activity',
 } as const;
 export type McpToolName = (typeof MCP_TOOL_NAMES)[keyof typeof MCP_TOOL_NAMES];
 
@@ -55,13 +56,48 @@ export const NUDGE_STATUSES = [
 ] as const;
 export type NudgeStatus = (typeof NUDGE_STATUSES)[number];
 
+/** Values of the pg enum `chat_kind` (read side). `nearby` rows no longer exist and a CHECK blocks new ones. */
 export const CHAT_KINDS = ['dm', 'room', 'nearby'] as const;
 export type ChatKind = (typeof CHAT_KINDS)[number];
+/** Chat kinds that can be written and listed. */
+export const WRITABLE_CHAT_KINDS = ['dm', 'room'] as const;
+export type WritableChatKind = (typeof WRITABLE_CHAT_KINDS)[number];
+
+/** Kinds of work the owner's own Claude reports as `post_activity.now` (label only, never draws an avatar). */
+export const NOW_KINDS = ['work', 'docs', 'review', 'collab'] as const;
+export type NowKind = (typeof NOW_KINDS)[number];
+
+/** Calendar blocks the owner's own Claude reports as `post_activity.schedule`. */
+export const SCHEDULE_KINDS = ['meeting', 'focus', 'away'] as const;
+export type ScheduleKind = (typeof SCHEDULE_KINDS)[number];
+
+/** Statuses the owner sets by hand in the town (`status:set`); they beat every Claude signal. */
+export const MANUAL_STATUSES = ['available', 'focus', 'meeting', 'break', 'away'] as const;
+export type ManualStatus = (typeof MANUAL_STATUSES)[number];
+
+/** How long a manual status lasts; it never outlives the office day (`manualStatusUntil`). */
+export const MANUAL_DURATIONS = ['30m', '1h', '2h', 'today'] as const;
+export type ManualDuration = (typeof MANUAL_DURATIONS)[number];
+
+/**
+ * Work item reference copied verbatim from a connected tool: scheme:id, e.g. gcal:<iCalUID>, jira:ENU-123,
+ * github:owner/repo#45, drive:<fileId>. The id part is any printable ASCII except space ([!-~]), so iCalUIDs
+ * with + = { } pass. Stored only as a keyed daily hash.
+ */
+export const WORK_REF_PATTERN = /^[A-Za-z][A-Za-z0-9-]{1,15}:[!-~]{1,180}$/;
+
+/** Server director timing and grouping thresholds (docs/design/town-visualization-spec.md §6.7, D5). */
+export const TOWN_TIMING = {
+  directorTickMs: 1_000,
+  liveGraceMs: 60_000,
+  moveStaggerMs: 350,
+  meetingGroupMin: 3,
+  workGroupGatherMax: 3,
+} as const;
 
 /** Limits enforced identically by zod schemas, DB CHECKs and UI counters. */
 export const LIMITS = {
   chatMaxLen: 500,
-  nearbyRadiusTiles: 5,
   workLogSummaryMax: 1500,
   workLogTasksMax: 20,
   workLogTaskTitleMax: 120,
@@ -81,6 +117,10 @@ export const LIMITS = {
   displayNameMax: 40,
   statusTextMax: 80,
   petNameMax: 20,
+  scheduleBlocksMax: 16,
+  scheduleBlockMaxHours: 10,
+  nowDefaultMin: 90,
+  nowMaxMin: 120,
   toolResultMaxChars: 20_000,
   mcpBodyMaxBytes: 65_536,
 } as const;
@@ -90,7 +130,8 @@ export const EXTERNAL_REF_PATTERN = /^[\w:.\-/#@]{1,200}$/;
 /** Pet bubble scheduling (defaults; per-profile overrides live in `profiles`). */
 export const NUDGE_POLICY = {
   joinDelayMs: 8_000,
-  idleMs: 180_000,
+  /** The tab must have been hidden at least this long for its return to count as a `glance`. */
+  glanceHiddenMs: 600_000,
   dueWindowsMin: [30, 5] as readonly number[],
   minIntervalMin: 25,
   urgentMinIntervalMin: 10,
@@ -103,7 +144,7 @@ export const NUDGE_POLICY = {
   displayMaxMs: 15_000,
 } as const;
 
-/** Local work hours used to skip scheduled check-ins outside of office time. */
+/** Local work hours: scheduled check-ins are skipped and colleagues' state is hidden outside of them. */
 export const WORK_HOURS = { start: '08:30', end: '19:30' } as const;
 
 export const PET_SPECIES = ['cat', 'bunny', 'fox', 'chick', 'hamster', 'dragon'] as const;

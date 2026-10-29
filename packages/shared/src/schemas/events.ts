@@ -14,7 +14,11 @@ export const townEvent = z.discriminatedUnion('type', [
     log_id: z.string(),
     visibility: z.enum(VISIBILITIES),
     created: z.boolean(),
+    /** Who wrote: the owner's Claude (`post_work_log`) or the owner on the web (PATCH/DELETE). */
+    by: z.enum(['claude', 'user']),
   }),
+  /** The owner's `activity_reports` row for today changed (post_activity, or sharing turned off). */
+  z.object({ v: z.literal(1), type: z.literal('activity_changed'), user_id: z.string() }),
   z.object({ v: z.literal(1), type: z.literal('user_deactivated'), user_id: z.string() }),
   z.object({ v: z.literal(1), type: z.literal('desks_changed') }),
 ]);

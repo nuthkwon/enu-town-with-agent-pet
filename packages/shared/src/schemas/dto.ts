@@ -1,13 +1,16 @@
 import type {
   AvatarPreset,
-  ChatKind,
   LinkState,
+  ManualStatus,
+  NowKind,
   NudgeKind,
   NudgeStatus,
+  ScheduleKind,
   TeamId,
   TodoStatus,
   Visibility,
   WorkLogSource,
+  WritableChatKind,
 } from '../constants';
 
 /**
@@ -34,7 +37,6 @@ import type {
  *   GET    /api/v1/users/:id/work-logs?cursor           -> Paginated<WorkLogDto> (only logs the viewer may see)
  *   GET    /api/v1/users/:id/chat-history?kind&before   -> Paginated<ChatItemDto>
  *                                     kind=dm     : DMs between the viewer and :id
- *                                     kind=nearby : nearby messages both of them received
  *                                     kind=room   : public room messages sent by :id
  *   GET    /api/v1/users/:id/claude-summaries?cursor    -> Paginated<ClaudeSummaryDto>
  *   GET    /api/v1/chat/room?before                     -> Paginated<ChatItemDto>
@@ -76,6 +78,18 @@ export interface NudgePrefsDto {
   quietEnd: string;
 }
 
+/** A status the owner set by hand in the town (expired values are never returned). */
+export interface ManualStatusDto {
+  status: ManualStatus;
+  until: string;
+}
+
+/** Today's (office date) activity report from the owner's own Claude. Refs are never echoed. */
+export interface ActivityTodayDto {
+  now: { kind: NowKind; until: string } | null;
+  schedule: { startAt: string; endAt: string; kind: ScheduleKind; hasRef: boolean }[];
+}
+
 export interface MeDto {
   userId: string;
   email: string;
@@ -95,6 +109,14 @@ export interface MeDto {
   isAdmin: boolean;
   onboardingCompleted: boolean;
   prefs: NudgePrefsDto;
+  /** 활동 공유. null = not chosen yet (treated as off). */
+  shareActivity: boolean | null;
+  /** 접속 표시: having the town open may draw me and my online dot. */
+  showLive: boolean;
+  /** APP_TIMEZONE: the office day of every town rule; the client formats `~HH:MM` with it. */
+  officeTimeZone: string;
+  manualStatus: ManualStatusDto | null;
+  activityToday: ActivityTodayDto | null;
   /** Current privacy notice version the user must accept (onboarding). */
   noticeVersion: string;
   noticeAccepted: boolean;
@@ -102,6 +124,10 @@ export interface MeDto {
   mcpUrl: string;
 }
 
+/**
+ * A colleague as any signed-in member sees them. It carries no status or activity timestamps:
+ * 상태 문구 and activity reach colleagues only through the realtime state during office hours.
+ */
 export interface PersonDto {
   userId: string;
   displayName: string;
@@ -113,9 +139,7 @@ export interface PersonDto {
   teamLabel: string;
   title: string | null;
   roleNote: string | null;
-  statusText: string | null;
   linkState: LinkState;
-  lastWorkLogAt: string | null;
 }
 
 export interface DeskDto {
@@ -146,8 +170,9 @@ export interface WorkLogDto {
   visibility: Visibility;
   chatSummaryVisibility: Visibility;
   source: WorkLogSource;
-  claudeWrittenAt: string;
-  updatedAt: string;
+  /** Exact timestamps are for the owner only (canViewLogTimestamps); colleagues get null. */
+  claudeWrittenAt: string | null;
+  updatedAt: string | null;
   editedByUser: boolean;
   userEditedAt: string | null;
   /** e.g. "김OO님의 Claude가 작성" (+ " · 본인 수정"). */
@@ -163,12 +188,11 @@ export interface ProfileCardDto {
 
 export interface ChatItemDto {
   id: string;
-  kind: ChatKind;
+  kind: WritableChatKind;
   senderId: string;
   senderName: string;
   text: string;
   createdAt: string;
-  zoneId: string | null;
 }
 
 export interface ClaudeSummaryDto {

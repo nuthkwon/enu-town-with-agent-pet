@@ -1,10 +1,15 @@
 import { schema, t, type SchemaType } from '@colyseus/schema';
 
 /**
- * Synced room state. Players and pets are keyed by user id (one session per user).
+ * Synced room state. Players and pets are keyed by user id: every roster member has one of each,
+ * whether or not anyone is connected. Activity fields come from the colleague projection
+ * (`projectForColleagues`) and positions from the server director, so every client, the owner
+ * included, decodes the same values.
  * Pet bubble fields are `.view()`-tagged: only the owner's StateView contains their own pet,
  * so nobody else ever receives the Claude-authored text (they only see `indicator`).
  */
+
+/** A roster member (NOT a connected player): placed by the server director; nobody steers it. */
 export const Player = schema(
   {
     id: t.string(),
@@ -15,9 +20,24 @@ export const Player = schema(
     y: t.uint16().default(0),
     dir: t.uint8().default(0),
     anim: t.uint8().default(0),
-    status: t.uint8().default(0),
+    /** Human-typed 상태 문구; '' unless the member is shown or their plate note is Away. */
     statusText: t.string().default(''),
-    zoneId: t.string().default(''),
+    /** The avatar is drawn. */
+    shown: t.boolean().default(false),
+    /** Connected now (no grace) ∧ 접속 표시 on ∧ shown ∧ office open. */
+    online: t.boolean().default(false),
+    /** ActivityCode (also the plate label while hidden). */
+    activity: t.uint8().default(0),
+    /** SourceCode (None for a 부재 plate). */
+    source: t.uint8().default(0),
+    /** Epoch ms when the activity ends, 0 = none (always 0 for a 부재 plate). */
+    until: t.float64().default(0),
+    /** PlateNote of a hidden member. */
+    note: t.uint8().default(0),
+    /** Opaque 'g…' group id, '' = none; the family is a meeting when activity is Meeting, otherwise work. */
+    groupId: t.string().default(''),
+    /** +1 (wrapping) per Claude work-log write while shown during office hours (the client sparkles). */
+    logPulse: t.uint8().default(0),
   },
   'Player',
 );
@@ -33,6 +53,7 @@ export const Pet = schema(
     dir: t.uint8().default(0),
     anim: t.uint8().default(0),
     linkState: t.uint8().default(1),
+    /** Shared with everyone: Dots only while a bubble is active and the owner is shown. */
     indicator: t.uint8().default(0),
     bubbleId: t.string().default('').view(),
     bubbleKind: t.uint8().default(0).view(),
@@ -51,6 +72,8 @@ export const OfficeState = schema(
     pets: t.map(Pet),
     mapId: t.string(),
     mapHash: t.string(),
+    /** Business day 08:30–19:30 (APP_TIMEZONE). While false every Player is neutral and pets sleep. */
+    officeOpen: t.boolean().default(false),
   },
   'OfficeState',
 );
