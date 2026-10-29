@@ -30,8 +30,8 @@ export const OFFICE_606_ASCII = [
   '#.dddddd.::::.CCCddd.#', // 12 L4 desks (joined with L3)      | storage (R3a spot) + R3b desk
   '#.d^..^d.::::........#', // 13 L4a L4b (facing up), returns
   '#........::::LppppppF#', // 14 back-to-back gap               | pantry: fridge
-  '#.dv..vd.::::pppppppM#', // 15 L5a L5b (facing down), returns | microwave
-  '#.dddddd.::::ppppppKK#', // 16 L5 desks                       | counter
+  '#.dv..vd.::::pppppppp#', // 15 L5a L5b (facing down), returns | free floor in front of the fridge
+  '#.dddddd.::::ppppKMKK#', // 16 L5 desks                       | counter along the wall, microwave on it
   '#.......L::::#########', // 17                                | server room wall
   '#mmhhhhmm::::#sSsSsSs#', // 18 meeting area                   | server room
   '#mhTTTThm::::xsSsSsSs#', // 19                                | server door (closed)

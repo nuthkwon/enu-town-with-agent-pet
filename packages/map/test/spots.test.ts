@@ -69,7 +69,9 @@ describe('buildSpots on the 606 map', () => {
   });
 
   it('has break spots on every walkable pantry tile, facing down', () => {
-    expect(spots.breakSpots).toHaveLength(19);
+    expect(spots.breakSpots).toHaveLength(18);
+    // including the free tile in front of the fridge
+    expect(spots.breakSpots).toContainEqual(at(20, 15, 'down'));
     for (const s of spots.breakSpots) {
       expect(world.zoneAt(s.x, s.y)?.zoneId, key(s)).toBe('pantry');
       expect(world.isWalkable(s.x, s.y)).toBe(true);
@@ -221,21 +223,23 @@ describe('allocateSpots', () => {
     expect(r.get('p99')).toEqual({ x: 18, y: 11, facing: 'down', fallback: true });
   });
 
-  it('places 20 people on a break: 19 pantry spots, overflow at the own desk or by BFS', () => {
+  it('places 20 people on a break: 18 pantry spots, overflow at the own desk or by BFS', () => {
     const withDesk = DESK_IDS.map((id, i) => req(`b${String(i).padStart(2, '0')}`, id, { kind: 'break' }));
     const deskless = Array.from({ length: 6 }, (_, i) => req(`n${i}`, null, { kind: 'break' }));
     const r = allocateSpots(world, spots, [...withDesk, ...deskless]);
     expect(r.size).toBe(20);
     expectDistinct(r);
-    expect([...r.values()].filter((s) => !s.fallback)).toHaveLength(19);
-    // userIds sort b.. < n..: the last desk-less person overflows, by BFS from the guest spots
-    expect(r.get('n5')).toEqual({ ...spots.overflowTiles[0]!, fallback: true });
+    expect([...r.values()].filter((s) => !s.fallback)).toHaveLength(18);
+    // userIds sort b.. < n..: the last two desk-less people overflow, by BFS from the guest spots
+    expect(r.get('n4')).toEqual({ ...spots.overflowTiles[0]!, fallback: true });
+    expect(r.get('n5')).toEqual({ ...spots.overflowTiles[1]!, fallback: true });
 
     // with desks sorting last, the overflow goes back to the own desk
     const late = allocateSpots(world, spots, [
       ...deskless,
       ...withDesk.map((q) => ({ ...q, userId: `z${q.userId}` })),
     ]);
+    expect(late.get('zb12')).toEqual({ x: 18, y: 9, facing: 'up', fallback: true });
     expect(late.get('zb13')).toEqual({ x: 18, y: 11, facing: 'down', fallback: true });
   });
 

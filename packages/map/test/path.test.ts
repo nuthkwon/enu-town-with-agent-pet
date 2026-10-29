@@ -129,7 +129,7 @@ describe('reachableMask / nearestWalkable', () => {
     const fromDesk = nearestWalkable(world, 3, 6)!;
     expect(world.isWalkable(fromDesk.x, fromDesk.y)).toBe(true);
     expect(Math.abs(fromDesk.x - 3) + Math.abs(fromDesk.y - 6)).toBe(1);
-    expect(nearestWalkable(world, 17, 19)).toEqual({ x: 17, y: 16 }); // server room -> pantry above
+    expect(nearestWalkable(world, 17, 19)).toEqual({ x: 17, y: 15 }); // server room -> pantry above the counter
     expect(nearestWalkable(world, 0, 10)).toEqual({ x: 1, y: 10 }); // wall
     const outside = nearestWalkable(world, -5, 100)!;
     expect(world.isWalkable(outside.x, outside.y)).toBe(true);

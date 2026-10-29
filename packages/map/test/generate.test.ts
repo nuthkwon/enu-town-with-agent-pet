@@ -128,8 +128,15 @@ describe('generateOfficeTmj', () => {
     expect(nameAt(map, 'furniture', 3, 19)).toBe('meeting_table');
     expect(nameAt(map, 'furniture', 3, 18)).toBe('meeting_chair');
     expect(nameAt(map, 'furniture', 20, 14)).toBe('fridge');
-    expect(nameAt(map, 'furniture', 20, 15)).toBe('microwave');
-    expect(nameAt(map, 'furniture', 19, 16)).toBe('counter');
+    // the microwave sits on the counter along the wall; the fridge door (facing down) stays clear
+    expect([17, 18, 19, 20].map((x) => nameAt(map, 'furniture', x, 16))).toEqual([
+      'counter',
+      'microwave',
+      'counter',
+      'counter',
+    ]);
+    expect(nameAt(map, 'furniture', 20, 14)).toBe('fridge');
+    expect(nameAt(map, 'furniture', 20, 15)).toBeNull();
     expect(nameAt(map, 'furniture', 15, 18)).toBe('server_rack');
     expect(nameAt(map, 'furniture', 14, 12)).toBe('cabinet');
     expect(nameAt(map, 'furniture', 1, 4)).toBe('plant');
