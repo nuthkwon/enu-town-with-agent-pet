@@ -2,6 +2,7 @@ import {
   type AvatarPreset,
   BODY_TYPES,
   DEFAULT_AVATAR,
+  DESK_IDS,
   HAIR_COLORS,
   HAIR_STYLES,
   OUTFIT_COLORS,
@@ -37,9 +38,11 @@ import {
   renderAvatarFrame,
   renderAvatarSheet,
   renderEffects,
+  renderPetFrame,
   renderPetSheet,
   renderTileset,
 } from '../src/index';
+import { PET_ART } from '../src/parts/pets';
 
 function frame(sheet: Canvas, size: number, columns: number, index: number): Canvas {
   return sheet.crop((index % columns) * size, Math.floor(index / columns) * size, size, size);
@@ -72,7 +75,8 @@ describe('sheet dimensions follow the spec', () => {
     expect([png.width, png.height]).toEqual([320, 128]);
   });
 
-  it('pet: 12 columns (idle, hop, sleep) x 2 directions of 24x24', () => {
+  it('pet: 12 columns (idle, hop, sleep) x 2 directions of 24x24, one sheet per species', () => {
+    expect(PET_SPECIES).toHaveLength(16);
     for (const species of PET_SPECIES) {
       const png = decodePng(renderPetSheet(species));
       expect([png.width, png.height]).toEqual([PET_COLUMNS * PET_FRAME, 2 * PET_FRAME]);
@@ -187,6 +191,59 @@ describe('content', () => {
     const sheets = PET_SPECIES.map((s) => renderPetSheet(s));
     for (let i = 0; i < sheets.length; i++)
       for (let j = i + 1; j < sheets.length; j++) expect(sheets[i]!.equals(sheets[j]!)).toBe(false);
+  });
+
+  it('there is a different pet species for every desk', () => {
+    expect(new Set(PET_SPECIES).size).toBe(PET_SPECIES.length);
+    expect(PET_SPECIES.length).toBeGreaterThanOrEqual(DESK_IDS.length);
+  });
+
+  it('every two species look clearly different (shape and colour), not just recoloured details', () => {
+    // Idle frame 0 facing left: the silhouettes must differ, and a large share of the pet's pixels
+    // must differ in colour (catches copy-pasted templates with a few changed pixels).
+    const frames = PET_SPECIES.map((s) => renderPetFrame(s, 'left', 'idle', 0).data);
+    for (let i = 0; i < frames.length; i++) {
+      for (let j = i + 1; j < frames.length; j++) {
+        const a = frames[i]!;
+        const b = frames[j]!;
+        let union = 0;
+        let shape = 0;
+        let differs = 0;
+        for (let p = 0; p < a.length; p += 4) {
+          const sa = a[p + 3]! >= 128;
+          const sb = b[p + 3]! >= 128;
+          if (!sa && !sb) continue;
+          union++;
+          if (sa !== sb) {
+            shape++;
+            differs++;
+          } else if (Math.hypot(a[p]! - b[p]!, a[p + 1]! - b[p + 1]!, a[p + 2]! - b[p + 2]!) > 48) differs++;
+        }
+        const pair = `${PET_SPECIES[i]} / ${PET_SPECIES[j]}`;
+        expect(shape, pair).toBeGreaterThanOrEqual(10);
+        expect(differs / union, pair).toBeGreaterThan(0.4);
+      }
+    }
+  });
+
+  it('sleeping pets close their eyes (the eye shine is gone)', () => {
+    const isWhite = (c: Canvas, x: number, y: number): boolean => c.get(x, y).every((v) => v === 255);
+    for (const species of PET_SPECIES) {
+      const { body } = PET_ART[species];
+      const x0 = Math.floor((PET_FRAME - Math.max(...body.map((r) => r.length))) / 2) - 1;
+      const awake = renderPetFrame(species, 'left', 'idle', 0); // body bottom on row 18
+      const asleep = renderPetFrame(species, 'left', 'sleep', 0); // body bottom on row 21
+      let shines = 0;
+      body.forEach((row, ty) =>
+        [...row].forEach((ch, tx) => {
+          if (ch !== 'w') return;
+          shines++;
+          expect(isWhite(awake, x0 + tx, 18 - body.length + 1 + ty), `${species} awake`).toBe(true);
+          expect(isWhite(asleep, x0 + tx, 21 - body.length + 1 + ty), `${species} asleep`).toBe(false);
+        }),
+      );
+      expect(shines, species).toBeGreaterThan(0);
+    }
   });
 
   it('every pet frame has pixels; sleeping:false leaves the sleep cells empty', () => {

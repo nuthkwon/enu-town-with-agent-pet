@@ -198,7 +198,16 @@ export const HAIR_STYLES = ['short', 'swept', 'curly', 'bob', 'ponytail', 'long'
 export type HairStyle = (typeof HAIR_STYLES)[number];
 
 /** Palette keys understood by the sprite generator. */
-export const HAIR_COLORS = ['black', 'brown', 'chestnut', 'blonde', 'pink', 'lavender', 'teal', 'silver'] as const;
+export const HAIR_COLORS = [
+  'black',
+  'brown',
+  'chestnut',
+  'blonde',
+  'pink',
+  'lavender',
+  'teal',
+  'silver',
+] as const;
 export type HairColor = (typeof HAIR_COLORS)[number];
 
 export const OUTFIT_COLORS = ['rose', 'sky', 'mint', 'lemon', 'lilac', 'coral', 'navy', 'peach'] as const;
@@ -256,9 +265,24 @@ export function teamLabel(id: string | null | undefined): string {
 export const WORK_REQUEST_KINDS = [
   { id: 'question', label: '질문하기', template: '[질문] ', teams: null },
   { id: 'meeting', label: '회의 요청', template: '[회의 요청] 일시: \n안건: ', teams: null },
-  { id: 'review', label: '검토 요청 (SQA)', template: '[검토 요청] 대상 산출물: \n요청 내용: ', teams: ['qa'] },
-  { id: 'config', label: '형상 변경 요청', template: '[형상 변경 요청] 대상: \n변경 사유: ', teams: ['design'] },
-  { id: 'build', label: '구현·디자인 요청', template: '[구현 요청] 화면/기능: \n요청 사항: ', teams: ['dev'] },
+  {
+    id: 'review',
+    label: '검토 요청 (SQA)',
+    template: '[검토 요청] 대상 산출물: \n요청 내용: ',
+    teams: ['qa'],
+  },
+  {
+    id: 'config',
+    label: '형상 변경 요청',
+    template: '[형상 변경 요청] 대상: \n변경 사유: ',
+    teams: ['design'],
+  },
+  {
+    id: 'build',
+    label: '구현·디자인 요청',
+    template: '[구현 요청] 화면/기능: \n요청 사항: ',
+    teams: ['dev'],
+  },
   { id: 'report', label: '진행 보고', template: '[진행 보고] ', teams: ['mgmt'] },
 ] as const;
 

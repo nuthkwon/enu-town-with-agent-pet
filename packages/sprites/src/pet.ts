@@ -80,7 +80,7 @@ export function renderPetFrame(species: PetSpecies, dir: PetDirection, anim: Pet
   const y0 = pose.bottom - h + 1;
 
   const colors: ColorMap = pose.sleep
-    ? { ...art.colors, w: art.colors.b, e: art.colors.b, E: INK }
+    ? { ...art.colors, w: art.colors.b, e: art.colors.b, E: INK, ...art.asleep }
     : art.colors;
   let body = new Canvas(PET_FRAME, PET_FRAME);
   stamp(body, art.body, x0, y0, colors);

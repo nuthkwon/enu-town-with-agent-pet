@@ -6,9 +6,21 @@ import type { Template } from '../draw/template';
  * Pet templates, facing left, 3/4 view (both eyes visible, face shifted towards the facing side).
  * Shared keys: b base, B shade, l light, c cream (muzzle/belly), p pink, k blush, w eye shine,
  * e eye (top row), E eye (bottom row — stays as the closed-eye line when sleeping), n nose/mouth ink,
- * y yellow/orange (beak, horns, feet), d dark accent.
- * `wingAt` is the wing root (x, y) relative to the template's top-left; `tailRow` is the row where
- * squash/stretch happens.
+ * y yellow/orange (beak, horns, feet), d dark accent. Other letters are species-specific.
+ * `wingAt` is the wing root (x, y) relative to the template's top-left; `bendRow` is the row where
+ * squash/stretch happens. Keep templates at most 17 wide and 14 tall (hop frames must not clip), and
+ * `wingAt[1] >= height - 9` so the far wing stays inside the frame.
+ *
+ * Every employee gets a different pet, so each species must be recognisable at 1x by its silhouette
+ * AND its dominant colour. Taken (keep new species away from these):
+ *   cat       lavender, pointy ears          bunny     white, long ears
+ *   fox       orange, pointy ears, big tail  chick     yellow, round bird, orange beak
+ *   hamster   peach-tan + cream, wide blob   dragon    mint, gold horns, belly plates
+ *   puppy     cream + chocolate floppy ears  panda     white with black ears, eye patches, limbs
+ *   penguin   navy + white face, beak        owl       violet, cream face discs, ear tufts
+ *   hedgehog  chocolate spikes, tan face     koala     grey, big fluffy round ears, big nose
+ *   frog      lime, eye bumps, wide smile    unicorn   white, rainbow mane + tail, gold horn
+ *   whale     sky blue, tail fluke, spout    lamb      pink cotton wool, mauve face
  */
 export interface PetArt {
   body: Template;
@@ -16,6 +28,12 @@ export interface PetArt {
   wingAt: readonly [number, number];
   /** Row used for squash/stretch (inside the body, below the face). */
   bendRow: number;
+  /**
+   * Colour overrides for the sleep frames. By default the eyes close onto the base colour
+   * (`w`/`e` -> `b`, `E` -> ink line); faces drawn in another colour (a mask, a face disc, a dark
+   * face) override `w`/`e` (and `E` when ink would not show).
+   */
+  asleep?: Readonly<Record<string, RGBA>>;
 }
 
 const BLUSH = hex('#ff8fb1', 170);
@@ -186,5 +204,276 @@ export const PET_ART: Record<PetSpecies, PetArt> = {
     },
     wingAt: [11, 4],
     bendRow: 9,
+  },
+  puppy: {
+    body: [
+      '...bbbbbbb......',
+      '..bbbbbbbbbb....',
+      'ddbbbbbbbbbbdd..',
+      'ddbbbbbbbbbbdd..',
+      'ddbwebbbwebbdd..',
+      'ddbEEbbbEEbbdd.d',
+      'ddkccccccbkbdd.d',
+      '.dccccnccbbbd.dd',
+      '..bcccpcbbbddbb.',
+      '..rrrrryrbddddb.',
+      '..bccbbbbbbddbb.',
+      '..bccbbbbbbbbBb.',
+      '..bb.bb..bb.bb..',
+    ],
+    colors: {
+      ...common,
+      b: hex('#fff0dc'),
+      B: hex('#ecd3b2'),
+      c: hex('#fffaf2'),
+      d: hex('#9a6450'),
+      p: hex('#ff8fa8'),
+      r: hex('#ff6b81'),
+      y: hex('#ffd45e'),
+    },
+    wingAt: [11, 6],
+    bendRow: 10,
+  },
+  panda: {
+    body: [
+      '.dd.......dd....',
+      'dddbbbbbbbddd...',
+      '.dbbbbbbbbbd....',
+      '.bbbbbbbbbbbb...',
+      'bbddbbbbddbbb...',
+      'bdwdbbbdwdbbbb..',
+      'bdddbbbdddbbbb..',
+      'kbbbbnbbbkbbbbb.',
+      '.bbbbbbbbbbbbbb.',
+      '.dddbbbbbbdddbb.',
+      '.dddbbbbbbddddb.',
+      '..bbbbbbbbbbbBd.',
+      '..dd.dd..dd.dd..',
+    ],
+    colors: {
+      ...common,
+      b: hex('#fdfcff'),
+      B: hex('#e4e0ef'),
+      d: hex('#4e4760'),
+    },
+    asleep: { w: hex('#4e4760') },
+    wingAt: [11, 4],
+    bendRow: 9,
+  },
+  penguin: {
+    body: [
+      '....bbbbbb......',
+      '..bbbbbbbbbb....',
+      '.bbbbbbbbbbbb...',
+      '.bccccbccccbb...',
+      'bcwecccwecbbbb..',
+      'bcEEcccEEcbbbb..',
+      'yykccccckcbbbbb.',
+      'yyycccccccbbbbb.',
+      '.bccccccccbbbbbb',
+      '.bccccccccbbbbb.',
+      '..bccccccbbbbB..',
+      '...bcccccbbbB...',
+      '....yy....yy....',
+    ],
+    colors: {
+      ...common,
+      b: hex('#5a6cb8'),
+      B: hex('#47579c'),
+      c: hex('#fbfcff'),
+      y: hex('#ffa646'),
+    },
+    asleep: { w: hex('#fbfcff'), e: hex('#fbfcff') },
+    wingAt: [11, 4],
+    bendRow: 9,
+  },
+  owl: {
+    body: [
+      'd........d......',
+      'dd......dd......',
+      'bbbbbbbbbbb.....',
+      'bccbbbccbbb.....',
+      'cwecbcwecbbb....',
+      'cEEcycEEcbbbb...',
+      'kccbybcckbbbb...',
+      'bbbbbbbbbbbbbb..',
+      '.bllbbbbbbbbbb..',
+      '.bllllbbbbbbbB..',
+      '..bllbbbbbbBB...',
+      '...bbbbbbbbB....',
+      '....yy...yy.....',
+    ],
+    colors: {
+      ...common,
+      b: hex('#a983d6'),
+      B: hex('#8d68bf'),
+      l: hex('#d9c6f2'),
+      c: hex('#fff3dc'),
+      d: hex('#7a58ad'),
+      y: hex('#ffc24d'),
+    },
+    asleep: { w: hex('#fff3dc'), e: hex('#fff3dc') },
+    wingAt: [11, 5],
+    bendRow: 8,
+  },
+  hedgehog: {
+    body: [
+      '......d.d.d.....',
+      '....d.ddddddd...',
+      '...ddddDdddDdd.d',
+      '..dccdddDddddddd',
+      '.dccccddddDdddd.',
+      '.cweccweddddDddd',
+      '.cEEccEEdddDdddd',
+      'ncckcccckddddddd',
+      '.cccccccdddDddd.',
+      '..cccccdddddddd.',
+      '...cccdddddddd..',
+      '...cc.cc..cc.cc.',
+    ],
+    colors: {
+      ...common,
+      c: hex('#f7dcbc'),
+      b: hex('#f7dcbc'),
+      d: hex('#9a6852'),
+      D: hex('#c48e6e'),
+    },
+    asleep: { w: hex('#f7dcbc'), e: hex('#f7dcbc') },
+    wingAt: [10, 4],
+    bendRow: 8,
+  },
+  koala: {
+    body: [
+      '.bbb.....bbb....',
+      'bllbb...bbllb...',
+      'blllbbbbblllb...',
+      'bllbbbbbbbllb...',
+      '.bbwebbbbwebb...',
+      '..bEEbMNbEEbbb..',
+      '..kbbbNNbbkbbbb.',
+      '...bbbbbbbbbbbb.',
+      '...bbbbbbbbbbbb.',
+      '...bbbbbbbbbbbB.',
+      '...bbbbbbbbbbBB.',
+      '...bb.bb..bb.bb.',
+    ],
+    colors: {
+      ...common,
+      b: hex('#aeb3bf'),
+      B: hex('#9097a6'),
+      l: hex('#f5f4fa'),
+      N: hex('#4e4760'),
+      M: hex('#8a809c'),
+    },
+    wingAt: [11, 4],
+    bendRow: 8,
+  },
+  frog: {
+    body: [
+      '.bbb...bbb......',
+      'bwebb.bwebb.....',
+      'bEEbbbbEEbb.....',
+      'bbbbbbbbbbbb....',
+      'kbnbbbbnkbbbb...',
+      '.bbnnnnbbbbbbb..',
+      '.bbbbbbbbbbbbb..',
+      '.bbccccbbbbbbb..',
+      '..ccccccbbbbbB..',
+      '..bccccbbbbbB...',
+      '.bbb.bb..bbbb...',
+    ],
+    colors: {
+      ...common,
+      b: hex('#a9dc62'),
+      B: hex('#86c04a'),
+      c: hex('#f4fbd8'),
+    },
+    wingAt: [11, 3],
+    bendRow: 7,
+  },
+  unicorn: {
+    body: [
+      '....y...........',
+      '....yy..........',
+      '..b.yprb........',
+      '.bbbpprrrg......',
+      '.bbbbprrggm.....',
+      'bbbbbbprggmm....',
+      'bwebbwebrgmms...',
+      'bEEbbEEbbbmssv..',
+      'kccbbbkbbbbssvv.',
+      'cnccbbbbbbbbbsvv',
+      '.ccbbbbbbbbbbbsv',
+      '..bbbbbbbbbbBb..',
+      '..bb.bb..bb.bb..',
+    ],
+    colors: {
+      ...common,
+      b: hex('#fffaff'),
+      B: hex('#e6daf5'),
+      c: hex('#ffe3ef'),
+      y: hex('#ffd25e'),
+      p: hex('#ff9ccf'),
+      r: hex('#ffb38a'),
+      g: hex('#ffe580'),
+      m: hex('#9ee8c8'),
+      s: hex('#9fd4ff'),
+      v: hex('#c9a8ff'),
+    },
+    wingAt: [9, 6],
+    bendRow: 10,
+  },
+  whale: {
+    body: [
+      '..s...s.........',
+      '...s.s..........',
+      '....s...........',
+      '..bbbbbbb.......',
+      '.bbbbbbbbbb...bb',
+      'bbbbbbbbbbbb.bbb',
+      'bwebbwebbbbbbbb.',
+      'bEEbbEEbbbbbbb..',
+      'kccnccckbbbbbb..',
+      '.cccccccccbbbb..',
+      '..cccccccbbbB...',
+      '...bbbbbbbbB....',
+    ],
+    colors: {
+      ...common,
+      b: hex('#86c8f4'),
+      B: hex('#62a8de'),
+      c: hex('#eef8ff'),
+      s: hex('#a8dcff'),
+    },
+    wingAt: [8, 4],
+    bendRow: 8,
+  },
+  lamb: {
+    body: [
+      '..o.oo.o........',
+      '.oooooooo.o.o...',
+      'ooooooooooooooo.',
+      'ooffffffoooooooO',
+      'FfwefffwefFoooo.',
+      'FfEEfffEEfoooooO',
+      '.kfffnfffkooooo.',
+      '..offfffoooooooO',
+      '.ooooooooooooOo.',
+      'oooooooooooooOoO',
+      '.o.ooooooooOoO..',
+      '..ff.ff..ff.ff..',
+    ],
+    colors: {
+      ...common,
+      b: hex('#ffd9e8'),
+      o: hex('#ffd9e8'),
+      O: hex('#f5bcd3'),
+      f: hex('#a88aa0'),
+      F: hex('#8c6e86'),
+      n: hex('#ffc2d6'),
+    },
+    asleep: { w: hex('#a88aa0'), e: hex('#a88aa0') },
+    wingAt: [11, 3],
+    bendRow: 8,
   },
 };
