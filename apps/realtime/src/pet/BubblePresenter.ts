@@ -75,9 +75,7 @@ export function createDbDeliveryStore(db: Db): DeliveryStore {
  * as the due time travels separately in `bubbleDueAt` and is drawn as a chip outside the bubble.
  */
 export class BubblePresenter {
-  constructor(
-    private readonly deps: { store: DeliveryStore; clock: Clock; logger?: Logger },
-  ) {}
+  constructor(private readonly deps: { store: DeliveryStore; clock: Clock; logger?: Logger }) {}
 
   /**
    * Shows the bubble immediately (state is synced on the next patch) and records the delivery.
@@ -109,7 +107,10 @@ export class BubblePresenter {
       if (!ok && pet.bubbleId === candidate.refId) this.hide(pet);
       return ok;
     } catch (err) {
-      this.deps.logger?.error({ err, userId: input.userId, refId: candidate.refId }, 'recording bubble delivery failed');
+      this.deps.logger?.error(
+        { err, userId: input.userId, refId: candidate.refId },
+        'recording bubble delivery failed',
+      );
       return true;
     }
   }

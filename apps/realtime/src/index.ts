@@ -17,6 +17,17 @@ const logger = createLogger(env);
 
 process.on('unhandledRejection', (err) => logger.error({ err }, 'unhandled rejection'));
 
+if (env.NODE_ENV === 'production' && env.ALLOWED_ORIGINS.length === 0) {
+  logger.fatal('ALLOWED_ORIGINS must list the public web origin in production');
+  process.exit(1);
+}
+if (env.NUDGE_JOIN_DELAY_MS !== undefined || env.NUDGE_MIN_INTERVAL_MIN !== undefined) {
+  logger.warn(
+    { joinDelayMs: env.NUDGE_JOIN_DELAY_MS, minIntervalMin: env.NUDGE_MIN_INTERVAL_MIN },
+    'nudge timing overrides are set (meant for e2e/tests only)',
+  );
+}
+
 const dbHandle = createDb(env.DATABASE_URL, { max: 8, applicationName: 'enu-town-realtime' });
 setRealtimeContext({ env, db: dbHandle.db, logger, clock: systemClock });
 

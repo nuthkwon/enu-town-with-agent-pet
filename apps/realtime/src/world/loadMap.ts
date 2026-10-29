@@ -18,9 +18,11 @@ export function loadOfficeMap(mapsDir: string, mapId: string = OFFICE_MAP_ID): L
   const dir = path.resolve(mapsDir, mapId);
   const bytes = fs.readFileSync(path.join(dir, `${mapId}.tmj`));
   const mapHash = createHash('sha256').update(bytes).digest('hex');
-  let metaHash: string | null = null;
+  let metaHash: string | null;
   try {
-    const meta = JSON.parse(fs.readFileSync(path.join(dir, `${mapId}.meta.json`), 'utf8')) as { sha256?: unknown };
+    const meta = JSON.parse(fs.readFileSync(path.join(dir, `${mapId}.meta.json`), 'utf8')) as {
+      sha256?: unknown;
+    };
     metaHash = typeof meta.sha256 === 'string' ? meta.sha256 : null;
   } catch {
     metaHash = null;

@@ -40,6 +40,7 @@ export default defineConfig({
         NUDGE_JOIN_DELAY_MS: '1500',
         NUDGE_MIN_INTERVAL_MIN: '0',
         NUDGE_TICK_MS: '500',
+        NUDGE_IGNORE_QUIET_HOURS: '1',
         LOG_LEVEL: 'warn',
       },
     },

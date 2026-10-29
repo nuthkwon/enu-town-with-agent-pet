@@ -53,6 +53,17 @@ describe('selectBubble', () => {
     expect(run({ history: { lastShownAt: null, shownToday: 8 } })).toMatchObject({ show: false, reason: 'daily_cap' });
   });
 
+  it('can ignore quiet hours for development and e2e runs', () => {
+    const night = new Date('2026-10-31T13:00:00Z'); // Saturday 22:00 KST
+    const at = {
+      now: night,
+      presence: { ...presence, joinedAt: new Date(night.getTime() - 60_000), lastActivityAt: night },
+      candidates: [nudge({ eligibleAt: new Date(night.getTime() - 1000), expiresAt: new Date(night.getTime() + 3600_000) })],
+    };
+    expect(run(at)).toMatchObject({ show: false, reason: 'quiet' });
+    expect(run({ ...at, prefs: { ...prefs, ignoreQuietHours: true } })).toMatchObject({ show: true });
+  });
+
   it('enforces the interval but lets urgent items through after 10 minutes', () => {
     const recent = { lastShownAt: new Date(now.getTime() - 12 * 60_000), shownToday: 1 };
     expect(run({ history: recent })).toMatchObject({ show: false, reason: 'interval' });

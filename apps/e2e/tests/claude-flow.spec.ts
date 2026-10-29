@@ -13,19 +13,6 @@ import { connectClaude, mcpClient, structured } from '../support/claude';
 const NUDGE = 'E2E 테스트: 3시 회의 전에 검토 자료 확인해 볼까요?';
 const SUMMARY = 'E2E 테스트로 HMI 화면 설계 리뷰와 SQA 검토 요청 사항을 정리했습니다.';
 
-function isKoreanBusinessHours(now = new Date()): boolean {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Seoul',
-    hourCycle: 'h23',
-    weekday: 'short',
-    hour: 'numeric',
-    minute: 'numeric',
-  }).formatToParts(now);
-  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
-  const minutes = Number(get('hour')) * 60 + Number(get('minute'));
-  return !['Sat', 'Sun'].includes(get('weekday')) && minutes >= 8 * 60 + 30 && minutes < 19 * 60 + 30;
-}
-
 test('Claude writes; the owner sees the pet bubble, colleagues see the work log', async ({ browser }) => {
   const owner = await browser.newContext();
   const colleague = await browser.newContext();
@@ -76,16 +63,12 @@ test('Claude writes; the owner sees the pet bubble, colleagues see the work log'
   expect(card.latestLog.summary).toBe(SUMMARY);
   expect(card.latestLog.provenanceLabel).toContain('Claude가 작성');
 
-  // 4. The pet bubble: exact text, owner only (bubbles stay quiet outside Korean office hours).
+  // 4. The pet bubble: exact text, owner only (realtime runs with NUDGE_IGNORE_QUIET_HOURS in e2e).
   const ownerPage = await owner.newPage();
   const colleaguePage = await colleague.newPage();
   await openTown(ownerPage);
   await openTown(colleaguePage);
-  if (isKoreanBusinessHours()) {
-    await expect(ownerPage.getByText(NUDGE)).toBeVisible({ timeout: 45_000 });
-  } else {
-    test.info().annotations.push({ type: 'skip-part', description: 'pet bubble check skipped outside KST office hours' });
-  }
+  await expect(ownerPage.getByText(NUDGE)).toBeVisible({ timeout: 45_000 });
   await colleaguePage.waitForTimeout(3_000);
   await expect(colleaguePage.getByText(NUDGE)).toHaveCount(0);
   await ownerPage.screenshot({ path: 'screenshots/owner-town.png' });

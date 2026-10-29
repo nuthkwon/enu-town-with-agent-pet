@@ -77,7 +77,11 @@ export function registerHttpRoutes(app: RouteApp, deps: { pool: Pick<pg.Pool, 'q
   });
 }
 
-export function createRealtimeServer(deps: { env: RealtimeEnv; logger: Logger; pool: Pick<pg.Pool, 'query'> }): Server {
+export function createRealtimeServer(deps: {
+  env: RealtimeEnv;
+  logger: Logger;
+  pool: Pick<pg.Pool, 'query'>;
+}): Server {
   installCorsPolicy(deps.env.ALLOWED_ORIGINS);
   return defineServer({
     rooms,

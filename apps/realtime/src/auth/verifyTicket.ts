@@ -33,7 +33,10 @@ export interface VerifyTicketDeps {
  * Verifies the short-lived HS256 ticket minted by the web app, then re-reads the user from the DB
  * (active, allowed e-mail domain) so a revoked or deactivated account cannot join with an old ticket.
  */
-export async function verifyTicket(token: string | null | undefined, deps: VerifyTicketDeps): Promise<AuthData> {
+export async function verifyTicket(
+  token: string | null | undefined,
+  deps: VerifyTicketDeps,
+): Promise<AuthData> {
   if (!token) throw new TicketError('missing_ticket');
 
   let sub: string;

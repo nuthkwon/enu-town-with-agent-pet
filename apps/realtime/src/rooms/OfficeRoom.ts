@@ -1,4 +1,12 @@
-import { CloseCode, ErrorCode, Room, ServerError, type AuthContext, type Client, type Deferred } from '@colyseus/core';
+import {
+  CloseCode,
+  ErrorCode,
+  Room,
+  ServerError,
+  type AuthContext,
+  type Client,
+  type Deferred,
+} from '@colyseus/core';
 import { StateView } from '@colyseus/schema';
 import { profiles } from '@enu/db';
 import { DEFAULT_TIMING, type PolicyTiming } from '@enu/domain';
@@ -7,7 +15,6 @@ import {
   Anim,
   C2S,
   CloseCodes,
-  Dir,
   MSG,
   OfficeState,
   Pet,
@@ -16,9 +23,11 @@ import {
   Status,
   linkStateToCode,
   type ChatAckMsg,
+  type Dir,
   type ChatMsg,
   type DmMsg,
   type EmoteMsg,
+  type ErrorMsg,
   type MoveCorrectMsg,
   type NoticeMsg,
   type PingedMsg,
@@ -47,7 +56,6 @@ import { NudgeScheduler } from '../pet/NudgeScheduler';
 import { loadOfficeMap } from '../world/loadMap';
 import { chooseSpawn, adjacentWalkable, stepTarget } from '../world/Movement';
 import { PetFollower } from '../world/PetFollower';
-import type { ErrorMsg } from './errors';
 import { createClientLimits, type ClientLimits } from './limits';
 
 export interface OfficeUserData {
@@ -151,7 +159,10 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
     const { env, db, logger, clock } = this.ctx;
     const map = loadOfficeMap(env.MAPS_DIR);
     if (map.metaHash && map.metaHash !== map.mapHash) {
-      logger.warn({ mapHash: map.mapHash, metaHash: map.metaHash }, 'map file differs from its meta.json (run pnpm map:check)');
+      logger.warn(
+        { mapHash: map.mapHash, metaHash: map.metaHash },
+        'map file differs from its meta.json (run pnpm map:check)',
+      );
     }
     this.world = map.world;
     this.state.mapId = map.mapId;
@@ -162,7 +173,13 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
       joinDelayMs: env.NUDGE_JOIN_DELAY_MS ?? DEFAULT_TIMING.joinDelayMs,
     };
     this.chat = new ChatService(db);
-    this.loader = new CandidateLoader({ db, clock, timing, minIntervalOverrideMin: env.NUDGE_MIN_INTERVAL_MIN });
+    this.loader = new CandidateLoader({
+      db,
+      clock,
+      timing,
+      minIntervalOverrideMin: env.NUDGE_MIN_INTERVAL_MIN,
+      ignoreQuietHours: env.NUDGE_IGNORE_QUIET_HOURS,
+    });
     this.presenter = new BubblePresenter({ store: createDbDeliveryStore(db), clock, logger });
     this.scheduler = new NudgeScheduler({
       loader: this.loader,
@@ -320,7 +337,12 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
     this.state.players.delete(s.userId);
     this.state.pets.delete(s.userId);
     try {
-      await savePresence(this.ctx.db, s.userId, { x: p.x, y: p.y, dir: p.dir, zoneId: p.zoneId || null }, this.ctx.clock.now());
+      await savePresence(
+        this.ctx.db,
+        s.userId,
+        { x: p.x, y: p.y, dir: p.dir, zoneId: p.zoneId || null },
+        this.ctx.clock.now(),
+      );
     } catch (err) {
       this.ctx.logger.error({ err, userId: s.userId }, 'saving presence failed');
     }
@@ -387,7 +409,10 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
       this.scheduler.seen(s.userId, m.bubbleId);
     });
     this.onMessage('*', (client, type) => {
-      (client as OfficeClient).send(MSG.error, { code: 'UNKNOWN_MESSAGE', type: String(type) } satisfies ErrorMsg);
+      (client as OfficeClient).send(MSG.error, {
+        code: 'UNKNOWN_MESSAGE',
+        type: String(type),
+      } satisfies ErrorMsg);
     });
   }
 
@@ -458,13 +483,16 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
     s.baseStatus = status;
     if (text !== undefined) {
       const clean = normalizeLine(text);
-      if (graphemeLength(clean) > LIMITS.statusTextMax) return this.sendError(s, MSG.statusSet, 'INVALID_PAYLOAD');
+      if (graphemeLength(clean) > LIMITS.statusTextMax)
+        return this.sendError(s, MSG.statusSet, 'INVALID_PAYLOAD');
       s.customStatusText = clean;
       void this.ctx.db
         .update(profiles)
         .set({ statusText: clean || null })
         .where(eq(profiles.userId, s.userId))
-        .catch((err: unknown) => this.ctx.logger.error({ err, userId: s.userId }, 'saving status text failed'));
+        .catch((err: unknown) =>
+          this.ctx.logger.error({ err, userId: s.userId }, 'saving status text failed'),
+        );
     }
     this.applyStatus(s);
   }
@@ -497,12 +525,23 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
   }
 
   private nearbyOf(s: Session): string[] {
-    const me: ProximityPlayer = { id: s.userId, x: s.player.x, y: s.player.y, zoneId: s.player.zoneId || null };
+    const me: ProximityPlayer = {
+      id: s.userId,
+      x: s.player.x,
+      y: s.player.y,
+      zoneId: s.player.zoneId || null,
+    };
     return nearbyRecipients(me, this.proximityList(), LIMITS.nearbyRadiusTiles, ISOLATED_ZONES);
   }
 
-  private async handleChat(s: Session, channel: 'nearby' | 'room', raw: string, clientMsgId: string): Promise<void> {
-    const ack = (msg: Omit<ChatAckMsg, 'clientMsgId'>) => s.client.send(MSG.chatAck, { clientMsgId, ...msg } satisfies ChatAckMsg);
+  private async handleChat(
+    s: Session,
+    channel: 'nearby' | 'room',
+    raw: string,
+    clientMsgId: string,
+  ): Promise<void> {
+    const ack = (msg: Omit<ChatAckMsg, 'clientMsgId'>) =>
+      s.client.send(MSG.chatAck, { clientMsgId, ...msg } satisfies ChatAckMsg);
     if (!s.limits.chat.take(monotonicMs())) return ack({ id: null, error: 'RATE_LIMITED' });
     const prepared = prepareChatText(raw, { multiline: false });
     if (!prepared.ok) return ack({ id: null, error: prepared.error });
@@ -535,14 +574,21 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
   }
 
   private async handleDm(s: Session, toUserId: string, raw: string, clientMsgId: string): Promise<void> {
-    const ack = (msg: Omit<ChatAckMsg, 'clientMsgId'>) => s.client.send(MSG.chatAck, { clientMsgId, ...msg } satisfies ChatAckMsg);
+    const ack = (msg: Omit<ChatAckMsg, 'clientMsgId'>) =>
+      s.client.send(MSG.chatAck, { clientMsgId, ...msg } satisfies ChatAckMsg);
     if (!s.limits.dm.take(monotonicMs())) return ack({ id: null, error: 'RATE_LIMITED' });
     const prepared = prepareChatText(raw, { multiline: true });
     if (!prepared.ok) return ack({ id: null, error: prepared.error });
-    if (toUserId === s.userId || !(await this.chat.findActiveUser(toUserId))) return ack({ id: null, error: 'NOT_FOUND' });
+    if (toUserId === s.userId || !(await this.chat.findActiveUser(toUserId)))
+      return ack({ id: null, error: 'NOT_FOUND' });
     this.scheduler.noteActivity(s.userId);
 
-    const stored = await this.chat.storeDm({ senderId: s.userId, toUserId, body: prepared.text, clientMsgId });
+    const stored = await this.chat.storeDm({
+      senderId: s.userId,
+      toUserId,
+      body: prepared.text,
+      clientMsgId,
+    });
     if (!stored.duplicate) {
       const msg: DmMsg = {
         id: stored.id,
@@ -593,7 +639,8 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
           return;
         case 'link_state_changed':
           this.applyLinkState(event.user_id, event.state);
-          if (event.state !== 'not_linked' && this.byUser.has(event.user_id)) await this.scheduler.reload(event.user_id);
+          if (event.state !== 'not_linked' && this.byUser.has(event.user_id))
+            await this.scheduler.reload(event.user_id);
           return;
         case 'profile_changed':
           await this.reloadProfile(event.user_id);
@@ -609,7 +656,11 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
         case 'work_log_changed': {
           if (event.visibility !== 'company' || !event.created) return;
           const s = this.byUser.get(event.user_id);
-          const notice: NoticeMsg = { kind: 'work_log_published', text: WORK_LOG_PUBLISHED_TEXT, logId: event.log_id };
+          const notice: NoticeMsg = {
+            kind: 'work_log_published',
+            text: WORK_LOG_PUBLISHED_TEXT,
+            logId: event.log_id,
+          };
           s?.client.send(MSG.notice, notice);
           return;
         }

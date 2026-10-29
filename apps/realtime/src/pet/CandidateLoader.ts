@@ -45,7 +45,9 @@ export interface TodoRow {
 
 export function nudgeRowToCandidate(row: NudgeRow): Candidate {
   const eligibleAt =
-    row.snoozedUntil && row.snoozedUntil.getTime() > row.showAfter.getTime() ? row.snoozedUntil : row.showAfter;
+    row.snoozedUntil && row.snoozedUntil.getTime() > row.showAfter.getTime()
+      ? row.snoozedUntil
+      : row.showAfter;
   return {
     kind: 'nudge',
     refId: row.id,
@@ -95,6 +97,8 @@ export interface CandidateLoaderDeps {
   timing: PolicyTiming;
   /** NUDGE_MIN_INTERVAL_MIN env override (e2e/tests); replaces the profile value. */
   minIntervalOverrideMin?: number;
+  /** NUDGE_IGNORE_QUIET_HOURS (development/e2e only). */
+  ignoreQuietHours?: boolean;
   holidaysTtlMs?: number;
 }
 
@@ -144,7 +148,13 @@ export class CandidateLoader {
         ),
       );
     const todoRows = await db
-      .select({ id: todos.id, title: todos.title, priority: todos.priority, dueAt: todos.dueAt, createdAt: todos.createdAt })
+      .select({
+        id: todos.id,
+        title: todos.title,
+        priority: todos.priority,
+        dueAt: todos.dueAt,
+        createdAt: todos.createdAt,
+      })
       .from(todos)
       .where(
         and(
@@ -212,6 +222,7 @@ export class CandidateLoader {
       quietEnd: p.quietEnd,
       timeZone: p.timeZone,
       holidays: await this.holidays(),
+      ignoreQuietHours: this.deps.ignoreQuietHours ?? false,
     };
   }
 
@@ -239,7 +250,11 @@ export class CandidateLoader {
         .limit(1);
       return !!n && (n.status === 'pending' || n.status === 'shown') && n.expiresAt > now;
     }
-    const [t] = await db.select({ status: todos.status }).from(todos).where(eq(todos.id, bubble.refId)).limit(1);
+    const [t] = await db
+      .select({ status: todos.status })
+      .from(todos)
+      .where(eq(todos.id, bubble.refId))
+      .limit(1);
     return !!t && t.status === 'open';
   }
 }

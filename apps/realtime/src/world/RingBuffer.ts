@@ -5,7 +5,8 @@ export class RingBuffer<T> {
   private count = 0;
 
   constructor(readonly capacity: number) {
-    if (!Number.isInteger(capacity) || capacity <= 0) throw new Error('RingBuffer capacity must be a positive integer');
+    if (!Number.isInteger(capacity) || capacity <= 0)
+      throw new Error('RingBuffer capacity must be a positive integer');
     this.items = new Array<T | undefined>(capacity);
   }
 

@@ -1,5 +1,5 @@
 import type { Point, WalkGrid } from '@enu/map';
-import { Anim, Dir, STEP_MS } from '@enu/protocol';
+import { Anim, STEP_MS, type Dir } from '@enu/protocol';
 import { RingBuffer } from './RingBuffer';
 import { adjacentWalkable, dirBetween, manhattan, samePoint } from './Movement';
 

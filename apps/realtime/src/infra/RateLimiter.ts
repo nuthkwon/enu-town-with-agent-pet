@@ -59,7 +59,8 @@ export class KeyedLimiter {
     }
     const ok = b.take(nowMs);
     if (this.buckets.size > 64) {
-      for (const [k, v] of this.buckets) if (k !== key && v.available(nowMs) >= v.capacity) this.buckets.delete(k);
+      for (const [k, v] of this.buckets)
+        if (k !== key && v.available(nowMs) >= v.capacity) this.buckets.delete(k);
     }
     return ok;
   }

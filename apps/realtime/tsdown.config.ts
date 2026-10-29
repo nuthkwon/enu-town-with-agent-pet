@@ -19,6 +19,14 @@ export default defineConfig({
     neverBundle: [/^@colyseus\//, 'express', 'pg', 'pino', 'jose', /^drizzle-orm(\/.*)?$/],
     alwaysBundle: [/^@enu\//],
     onlyBundle: ['zod', 'uuid'],
-    onlyImport: ['@colyseus/core', '@colyseus/schema', '@colyseus/ws-transport', 'pg', 'pino', 'jose', 'drizzle-orm'],
+    onlyImport: [
+      '@colyseus/core',
+      '@colyseus/schema',
+      '@colyseus/ws-transport',
+      'pg',
+      'pino',
+      'jose',
+      'drizzle-orm',
+    ],
   },
 });

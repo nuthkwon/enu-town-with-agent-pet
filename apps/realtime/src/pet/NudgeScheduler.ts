@@ -243,7 +243,9 @@ function mergeSnapshot(prev: OwnerSnapshot | null, next: OwnerSnapshot): OwnerSn
     history: {
       dayKey: next.history.dayKey,
       firedDueKeys: next.history.firedDueKeys,
-      shownToday: sameDay ? Math.max(prev.history.shownToday, next.history.shownToday) : next.history.shownToday,
+      shownToday: sameDay
+        ? Math.max(prev.history.shownToday, next.history.shownToday)
+        : next.history.shownToday,
       lastShownAt: lastPrev > lastNext ? prev.history.lastShownAt : next.history.lastShownAt,
     },
   };

@@ -32,6 +32,8 @@ export interface NudgePrefs {
   quietEnd: string;
   timeZone: string;
   holidays: ReadonlySet<string>;
+  /** Development/e2e only (NUDGE_IGNORE_QUIET_HOURS): never treat the time as quiet. */
+  ignoreQuietHours?: boolean;
 }
 
 export interface OwnerPresence {
@@ -86,6 +88,7 @@ export function compareCandidates(a: BubbleCandidate, b: BubbleCandidate): numbe
 }
 
 export function isQuietTime(now: Date, prefs: NudgePrefs): boolean {
+  if (prefs.ignoreQuietHours) return false;
   return (
     !isBusinessDay(now, prefs.timeZone, prefs.holidays) ||
     isWithinLocalRange(now, prefs.timeZone, prefs.quietStart, prefs.quietEnd)

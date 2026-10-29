@@ -60,7 +60,8 @@ export const webEnvSchema = z
   });
 export type WebEnv = z.infer<typeof webEnvSchema>;
 
-export const realtimeEnvSchema = z.object({
+export const realtimeEnvSchema = z
+  .object({
   ...common,
   REALTIME_PORT: z.coerce.number().int().default(2567),
   REALTIME_TICKET_SECRET: z.string().min(32),
@@ -70,7 +71,14 @@ export const realtimeEnvSchema = z.object({
   NUDGE_TICK_MS: z.coerce.number().int().positive().default(1000),
   NUDGE_JOIN_DELAY_MS: z.coerce.number().int().nonnegative().optional(),
   NUDGE_MIN_INTERVAL_MIN: z.coerce.number().nonnegative().optional(),
-});
+  /** Development/e2e only: pet bubbles ignore quiet hours, weekends and holidays. */
+  NUDGE_IGNORE_QUIET_HOURS: bool.default(false),
+})
+  .superRefine((env, ctx) => {
+    if (env.NODE_ENV === 'production' && env.NUDGE_IGNORE_QUIET_HOURS) {
+      ctx.addIssue({ code: 'custom', message: 'NUDGE_IGNORE_QUIET_HOURS must never be set in production' });
+    }
+  });
 export type RealtimeEnv = z.infer<typeof realtimeEnvSchema>;
 
 export const workerEnvSchema = z.object({

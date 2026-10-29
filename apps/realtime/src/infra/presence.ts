@@ -15,7 +15,12 @@ export async function loadRecentPresence(db: Db, userId: string, now: Date): Pro
   const [row] = await db
     .select({ x: userPresence.x, y: userPresence.y, dir: userPresence.dir, zoneId: userPresence.zoneId })
     .from(userPresence)
-    .where(and(eq(userPresence.userId, userId), gt(userPresence.lastSeenAt, new Date(now.getTime() - PRESENCE_MAX_AGE_MS))))
+    .where(
+      and(
+        eq(userPresence.userId, userId),
+        gt(userPresence.lastSeenAt, new Date(now.getTime() - PRESENCE_MAX_AGE_MS)),
+      ),
+    )
     .limit(1);
   return row ?? null;
 }

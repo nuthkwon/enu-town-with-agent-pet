@@ -9,7 +9,10 @@ export type ChatTextError = 'EMPTY' | 'TOO_LONG';
  * Meaning-preserving hygiene only (NFC, control/invisible characters). Nearby/room chat is a single
  * line; DMs keep their line breaks. Over-long text is rejected, never cut.
  */
-export function prepareChatText(raw: string, opts: { multiline: boolean }): { ok: true; text: string } | { ok: false; error: ChatTextError } {
+export function prepareChatText(
+  raw: string,
+  opts: { multiline: boolean },
+): { ok: true; text: string } | { ok: false; error: ChatTextError } {
   const text = opts.multiline ? normalizeText(raw) : normalizeLine(raw);
   if (text.length === 0) return { ok: false, error: 'EMPTY' };
   // The DB CHECK counts code points; the product limit counts graphemes. Both must hold.
@@ -59,13 +62,20 @@ export class ChatService {
       if (!row) return { ...(await this.existing(tx, input.senderId, input.clientMsgId)), duplicate: true };
       const recipients = [...new Set(input.recipients ?? [])];
       if (input.kind === 'nearby' && recipients.length > 0) {
-        await tx.insert(chatMessageRecipients).values(recipients.map((userId) => ({ messageId: row.id, userId })));
+        await tx
+          .insert(chatMessageRecipients)
+          .values(recipients.map((userId) => ({ messageId: row.id, userId })));
       }
       return { id: row.id, createdAt: row.createdAt, duplicate: false };
     });
   }
 
-  async storeDm(input: { senderId: string; toUserId: string; body: string; clientMsgId: string }): Promise<StoredMessage> {
+  async storeDm(input: {
+    senderId: string;
+    toUserId: string;
+    body: string;
+    clientMsgId: string;
+  }): Promise<StoredMessage> {
     const [row] = await this.db
       .insert(chatMessages)
       .values({
@@ -79,7 +89,8 @@ export class ChatService {
       })
       .onConflictDoNothing({ target: [chatMessages.senderId, chatMessages.clientMsgId] })
       .returning({ id: chatMessages.id, createdAt: chatMessages.createdAt });
-    if (!row) return { ...(await this.existing(this.db, input.senderId, input.clientMsgId)), duplicate: true };
+    if (!row)
+      return { ...(await this.existing(this.db, input.senderId, input.clientMsgId)), duplicate: true };
     return { id: row.id, createdAt: row.createdAt, duplicate: false };
   }
 
@@ -151,7 +162,10 @@ export class ChatService {
     const rows = await this.db
       .select({ peer: chatMessages.senderId, n: count() })
       .from(chatMessages)
-      .leftJoin(dmReadState, and(eq(dmReadState.userId, userId), eq(dmReadState.peerId, chatMessages.senderId)))
+      .leftJoin(
+        dmReadState,
+        and(eq(dmReadState.userId, userId), eq(dmReadState.peerId, chatMessages.senderId)),
+      )
       .where(
         and(
           eq(chatMessages.kind, 'dm'),
