@@ -41,6 +41,7 @@ export default tseslint.config(
       'apps/web/next-env.d.ts',
       '**/playwright-report/**',
       '**/test-results/**',
+      'claude/plugins/*/server/**',
     ],
   },
   js.configs.recommended,

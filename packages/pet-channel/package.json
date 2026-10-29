@@ -1,0 +1,25 @@
+{
+  "name": "@enu/pet-channel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Source of the enu-den-channel Claude Code plugin (bundled into claude/plugins/enu-den-channel/server).",
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run --passWithNoTests",
+    "bundle": "tsdown"
+  },
+  "dependencies": {
+    "@enu/shared": "workspace:*",
+    "@modelcontextprotocol/server": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@enu/config": "workspace:*",
+    "@modelcontextprotocol/client": "catalog:",
+    "@types/node": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

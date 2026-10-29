@@ -1,0 +1,7 @@
+{
+  "name": "enu-den-channel",
+  "version": "0.1.0",
+  "description": "ENU Den 펫 채널: enu-pet으로 시작한 Claude Code 세션이 ENU Den 펫 대화방 메시지에 바로 답합니다.",
+  "author": { "name": "ENU-Tech" },
+  "keywords": ["enu-den", "channel", "pet"]
+}

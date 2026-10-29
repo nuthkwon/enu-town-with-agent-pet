@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "den": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/den-channel.mjs"],
+      "env": {
+        "ENU_DEN_URL": "${ENU_DEN_URL:-https://den.enu-tech.co.kr}",
+        "ENU_DEN_PET": "${ENU_DEN_PET:-0}"
+      }
+    }
+  }
+}

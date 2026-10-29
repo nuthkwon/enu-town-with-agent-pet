@@ -1,13 +1,23 @@
 {
   "name": "enu-tech",
-  "owner": { "name": "ENU-Tech" },
-  "metadata": { "description": "ENU-Tech 사내 Claude 플러그인 마켓플레이스" },
+  "owner": {
+    "name": "ENU-Tech"
+  },
+  "metadata": {
+    "description": "ENU-Tech 사내 Claude 플러그인 마켓플레이스"
+  },
   "plugins": [
     {
       "name": "enu-den",
       "source": "./plugins/enu-den",
       "description": "ENU Den 체크인: 내 Claude가 펫 대화에 답하고 오늘의 업무 로그·활동·할 일·펫 메시지를 ENU Den에 기록합니다.",
       "version": "1.0.0"
+    },
+    {
+      "name": "enu-den-channel",
+      "source": "./plugins/enu-den-channel",
+      "description": "ENU Den 펫 채널: 내 Claude Code가 ENU Den 펫 대화방 메시지에 바로 답합니다(선택, 터미널에서 직접 연결).",
+      "version": "0.1.0"
     }
   ]
 }

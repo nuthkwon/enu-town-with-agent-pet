@@ -48,6 +48,8 @@ jobs:
         run: pnpm sprites:build && pnpm map:check && git diff --exit-code -- apps/web/public/assets
       - name: Migrations are up to date
         run: pnpm --filter @enu/db generate && git diff --exit-code -- packages/db/migrations
+      - name: Pet channel plugin bundle is up to date
+        run: pnpm --filter @enu/pet-channel bundle && git diff --exit-code -- claude/plugins/enu-den-channel/server
       - name: Build
         run: pnpm build
         env:
