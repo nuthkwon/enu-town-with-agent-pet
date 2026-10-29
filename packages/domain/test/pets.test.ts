@@ -275,8 +275,14 @@ describe('pets: who answers an owner message', () => {
 
   it('delivers to a channel only what nobody else holds, while it is recent', () => {
     expect(isChannelDeliverable(q(), 'both', 't1', NOW)).toBe(true);
-    expect(isChannelDeliverable(held('t1'), 'both', 't1', NOW)).toBe(true);
+    // What the token already holds comes back only to a restarted plugin (includeHeld).
+    expect(isChannelDeliverable(held('t1'), 'both', 't1', NOW)).toBe(false);
+    expect(isChannelDeliverable(held('t1'), 'both', 't1', NOW, { includeHeld: true })).toBe(true);
+    const lapsed = q({ answerState: 'claimed', claimedBy: 't1', claimUntil: new Date(NOW.getTime() - 1) });
+    expect(isChannelDeliverable(lapsed, 'both', 't1', NOW)).toBe(false);
+    expect(isChannelDeliverable(lapsed, 'both', 't2', NOW)).toBe(true);
     expect(isChannelDeliverable(held('t2'), 'both', 't1', NOW)).toBe(false);
+    expect(isChannelDeliverable(held('t2'), 'both', 't1', NOW, { includeHeld: true })).toBe(false);
     expect(isChannelDeliverable(q(), 'checkin', 't1', NOW)).toBe(false);
     const old = q({ createdAt: new Date(NOW.getTime() - (PET_CHANNEL.deliverMaxAgeHours * 60 + 1) * MIN) });
     expect(isChannelDeliverable(old, 'both', 't1', NOW)).toBe(false);

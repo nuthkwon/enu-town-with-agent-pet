@@ -189,7 +189,10 @@ PET_CHANNEL = {
   live by another channel token). Parts 2..3 only on the same lane, in order.
 - The first reply to a message marks it `answered` and also every earlier unanswered owner message of the same pet
   (pending, expired claim, or claimed by the same token).
-- Channel claims are a 10-minute lease (`claim_until`); a re-poll by the same token returns its own claims again.
+- Channel claims are a 10-minute lease (`claim_until`). A poll never hands a token back what it already took
+  (held now, or held before and left unanswered), except on the first poll after the plugin starts
+  (`include_held: true`, a resumed session); so an idle session cannot keep a message from the connector past its
+  lease, and a held message never ends every long-poll at once.
 
 ## 4. REST
 
@@ -221,12 +224,12 @@ PET_CHANNEL = {
 
 ### Channel (bearer `edc_…` only, `channelRoute()`, never cookies)
 
-| Route                              | Notes                                                                                    |
-| ---------------------------------- | ---------------------------------------------------------------------------------------- |
-| POST `/api/v1/pet-channel/pair`    | unauthenticated; `{code, label?, platform, plugin_version}`; limited per IP and globally |
-| POST `/api/v1/pet-channel/poll`    | `{wait_s ≤25, plugin_version}` → `{messages ≤10, pets[], token_expires_at}`; claims      |
-| POST `/api/v1/pet-channel/replies` | `{in_reply_to, part, text, visibility?}` → shared reply service                          |
-| DELETE `/api/v1/pet-channel/token` | self-revoke                                                                              |
+| Route                              | Notes                                                                                              |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------- |
+| POST `/api/v1/pet-channel/pair`    | unauthenticated; `{code, label?, platform, plugin_version}`; limited per IP and globally           |
+| POST `/api/v1/pet-channel/poll`    | `{wait_s ≤25, plugin_version, include_held?}` → `{messages ≤10, pets[], token_expires_at}`; claims |
+| POST `/api/v1/pet-channel/replies` | `{in_reply_to, part, text, visibility?}` → shared reply service                                    |
+| DELETE `/api/v1/pet-channel/token` | self-revoke                                                                                        |
 
 `resolvePetChannelCaller` (`packages/auth/src/pet-channel.ts`) answers 401 `invalid_token` / `token_revoked` /
 `token_expired` / `user_inactive` and 403 `notice_required` (not onboarded, or the current notice not accepted).

@@ -2,8 +2,10 @@ import {
   activityReports,
   auditEvents,
   chatMessages,
+  claudeLinks,
   newId,
   nudgeDeliveries,
+  petChannelTokens,
   petMessages,
   petNudges,
   pets,
@@ -386,5 +388,44 @@ describe('retention.purge', () => {
     const s = await purgeRetention(h.db, NOW, env);
     expect(s.petMessages).toBe(1);
     expect(remaining(await h.db.select({ id: petMessages.id }).from(petMessages))).toEqual([keepQ]);
+  });
+
+  it('removes pet channel tokens 30 days after they expired or were revoked', async () => {
+    const u = await users();
+    const machine = async (n: number, link: { revokedAt?: Date }, expiresAt: Date) => {
+      const linkId = newId();
+      await h.db.insert(claudeLinks).values({
+        id: linkId,
+        userId: u.a,
+        clientId: `enu-den-channel:${n}`,
+        clientKind: 'claude_code_channel',
+        consentedAt: before(200),
+        revokedAt: link.revokedAt ?? null,
+      });
+      const id = newId();
+      await h.db.insert(petChannelTokens).values({
+        id,
+        userId: u.a,
+        linkId,
+        tokenHash: String(n).repeat(64),
+        label: 'Claude Code (macOS)',
+        platform: 'darwin',
+        pluginVersion: '0.1.0',
+        expiresAt,
+      });
+      return id;
+    };
+    const live = await machine(1, {}, plus(NOW, 10 * DAY));
+    const recentlyExpired = await machine(2, {}, before(29));
+    await machine(3, {}, before(31));
+    const recentlyRevoked = await machine(4, { revokedAt: before(29) }, plus(NOW, 10 * DAY));
+    await machine(5, { revokedAt: before(31) }, plus(NOW, 10 * DAY));
+    const s = await purgeRetention(h.db, NOW, env);
+    expect(s.petChannelTokens).toBe(2);
+    expect(remaining(await h.db.select({ id: petChannelTokens.id }).from(petChannelTokens)).sort()).toEqual(
+      [live, recentlyExpired, recentlyRevoked].sort(),
+    );
+    // The revoked link rows stay in the owner's link list.
+    expect(await h.db.select().from(claudeLinks)).toHaveLength(5);
   });
 });

@@ -298,7 +298,40 @@ export const claudeLinks = pgTable(
   },
   (t) => [
     uniqueIndex('claude_links_user_client_uidx').on(t.userId, t.clientId),
-    check('claude_links_kind_chk', sql`${t.clientKind} in ('claude_ai','claude_code','other')`),
+    check(
+      'claude_links_kind_chk',
+      sql`${t.clientKind} in ('claude_ai','claude_code','claude_code_channel','other')`,
+    ),
+  ],
+);
+
+/**
+ * Claude Code pet channel credentials (ADR 0006): one per paired machine, tied to its own `claude_links` row so the
+ * link list, revoke and deactivation cover it. Only the sha256 of the `edc_` token is stored. No last-seen column:
+ * whether a channel is listening lives only in the web process memory.
+ */
+export const petChannelTokens = pgTable(
+  'pet_channel_tokens',
+  {
+    id: uuid('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    linkId: uuid('link_id')
+      .notNull()
+      .references(() => claudeLinks.id, { onDelete: 'cascade' }),
+    tokenHash: char('token_hash', { length: 64 }).notNull(),
+    label: varchar('label', { length: 40 }).notNull(),
+    platform: text('platform').notNull(),
+    pluginVersion: varchar('plugin_version', { length: 20 }).notNull(),
+    createdAt: tstz('created_at').notNull().defaultNow(),
+    expiresAt: tstz('expires_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('pet_channel_tokens_link_uidx').on(t.linkId),
+    uniqueIndex('pet_channel_tokens_hash_uidx').on(t.tokenHash),
+    index('pet_channel_tokens_user_idx').on(t.userId),
+    check('pet_channel_tokens_platform_chk', sql`${t.platform} in ('darwin','linux','win32','other')`),
   ],
 );
 

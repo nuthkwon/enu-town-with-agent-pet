@@ -3,6 +3,7 @@ import {
   chatMessages,
   claudeLinks,
   desks,
+  petChannelTokens,
   petMessages,
   petNudges,
   pets,
@@ -20,7 +21,7 @@ import { asc, eq, isNull, and } from 'drizzle-orm';
  * Everything ENU Den stores about the viewer that they authored or that is about them:
  * profile (incl. 활동 공유, 접속 표시 and the hand-set status), logs, today's activity report (refs only
  * as has_ref: the keyed hashes are never handed out), to-dos, pet bubbles, the chat messages they SENT,
- * consents, Claude links, my pets (with their role instructions) and my pet conversations (my messages and my
+ * consents, Claude links (and paired Claude Code machines, without token hashes), my pets (with their role instructions) and my pet conversations (my messages and my
  * Claude's replies). Messages other people sent (including DMs to the viewer) are not included.
  */
 export async function buildExport(db: DbOrTx, userId: string, now = new Date()) {
@@ -73,6 +74,19 @@ export async function buildExport(db: DbOrTx, userId: string, now = new Date()) 
     .orderBy(asc(petMessages.createdAt), asc(petMessages.id));
   const consents = await db.select().from(privacyConsents).where(eq(privacyConsents.userId, userId));
   const links = await db.select().from(claudeLinks).where(eq(claudeLinks.userId, userId));
+  const machines = await db
+    .select({
+      id: petChannelTokens.id,
+      linkId: petChannelTokens.linkId,
+      label: petChannelTokens.label,
+      platform: petChannelTokens.platform,
+      pluginVersion: petChannelTokens.pluginVersion,
+      createdAt: petChannelTokens.createdAt,
+      expiresAt: petChannelTokens.expiresAt,
+    })
+    .from(petChannelTokens)
+    .where(eq(petChannelTokens.userId, userId))
+    .orderBy(asc(petChannelTokens.createdAt));
 
   return {
     format: 'enu-den-export',
@@ -157,5 +171,7 @@ export async function buildExport(db: DbOrTx, userId: string, now = new Date()) 
     })),
     privacyConsents: consents,
     claudeLinks: links,
+    // Paired Claude Code machines; the token hashes are never handed out.
+    petChannelMachines: machines,
   };
 }

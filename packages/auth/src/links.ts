@@ -7,6 +7,8 @@ import {
   notifyTown,
   oauthConsent,
   oauthRefreshToken,
+  petChannelTokens,
+  petMessages,
   profiles,
   session,
   user,
@@ -15,7 +17,7 @@ import {
 } from '@enu/db';
 import { computeLinkState } from '@enu/domain';
 import type { LinkState } from '@enu/shared';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 
 /**
  * Claude connector links: one row per (user, OAuth client). A link is created when the
@@ -136,14 +138,41 @@ export async function recordConsent(db: Db, c: ConsentRecord, now = new Date()):
 }
 
 /**
+ * Gives back the messages that the pet channel tokens of `linkIds` were holding, so the connector (or another
+ * machine) may answer them at once instead of after the 10-minute lease.
+ */
+async function releaseChannelClaims(tx: DbOrTx, userId: string, linkIds: string[]): Promise<void> {
+  if (linkIds.length === 0) return;
+  const tokens = await tx
+    .select({ id: petChannelTokens.id })
+    .from(petChannelTokens)
+    .where(and(eq(petChannelTokens.userId, userId), inArray(petChannelTokens.linkId, linkIds)));
+  if (tokens.length === 0) return;
+  await tx
+    .update(petMessages)
+    .set({ answerState: 'pending', claimedBy: null, claimUntil: null })
+    .where(
+      and(
+        eq(petMessages.userId, userId),
+        eq(petMessages.answerState, 'claimed'),
+        inArray(
+          petMessages.claimedBy,
+          tokens.map((t) => t.id),
+        ),
+      ),
+    );
+}
+
+/**
  * Revokes one link (by id) or all of the user's links: marks them revoked, deletes the
  * matching refresh tokens and stored consents (so reconnecting always shows the consent
- * screen again) and, when everything is revoked, invalidates all outstanding access tokens.
+ * screen again), releases what a revoked pet channel was holding and, when everything is
+ * revoked, invalidates all outstanding access tokens. `system` is a revoke nobody asked for in person.
  */
 export async function revokeClaudeLinks(
   db: Db,
   userId: string,
-  opts: { linkId?: string; reason?: string; actor?: 'user' | 'admin' } = {},
+  opts: { linkId?: string; reason?: string; actor?: 'user' | 'admin' | 'system' } = {},
   now = new Date(),
 ): Promise<number> {
   return db.transaction(async (tx) => {
@@ -169,6 +198,11 @@ export async function revokeClaudeLinks(
         .delete(oauthConsent)
         .where(and(eq(oauthConsent.userId, userId), eq(oauthConsent.clientId, row.clientId)));
     }
+    await releaseChannelClaims(
+      tx,
+      userId,
+      rows.map((r) => r.id),
+    );
     const [stillActive] = await tx
       .select({ id: claudeLinks.id })
       .from(claudeLinks)

@@ -77,17 +77,21 @@ export function claimUntil(now: Date): Date {
 }
 
 /**
- * A poll by channel token `tokenId` may (re)deliver the message: the route admits the channel, it is not answered,
- * nobody else holds it, and it is recent enough to still be worth pushing into a session.
+ * A poll by channel token `tokenId` may deliver the message: the route admits the channel, it is not answered,
+ * nobody else holds it, and it is recent enough to still be worth pushing into a session. What this token already
+ * took (held now, or held before and left unanswered) comes back only with `includeHeld`, the first poll after the
+ * plugin starts; otherwise an idle session would keep it from the connector forever and a held message would end
+ * every long-poll at once.
  */
 export function isChannelDeliverable(
   q: PetQuestionState,
   route: PetReplyRoute,
   tokenId: string,
   now: Date,
+  opts: { includeHeld?: boolean } = {},
 ): boolean {
   if (!routeAllows(route, 'channel') || q.answerState === 'answered') return false;
-  if (isClaimLive(q, now) && q.claimedBy !== tokenId) return false;
+  if (q.claimedBy === tokenId ? !opts.includeHeld : isClaimLive(q, now)) return false;
   return now.getTime() - q.createdAt.getTime() <= PET_CHANNEL.deliverMaxAgeHours * 3_600_000;
 }
 

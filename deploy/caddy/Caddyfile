@@ -21,6 +21,11 @@
 		}
 	}
 
+	# Pet channel long-polls (every 25 s per paired machine) and colleagues' reads are not logged per request:
+	# a log line per poll would be a presence history (ADR 0006, messenger-spec §9).
+	@unlogged path /api/v1/pet-channel/poll /api/v1/users/*
+	log_skip @unlogged
+
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options nosniff
@@ -39,6 +44,9 @@
 
 		request_body /api/mcp {
 			max_size 64KB
+		}
+		request_body /api/v1/pet-channel/* {
+			max_size 16KB
 		}
 
 		# Colyseus only serves at the root, so strip the prefix (matchmake + WebSocket).

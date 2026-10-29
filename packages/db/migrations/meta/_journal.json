@@ -50,6 +50,13 @@
       "when": 1793283385288,
       "tag": "0006_pet_messages",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793285340189,
+      "tag": "0007_pet_channel",
+      "breakpoints": true
     }
   ]
 }

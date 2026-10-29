@@ -15,9 +15,14 @@
 			}
 		}
 	}
+	@unlogged path /api/v1/pet-channel/poll /api/v1/users/*
+	log_skip @unlogged
 	route {
 		request_body /api/mcp {
 			max_size 64KB
+		}
+		request_body /api/v1/pet-channel/* {
+			max_size 16KB
 		}
 		handle_path /colyseus/* {
 			reverse_proxy {$REALTIME_UPSTREAM:realtime:2567}

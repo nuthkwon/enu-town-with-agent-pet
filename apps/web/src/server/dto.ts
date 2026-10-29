@@ -226,7 +226,11 @@ export function toClaudeLinkDto(l: ClaudeLinkRow): ClaudeLinkDto {
   return {
     id: l.id,
     clientName: l.clientName ?? null,
-    clientKind: oneOf(['claude_ai', 'claude_code', 'other'] as const, l.clientKind, 'other'),
+    clientKind: oneOf(
+      ['claude_ai', 'claude_code', 'claude_code_channel', 'other'] as const,
+      l.clientKind,
+      'other',
+    ),
     redirectHost: l.redirectHost ?? null,
     consentedAt: isoReq(l.consentedAt),
     lastToolCallAt: iso(l.lastToolCallAt),

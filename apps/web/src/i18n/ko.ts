@@ -165,6 +165,11 @@ export const ko = {
     defaultPet: '대표 펫은 지울 수 없어요.',
     piiPublic: '전화번호 같은 개인정보가 있어요. 동료에게 공개되지 않게 "나만 보기"로 보내 주세요.',
     petNotFound: '펫을 찾을 수 없어요.',
+    invalidPairCode: '연결 코드가 맞지 않거나 만료되었어요. ENU Den 설정에서 새 코드를 만들어 주세요.',
+    tooManyMachines:
+      'Claude Code 펫 채널은 한 사람당 컴퓨터 3대까지 연결할 수 있어요. 설정에서 쓰지 않는 연결을 해제해 주세요.',
+    channelUnauthorized: '펫 채널 연결이 끊겼어요. ENU Den 설정에서 새 코드를 만들어 다시 연결해 주세요.',
+    jsonRequired: 'JSON 요청만 받을 수 있어요.',
   },
 
   fieldReason: {
@@ -407,7 +412,12 @@ export const ko = {
       lastLog: '마지막 업무 로그',
       linksTitle: '연결된 Claude',
       linksEmpty: '아직 연결된 Claude가 없어요.',
-      kind: { claude_ai: 'Claude (claude.ai)', claude_code: 'Claude Code', other: '기타 앱' },
+      kind: {
+        claude_ai: 'Claude (claude.ai)',
+        claude_code: 'Claude Code',
+        claude_code_channel: 'Claude Code 펫 채널',
+        other: '기타 앱',
+      },
       consentedAt: '연결',
       lastToolCall: '마지막 도구 호출',
       lastWrite: '마지막 기록',

@@ -44,6 +44,8 @@ export const petChannelPollInput = z
   .object({
     wait_s: z.number().int().min(0).max(PET_CHANNEL.pollWaitMaxS).default(PET_CHANNEL.pollWaitMaxS),
     plugin_version: z.string().min(1).max(20),
+    /** First poll after the plugin starts: also return what this machine already holds (a resumed session). */
+    include_held: z.boolean().default(false),
   })
   .strict();
 export type PetChannelPollInput = z.infer<typeof petChannelPollInput>;

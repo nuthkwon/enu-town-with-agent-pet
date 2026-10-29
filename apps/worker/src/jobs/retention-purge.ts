@@ -3,7 +3,9 @@ import {
   audit,
   auditEvents,
   chatMessages,
+  claudeLinks,
   nudgeDeliveries,
+  petChannelTokens,
   petMessages,
   petNudges,
   profiles,
@@ -22,6 +24,8 @@ export const RETENTION_BATCH_SIZE = 5000;
 export const SOFT_DELETED_WORK_LOG_DAYS = 30;
 /** Done/dismissed to-dos untouched for this many days are removed. */
 export const CLOSED_TODO_DAYS = 30;
+/** Pet channel tokens are removed this many days after they expired or their link was revoked. */
+export const CHANNEL_TOKEN_GRACE_DAYS = 30;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TERMINAL_NUDGE_STATUSES = ['acked', 'dismissed', 'expired', 'superseded'];
@@ -43,6 +47,8 @@ export interface RetentionSummary {
   clearedManual: number;
   /** Pet conversation messages of days past the retention window (replies go with their questions). */
   petMessages: number;
+  /** Pet channel tokens expired or revoked more than 30 days ago (their revoked link rows stay). */
+  petChannelTokens: number;
 }
 
 export interface RetentionOptions {
@@ -87,6 +93,8 @@ export function retentionDaysFromEnv(env: RetentionEnv): RetentionDays {
  *   Writers and readers key reports by the same day, so a live row is never deleted.
  * - expired manual statuses (`manual_status_until < now`) are cleared; readers already ignore them, so no
  *   NOTIFY is sent. 상태 문구 is not touched. No presence or attendance data exists to purge (ADR 0004).
+ * - pet conversations by `day_key` before the pet-message cutoff; pet channel tokens 30 days after they
+ *   expired or were revoked.
  */
 /**
  * Bubble deliveries shown before this instant are deleted. The policy only reads today's count, the last
@@ -294,6 +302,21 @@ export async function purgeRetention(
     ),
   );
 
+  const tokenCutoff = new Date(now.getTime() - CHANNEL_TOKEN_GRACE_DAYS * DAY_MS);
+  const petChannelTokenCount = affected(
+    await db
+      .delete(petChannelTokens)
+      .where(
+        or(
+          lt(petChannelTokens.expiresAt, tokenCutoff),
+          inArray(
+            petChannelTokens.linkId,
+            db.select({ id: claudeLinks.id }).from(claudeLinks).where(lt(claudeLinks.revokedAt, tokenCutoff)),
+          ),
+        ),
+      ),
+  );
+
   const summary: RetentionSummary = {
     dmMessages,
     roomMessages,
@@ -307,6 +330,7 @@ export async function purgeRetention(
     activityReports: activityReportCount,
     clearedManual,
     petMessages: petMessageCount,
+    petChannelTokens: petChannelTokenCount,
   };
   // Counts only (no content): proof that retention ran, kept like any other audit event.
   await audit(db, { actorType: 'system', action: 'retention.purge', metadata: { ...summary } });

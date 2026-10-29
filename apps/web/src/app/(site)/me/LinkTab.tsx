@@ -77,17 +77,20 @@ export function LinkTab({ me, initialLinks }: { me: MeDto; initialLinks: ClaudeL
                 <span
                   className={cx(
                     s.linkIcon,
-                    l.clientKind === 'claude_code' && s.linkIconCode,
+                    (l.clientKind === 'claude_code' || l.clientKind === 'claude_code_channel') &&
+                      s.linkIconCode,
                     l.clientKind === 'other' && s.linkIconOther,
                   )}
                   aria-hidden="true"
                 >
-                  {l.clientKind === 'claude_code' ? '>_' : '✦'}
+                  {l.clientKind === 'claude_code' || l.clientKind === 'claude_code_channel' ? '>_' : '✦'}
                 </span>
                 <div className={s.linkBody}>
                   <div className={s.linkTitle}>
                     <span>{l.clientName ?? t.kind[l.clientKind]}</span>
-                    <Badge tone={l.clientKind === 'claude_code' ? 'lavender' : 'sky'}>
+                    <Badge
+                      tone={l.clientKind === 'claude_ai' || l.clientKind === 'other' ? 'sky' : 'lavender'}
+                    >
                       {t.kind[l.clientKind]}
                     </Badge>
                     {l.revokedAt && <Badge tone="gray">{t.revoked}</Badge>}

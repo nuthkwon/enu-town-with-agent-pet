@@ -14,6 +14,12 @@ export const REST_LIMITS = {
   petRead: { max: 60, windowMs: MIN },
   colleaguePetThread: { max: 120, windowMs: MIN },
   pairingCodes: { max: 10, windowMs: HOUR },
+  /** Unauthenticated pairing attempts: per client address, and for the whole server. */
+  channelPairPerIp: { max: 10, windowMs: HOUR },
+  channelPairGlobal: { max: 60, windowMs: HOUR },
+  /** A parked long-poll answers at most every 25 s; a busy owner wakes it more often. */
+  channelPoll: { max: 600, windowMs: HOUR },
+  channelReply: { max: 120, windowMs: HOUR },
 } satisfies Record<string, RateLimitRule>;
 export type RestLimitName = keyof typeof REST_LIMITS;
 

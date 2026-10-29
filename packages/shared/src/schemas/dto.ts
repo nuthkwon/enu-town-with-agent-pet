@@ -258,7 +258,7 @@ export interface NudgeDto {
 export interface ClaudeLinkDto {
   id: string;
   clientName: string | null;
-  clientKind: 'claude_ai' | 'claude_code' | 'other';
+  clientKind: 'claude_ai' | 'claude_code' | 'claude_code_channel' | 'other';
   redirectHost: string | null;
   consentedAt: string;
   lastToolCallAt: string | null;

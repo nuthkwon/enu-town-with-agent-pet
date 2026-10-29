@@ -342,6 +342,25 @@ describe('migrations 0002_town_visualization and 0003_no_presence_traces', () =>
     await q(`delete from pet_messages where id = '${question}'`);
     expect((await q('select count(*)::int as n from pet_messages')).rows).toEqual([{ n: 0 }]);
 
+    // 0007: pet channel machines are Claude links of their own kind, with a known platform.
+    await violation(
+      'claude_links_kind_chk',
+      `insert into claude_links (id, user_id, client_id, client_kind, consented_at)
+       values ('00000000-0000-7000-8000-0000000000d1', 'u-a', 'x', 'telegram', now())`,
+    );
+    await q(`insert into claude_links (id, user_id, client_id, client_kind, consented_at)
+             values ('00000000-0000-7000-8000-0000000000d2', 'u-a', 'enu-den-channel:1', 'claude_code_channel', now())`);
+    const machine = (platform: string, hash: string) =>
+      `insert into pet_channel_tokens (id, user_id, link_id, token_hash, label, platform, plugin_version, expires_at)
+       values (gen_random_uuid(), 'u-a', '00000000-0000-7000-8000-0000000000d2', '${hash.repeat(64)}',
+               'Claude Code', '${platform}', '0.1.0', now())`;
+    await violation('pet_channel_tokens_platform_chk', machine('ios', 'a'));
+    await q(machine('darwin', 'b'));
+    expect(await failure(machine('linux', 'c'))).toMatchObject({
+      code: '23505',
+      constraint: 'pet_channel_tokens_link_uidx',
+    });
+
     /** An activity report for u-b with `extra` columns (name -> SQL expression). */
     const report = (extra: Record<string, string>, source = "'cowork_scheduled'") => {
       const cols = ['user_id', 'period_key', 'source', ...Object.keys(extra)].join(', ');
