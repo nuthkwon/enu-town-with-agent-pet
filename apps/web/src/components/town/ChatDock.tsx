@@ -6,27 +6,13 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ko } from '@/i18n/ko';
 import { useConnectionStatus } from '@/realtime/useRealtime';
 import { api, getJson } from './api';
+import { mergeLine, type ChatLine as Line } from './chatLogic';
 import { Composer } from './Composer';
 import { formatHm } from './format';
 import { useTown } from './TownContext';
 import s from './town.module.css';
 
 type Channel = 'nearby' | 'room';
-
-interface Line {
-  key: string;
-  id: string | null;
-  clientMsgId: string | null;
-  kind: Channel;
-  fromUserId: string;
-  fromName: string;
-  text: string;
-  createdAt: string;
-  state: 'sent' | 'pending' | 'failed';
-  error?: string;
-}
-
-const MAX_LINES = 150;
 
 function fromChatMsg(m: ChatMsg): Line {
   return {
@@ -54,23 +40,6 @@ function fromHistory(m: ChatItemDto): Line {
     createdAt: m.createdAt,
     state: 'sent',
   };
-}
-
-/** Merges an incoming line: replaces my own pending echo, ignores duplicates, keeps time order. */
-export function mergeLine(lines: readonly Line[], incoming: Line, myUserId: string): Line[] {
-  if (incoming.id && lines.some((l) => l.id === incoming.id)) return lines as Line[];
-  if (incoming.fromUserId === myUserId) {
-    const i = lines.findIndex(
-      (l) => l.state === 'pending' && l.kind === incoming.kind && l.text === incoming.text && l.fromUserId === myUserId,
-    );
-    if (i >= 0) {
-      const next = [...lines];
-      next[i] = { ...incoming, key: lines[i]?.key ?? incoming.key };
-      return next;
-    }
-  }
-  const next = [...lines, incoming];
-  return next.length > MAX_LINES ? next.slice(next.length - MAX_LINES) : next;
 }
 
 /** Bottom-left chat: 근처 (live, nearby + same meeting room) and 전체 (history + live). */

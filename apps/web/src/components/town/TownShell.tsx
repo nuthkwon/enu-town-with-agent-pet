@@ -3,6 +3,7 @@
 import { STATUS_LABEL_KO, type Status } from '@enu/protocol';
 import type { MeDto } from '@enu/shared';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AvatarSprite } from '@/components/sprites';
 import type { TownDirectory } from '@/game/directory';
@@ -59,6 +60,7 @@ export function TownShell({
   directory: TownDirectory;
   status: ConnectionStatus;
 }) {
+  const router = useRouter();
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [popover, setPopover] = useState<Popover | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -152,7 +154,7 @@ export function TownShell({
             text: t.workLogPublished,
             ttlMs: 15_000,
             actions: [
-              { label: t.view, onClick: () => window.location.assign(`/me?log=${encodeURIComponent(logId)}`) },
+              { label: t.view, onClick: () => router.push(`/me?log=${encodeURIComponent(logId)}`) },
               {
                 label: t.makePrivate,
                 onClick: async () => {
@@ -190,7 +192,7 @@ export function TownShell({
       }),
     ];
     return () => offs.forEach((off) => off());
-  }, [session, bus, toast, ui, me.userId, directory]);
+  }, [session, bus, toast, ui, me.userId, directory, router]);
 
   // Typing anywhere in the overlays pauses keyboard movement in the map.
   useEffect(() => {

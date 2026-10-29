@@ -144,6 +144,7 @@ export class WorldScene extends Phaser.Scene {
     this.bindBus();
 
     this.scale.on('resize', this.onResize, this);
+    this.installDebugHook();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown());
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.teardown());
     this.bridge.bus.emit('game:ready');
@@ -574,6 +575,34 @@ export class WorldScene extends Phaser.Scene {
     this.scrollX = snapToScreenPixel(this.scrollX, this.zoom);
     this.scrollY = snapToScreenPixel(this.scrollY, this.zoom);
     this.mainCam.setScroll(this.scrollX, this.scrollY);
+  }
+
+  /**
+   * Development/e2e only: lets tests find canvas positions (avatars, pets, desks) without pixel
+   * guessing. Never installed in production builds.
+   */
+  private installDebugHook(): void {
+    if (process.env.NODE_ENV === 'production' || typeof window === 'undefined') return;
+    const hook = {
+      avatarScreen: (userId: string) => {
+        const v = this.avatars.get(userId);
+        return v ? this.toScreen(v.feet.x, v.feet.y - 14) : null;
+      },
+      petScreen: (ownerId: string) => {
+        const v = this.pets.get(ownerId);
+        return v ? this.toScreen(v.feet.x, v.feet.y - 6) : null;
+      },
+      tileScreen: (tx: number, ty: number) => this.toScreen(tileCenterX(tx), ty * TILE_PX + TILE_PX / 2),
+      myTile: () => (this.mover ? { ...this.mover.pos } : null),
+      zoom: () => this.zoom,
+      avatarCount: () => this.avatars.size,
+      petBubble: () => this.pets.get(this.bridge.me.userId)?.activeBubble ?? null,
+    };
+    (window as unknown as { __ENU_TOWN_DEBUG__?: typeof hook }).__ENU_TOWN_DEBUG__ = hook;
+    this.offs.push(() => {
+      const w = window as unknown as { __ENU_TOWN_DEBUG__?: typeof hook };
+      if (w.__ENU_TOWN_DEBUG__ === hook) delete w.__ENU_TOWN_DEBUG__;
+    });
   }
 
   private teardown(): void {

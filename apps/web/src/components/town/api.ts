@@ -14,7 +14,7 @@ export class ApiFailure extends Error {
 async function parse<T>(res: Response): Promise<T> {
   if (res.status === 204) return undefined as T;
   const text = await res.text();
-  let body: unknown = null;
+  let body: unknown;
   try {
     body = text ? JSON.parse(text) : null;
   } catch {
@@ -22,7 +22,7 @@ async function parse<T>(res: Response): Promise<T> {
   }
   if (!res.ok) {
     if (res.status === 401 && typeof window !== 'undefined') {
-      window.location.assign(`/sign-in?next=${encodeURIComponent('/town')}`);
+      window.location.assign(new URL(`/sign-in?next=${encodeURIComponent('/town')}`, window.location.origin).href);
     }
     throw new ApiFailure(res.status, (body as ApiError | null) ?? null);
   }

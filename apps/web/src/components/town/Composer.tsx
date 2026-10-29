@@ -4,14 +4,8 @@ import { LIMITS, graphemeLength } from '@enu/shared';
 import { forwardRef, useState } from 'react';
 import { Button } from '@/components/ui';
 import { ko } from '@/i18n/ko';
+import { isSendEnter } from './chatLogic';
 import s from './town.module.css';
-
-/** True for Enter presses that should send (not while an IME is composing Hangul). */
-export function isSendEnter(e: { key: string; shiftKey: boolean; nativeEvent: { isComposing?: boolean }; keyCode?: number }): boolean {
-  if (e.key !== 'Enter' || e.shiftKey) return false;
-  if (e.nativeEvent.isComposing || e.keyCode === 229) return false;
-  return true;
-}
 
 /**
  * Chat/DM input: Enter sends (ignored while composing), Shift+Enter adds a line, grapheme counter

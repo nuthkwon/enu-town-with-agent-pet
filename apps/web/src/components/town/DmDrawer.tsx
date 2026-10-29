@@ -64,7 +64,6 @@ function Conversation({ peerId, draft }: { peerId: string; draft: string | null 
         }
         return [...prev, fromDm(m)];
       });
-      if (m.fromUserId === peerId) session.markDmRead(peerId, m.id);
     });
   }, [session, peerId, me.userId]);
 
@@ -75,9 +74,9 @@ function Conversation({ peerId, draft }: { peerId: string; draft: string | null 
   );
   const lastFromPeer = [...lines].reverse().find((l) => l.fromUserId === peerId && l.id)?.id ?? null;
 
+  // Opening the conversation (and every new message from the peer while it is open) marks it read.
   useEffect(() => {
-    if (lastFromPeer) session.markDmRead(peerId, lastFromPeer);
-    else session.markDmRead(peerId, null);
+    session.markDmRead(peerId, lastFromPeer);
   }, [session, peerId, lastFromPeer]);
 
   useLayoutEffect(() => {

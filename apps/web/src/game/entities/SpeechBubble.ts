@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import type Phaser from 'phaser';
 import { TEX } from '../assets';
 import { PIXEL_FONT_SIZE } from '../font';
 import { EFFECT_FRAMES } from '../spriteSpec';

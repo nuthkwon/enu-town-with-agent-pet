@@ -220,16 +220,19 @@ export class PetView {
     }
 
     if (this.bubble && this.chip) {
-      if (this.bubbleShownId && now >= this.bubbleHideAt) this.hideBubble(false);
+      if (this.bubbleShownId && this.bubble.visible && now >= this.bubbleHideAt) {
+        this.hideBubble(false);
+        // Tell the server this bubble has run its course on screen (it then takes it down).
+        if (tabVisible && this.seenSent !== this.bubbleShownId) {
+          this.seenSent = this.bubbleShownId;
+          this.onBubbleSeen(this.bubbleShownId);
+        }
+      }
       if (this.bubble.visible) {
         const head = this.stage.toScreen(this.feetX, this.feetY - 20 + bob);
         this.bubble.update(head.x, head.y - 2, this.stage.viewWidth);
         const below = this.stage.toScreen(this.feetX, this.feetY + 8);
         this.chip.setPosition(below.x, below.y);
-        if (tabVisible && this.seenSent !== this.bubbleShownId) {
-          this.seenSent = this.bubbleShownId;
-          this.onBubbleSeen(this.bubbleShownId);
-        }
       }
     }
   }
