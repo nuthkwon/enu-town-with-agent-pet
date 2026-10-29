@@ -126,11 +126,11 @@ export class WorldScene extends Phaser.Scene {
     const staticKeys = (this.registry.get(STATIC_AVATARS_REGISTRY_KEY) as Set<string> | undefined) ?? new Set();
     this.sheetLoader = new AvatarSheetLoader(this, staticKeys);
 
+    // Keep Phaser's default camera origin (0.5): tilemap culling assumes it. We track the visible
+    // world rectangle's top-left ourselves (scrollX/scrollY fields) and centre the camera on it.
     this.mainCam = this.cameras.main;
-    this.mainCam.setOrigin(0, 0);
     this.mainCam.setBackgroundColor('rgba(0,0,0,0)');
     this.overlayCam = this.cameras.add(0, 0, this.scale.width, this.scale.height, false, 'overlay');
-    this.overlayCam.setOrigin(0, 0);
     this.applyViewport(this.scale.width, this.scale.height);
     this.stage = this.makeStage();
 
@@ -534,6 +534,7 @@ export class WorldScene extends Phaser.Scene {
     }
 
     for (const v of this.avatars.values()) v.update(now);
+    this.pets.get(me.userId)?.setOwnerFeet(myView ? myView.feet.x : null);
     const tabVisible = typeof document === 'undefined' || document.visibilityState === 'visible';
     for (const v of this.pets.values()) v.update(now, tabVisible);
 
@@ -574,7 +575,8 @@ export class WorldScene extends Phaser.Scene {
     }
     this.scrollX = snapToScreenPixel(this.scrollX, this.zoom);
     this.scrollY = snapToScreenPixel(this.scrollY, this.zoom);
-    this.mainCam.setScroll(this.scrollX, this.scrollY);
+    // centerOn() with origin 0.5: the visible rect's top-left lands exactly on (scrollX, scrollY).
+    this.mainCam.centerOn(this.scrollX + viewW / 2, this.scrollY + viewH / 2);
   }
 
   /**

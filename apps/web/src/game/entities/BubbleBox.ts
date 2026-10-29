@@ -76,9 +76,14 @@ export class BubbleBox {
     this.redraw();
   }
 
+  /** Largest sideways body offset that still keeps the tail under the body. */
+  get maxShift(): number {
+    return Math.max(0, this.w / 2 - this.style.radius - 6);
+  }
+
   /** Moves the body sideways (keeps it on screen) while the tail still points at the speaker. */
   setTailShift(shift: number): void {
-    const max = Math.max(0, this.w / 2 - this.style.radius - 6);
+    const max = this.maxShift;
     const clamped = Math.round(Math.max(-max, Math.min(max, shift)));
     if (clamped === this.tailShift) return;
     this.tailShift = clamped;

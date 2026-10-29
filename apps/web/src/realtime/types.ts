@@ -4,6 +4,7 @@ import type {
   DmMsg,
   DmUnreadMsg,
   EmoteMsg,
+  ErrorMsg,
   MoveCorrectMsg,
   NoticeMsg,
   PingedMsg,
@@ -88,5 +89,6 @@ export interface SessionEvents {
   emote: EmoteMsg;
   pinged: PingedMsg;
   notice: NoticeMsg;
-  'server:error': { code?: string; message?: string };
+  /** Server rejected a message (rate limit, invalid payload, …); the connection stays open. */
+  'server:error': ErrorMsg;
 }

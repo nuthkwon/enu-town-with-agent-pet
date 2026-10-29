@@ -50,6 +50,7 @@ export class PetView {
   private feetY = 0;
   private readonly phase = Math.random() * Math.PI * 2;
   private readonly onBubbleSeen: (bubbleId: string) => void;
+  private ownerFeetX: number | null = null;
 
   constructor(
     private readonly stage: Stage,
@@ -112,6 +113,11 @@ export class PetView {
     if (snap.species !== prev.species) this.setSpecies(snap.species);
     if (snap.x !== prev.x || snap.y !== prev.y) this.interp.push(snap.x, snap.y);
     if (this.bubble) this.syncBubble(now);
+  }
+
+  /** Where the owner stands (world px), so the bubble can lean away from their name tag. */
+  setOwnerFeet(x: number | null): void {
+    this.ownerFeetX = x;
   }
 
   get feet(): { x: number; y: number } {
@@ -230,9 +236,12 @@ export class PetView {
       }
       if (this.bubble.visible) {
         const head = this.stage.toScreen(this.feetX, this.feetY - 20 + bob);
-        this.bubble.update(head.x, head.y - 2, this.stage.viewWidth);
-        const below = this.stage.toScreen(this.feetX, this.feetY + 8);
-        this.chip.setPosition(below.x, below.y);
+        const dx = this.ownerFeetX === null ? 0 : this.ownerFeetX - this.feetX;
+        this.bubble.update(head.x, head.y - 2, this.stage.viewWidth, dx > 6 ? 1 : dx < -6 ? -1 : 0);
+        // System chip just below and beside the pet (never inside the bubble; clear of the owner's
+        // name tag, which sits right under a pet hovering behind its owner).
+        const below = this.stage.toScreen(this.feetX + 12, this.feetY - 6);
+        this.chip.setPosition(below.x + Math.round(this.chip.width / 2) + 4, below.y);
       }
     }
   }

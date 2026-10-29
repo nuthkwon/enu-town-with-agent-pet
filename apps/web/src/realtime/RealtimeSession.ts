@@ -6,6 +6,7 @@ import {
   type DmMsg,
   type DmUnreadMsg,
   type EmoteMsg,
+  type ErrorMsg,
   type MoveCorrectMsg,
   type NoticeMsg,
   type OfficeState,
@@ -360,7 +361,9 @@ export class RealtimeSession extends TypedEmitter<SessionEvents> {
     on<EmoteMsg>(MSG.emote, (m) => this.emit('emote', m));
     on<PingedMsg>(MSG.pinged, (m) => this.emit('pinged', m));
     on<NoticeMsg>(MSG.notice, (m) => this.emit('notice', m));
-    on<{ code?: string; message?: string }>(MSG.error, (m) => this.emit('server:error', m ?? {}));
+    on<ErrorMsg>(MSG.error, (m) => {
+      if (m) this.emit('server:error', m);
+    });
 
     room.onDrop((code) => {
       if (gen !== this.generation) return;

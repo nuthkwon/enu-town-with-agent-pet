@@ -76,12 +76,18 @@ export class PetSpeechBubble {
     this.box.container.setVisible(false);
   }
 
-  update(x: number, y: number, viewWidth: number): void {
+  /**
+   * Tail tip at (x, y). `prefer` pushes the body away from the owner (-1: body to the right,
+   * +1: body to the left) so it does not cover the owner's name tag; it always stays on screen.
+   */
+  update(x: number, y: number, viewWidth: number, prefer: -1 | 0 | 1 = 0): void {
     const c = this.box.container;
     if (!c.visible) return;
     c.setPosition(x, y);
     const half = this.box.width / 2;
-    const shift = x - half < 6 ? x - half - 6 : x + half > viewWidth - 6 ? x + half - (viewWidth - 6) : 0;
+    let shift = prefer * this.box.maxShift;
+    if (x - shift - half < 6) shift = x - half - 6;
+    if (x - shift + half > viewWidth - 6) shift = x + half - (viewWidth - 6);
     this.box.setTailShift(shift);
   }
 
@@ -113,9 +119,16 @@ export class DueChip {
     this.container.setVisible(false);
   }
 
+  private w = 0;
+
+  get width(): number {
+    return this.w;
+  }
+
   show(hm: string): void {
     this.label.setText(hm);
     const w = 16 + 2 + Math.ceil(this.label.width) + 10;
+    this.w = w;
     const h = 18;
     const x = -Math.round(w / 2);
     this.bg.clear();

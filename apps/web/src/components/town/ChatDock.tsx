@@ -59,6 +59,11 @@ export function ChatDock() {
     collapsedRef.current = collapsed;
   });
 
+  // Small screens start with the dock folded so the map stays visible.
+  useEffect(() => {
+    if (window.matchMedia('(max-width: 640px)').matches) setCollapsed(true);
+  }, []);
+
   useEffect(() => {
     const offMsg = session.on('chat:msg', (m) => {
       setLines((prev) => mergeLine(prev, fromChatMsg(m), me.userId));

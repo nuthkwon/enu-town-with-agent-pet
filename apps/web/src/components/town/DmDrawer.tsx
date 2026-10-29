@@ -106,8 +106,8 @@ function Conversation({ peerId, draft }: { peerId: string; draft: string | null 
 
   const name = directory.person(peerId)?.displayName ?? '';
   return (
-    <>
-      <div ref={bodyRef} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className={s.conversation}>
+      <div ref={bodyRef} className={s.conversationLog}>
         {paged.nextCursor && !paged.loading && (
           <div className={s.loadMore}>
             <Button variant="ghost" size="sm" onClick={paged.loadMore}>
@@ -131,7 +131,7 @@ function Conversation({ peerId, draft }: { peerId: string; draft: string | null 
           })}
         </ul>
       </div>
-      <div style={{ position: 'sticky', bottom: -18, marginTop: 12, marginLeft: -16, marginRight: -16 }}>
+      <div className={s.conversationComposer}>
         <Composer
           ref={inputRef}
           value={text}
@@ -145,7 +145,7 @@ function Conversation({ peerId, draft }: { peerId: string; draft: string | null 
           note={draft ? t.draftNote : undefined}
         />
       </div>
-    </>
+    </div>
   );
 }
 

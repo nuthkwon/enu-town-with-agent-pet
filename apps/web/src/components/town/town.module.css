@@ -158,6 +158,7 @@
 }
 
 .linkDot {
+  display: inline-block;
   width: 9px;
   height: 9px;
   border-radius: 50%;
@@ -178,6 +179,7 @@
 }
 
 .statusDot {
+  display: inline-block;
   width: 9px;
   height: 9px;
   border-radius: 50%;
@@ -199,6 +201,10 @@
 
 .status-3 {
   background: #b6b2c4;
+}
+
+.showXs {
+  display: none;
 }
 
 .miniAvatar {
@@ -489,6 +495,7 @@
 }
 
 .teamSwatch {
+  display: inline-block;
   width: 10px;
   height: 10px;
   border-radius: 50%;
@@ -759,14 +766,34 @@
   margin: 8px 0;
 }
 
+/* DM conversation: messages fill the sheet, the composer stays pinned to the bottom. */
+.conversation {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.conversationLog {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.conversationComposer {
+  position: sticky;
+  bottom: -18px;
+  margin: 12px -16px -18px;
+}
+
 /* ------------------------------------------------------------------ chat dock */
 
 .dock {
   position: absolute;
   left: 10px;
   bottom: 10px;
-  width: min(360px, calc(100% - 20px));
-  height: 300px;
+  width: min(340px, calc(100% - 20px));
+  height: 270px;
   display: flex;
   flex-direction: column;
   border-radius: var(--radius-lg);
@@ -778,9 +805,11 @@
   z-index: 3;
 }
 
-.dockCollapsed {
+.dock.dockCollapsed {
   height: auto;
   width: auto;
+  padding: 4px;
+  border-radius: 999px;
 }
 
 .dockHeader {
@@ -965,6 +994,7 @@
 }
 
 .onlineDot {
+  display: inline-block;
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -973,6 +1003,7 @@
 }
 
 .offlineDot {
+  display: inline-block;
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -1145,6 +1176,16 @@
     display: none;
   }
 
+  .zoomGroup {
+    display: none;
+  }
+
+  .topBar {
+    left: 6px;
+    right: 6px;
+    gap: 4px;
+  }
+
   .pill {
     padding: 4px 9px;
   }
@@ -1163,5 +1204,25 @@
 
   .dock {
     height: 220px;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand {
+    display: none;
+  }
+
+  .hideXs {
+    display: none;
+  }
+
+  .showXs {
+    display: inline;
+  }
+
+  .pillGroup {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
 }

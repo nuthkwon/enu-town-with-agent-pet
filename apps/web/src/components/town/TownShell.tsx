@@ -180,6 +180,11 @@ export function TownShell({
         const name = session.getPlayer(m.fromUserId)?.name ?? directory.person(m.fromUserId)?.displayName ?? '';
         toast({ text: t.waved(name), ttlMs: 3000 });
       }),
+      session.on('server:error', (e) => {
+        if (e.type !== 'social:ping' && e.type !== 'social:wave' && e.type !== 'status:set') return;
+        if (e.code === 'RATE_LIMITED') toast({ text: t.rateLimited, ttlMs: 3000, tone: 'warn' });
+        else if (e.code === 'NOT_ONLINE') toast({ text: t.notOnline, ttlMs: 3000, tone: 'warn' });
+      }),
       session.on('dm:msg', (m) => {
         if (m.fromUserId === me.userId) return;
         const open = sheetRef.current;
@@ -288,10 +293,13 @@ export function TownShell({
               <span className={`${s.statusDot} ${s[`status-${myStatus}`]}`} aria-hidden="true" />
             </button>
             <Link className={s.pill} href="/me">
-              {tb.me}
+              <span className={s.hideXs}>{tb.me}</span>
+              <span className={s.showXs} aria-hidden="true">
+                ⚙
+              </span>
             </Link>
           </div>
-          <div className={s.pillGroup}>
+          <div className={`${s.pillGroup} ${s.zoomGroup}`}>
             <button
               type="button"
               className={`${s.pill} ${s.iconPill}`}

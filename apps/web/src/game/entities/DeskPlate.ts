@@ -28,7 +28,7 @@ export class DeskPlate {
       fontSize: '12px',
       color: COLORS.inkCss,
     });
-    this.text.setOrigin(0.5, 0.5);
+    this.text.setOrigin(0, 0);
     this.container = stage.overlay(scene.add.container(0, 0, [this.bg, this.text]));
     this.container.setDepth(DEPTH.overlayDesk);
     this.container.setVisible(false);
@@ -41,11 +41,14 @@ export class DeskPlate {
       this.text.setText(n);
       const w = Math.ceil(this.text.width) + 8;
       const h = 15;
+      const left = -Math.round(w / 2);
+      const top = -Math.round(h / 2);
       this.bg.clear();
       this.bg.fillStyle(COLORS.plateBorder, 1);
-      this.bg.fillRoundedRect(-w / 2 - 1, -h / 2 - 1, w + 2, h + 2, 3);
+      this.bg.fillRoundedRect(left - 1, top - 1, w + 2, h + 2, 3);
       this.bg.fillStyle(COLORS.plateFill, 1);
-      this.bg.fillRoundedRect(-w / 2, -h / 2, w, h, 3);
+      this.bg.fillRoundedRect(left, top, w, h, 3);
+      this.text.setPosition(left + 4, top + Math.round((h - this.text.height) / 2) + 1);
     }
     this.container.setVisible(n !== '');
     this.container.setAlpha(online ? 1 : 0.72);
@@ -55,8 +58,6 @@ export class DeskPlate {
     if (!this.container.visible) return;
     const p = this.stage.toScreen(this.anchorX, this.anchorY);
     this.container.setPosition(p.x, p.y);
-    // Plates get noisy when zoomed out; keep them readable but subtle.
-    this.container.setScale(1);
   }
 
   destroy(): void {

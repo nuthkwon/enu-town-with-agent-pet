@@ -764,6 +764,8 @@ export const ko = {
       goTo: '이동',
       waved: (name: string) => `${name}님이 손을 흔들었어요`,
       dmFrom: (name: string) => `${name}님의 DM`,
+      rateLimited: '조금 천천히 해 주세요.',
+      notOnline: '지금 타운에 없는 사람이에요.',
       open: '열기',
       close: '알림 닫기',
     },

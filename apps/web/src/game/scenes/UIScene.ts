@@ -11,6 +11,7 @@ import { COLORS } from '../stage';
  */
 export class UIScene extends Phaser.Scene {
   private chip!: Phaser.GameObjects.Container;
+  private dim!: Phaser.GameObjects.Rectangle;
   private chipBg!: Phaser.GameObjects.Graphics;
   private chipText!: Phaser.GameObjects.Text;
   private status: ConnectionStatus = { kind: 'idle' };
@@ -23,6 +24,8 @@ export class UIScene extends Phaser.Scene {
   create(): void {
     const bridge = this.registry.get(BRIDGE_REGISTRY_KEY) as GameBridge;
     const font = (this.registry.get(FONT_REGISTRY_KEY) as string | undefined) ?? 'Galmuri11, sans-serif';
+    // Dims the (now stale) world while a terminal state banner asks the user to act.
+    this.dim = this.add.rectangle(0, 0, 10, 10, COLORS.ink, 0.28).setOrigin(0, 0).setVisible(false);
     this.chipBg = this.add.graphics();
     this.chipText = this.add.text(0, 0, '', { fontFamily: font, fontSize: `${PIXEL_FONT_SIZE}px`, color: '#ffffff' });
     this.chipText.setOrigin(0.5, 0.5);
@@ -51,6 +54,10 @@ export class UIScene extends Phaser.Scene {
   }
 
   override update(): void {
+    const k = this.status.kind;
+    const terminal = k === 'replaced' || k === 'failed' || k === 'map_mismatch' || k === 'forbidden';
+    if (terminal) this.dim.setSize(this.scale.width, this.scale.height);
+    this.dim.setVisible(terminal);
     const text = this.label(Date.now());
     if (!text) {
       this.chip.setVisible(false);
