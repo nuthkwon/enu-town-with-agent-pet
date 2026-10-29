@@ -1,6 +1,6 @@
-# ENU Town MCP tools (reference)
+# ENU Den MCP tools (reference)
 
-Written for `instructions_version` `2026-11-02.1` (returned by `get_my_context`). If the server reports another
+Written for `instructions_version` `2026-11-03.1` (returned by `get_my_context`). If the server reports another
 version, the tool descriptions win over this page.
 
 All five tools act only on the signed-in employee's own data. None deletes the owner's records (`post_activity`
@@ -13,7 +13,7 @@ other people. Text is shown verbatim — never rewritten.
 | `post_work_log`   | write | `summary` (≤1500), `tasks[≤20]`, `blockers[≤10]`, `claude_chat_summary?` (≤800), `visibility?`, `chat_summary_visibility?`, `source_hint` | One cumulative log per local day. Visibility can only be lowered. `skipped_user_edited` / `skipped_user_deleted` mean the owner changed it — do not retry.                                                                                                                                                                                            |
 | `post_activity`   | write | `now: {kind, ref?, until?} \| null`, `schedule?[≤16]{start_at, end_at, kind, ref?}`, `source_hint`                                        | Only when `activity.sharing` is true. `now` is replaced on every call (`null` clears it); `schedule` is replaced only when sent (`[]` clears it). Meeting/focus blocks place the avatar, `away` hides it as `부재`; `now` only labels the avatar or desk plate. "Today" is the office date (Asia/Seoul), returned as `period_key`. 20 calls per hour. |
 | `upsert_todos`    | write | `items[≤30]{external_ref, title ≤120, note?, due_at? \| due_date?, priority 1-3, status open\|done}`                                      | Upsert by `external_ref`. Status the owner changed wins.                                                                                                                                                                                                                                                                                              |
-| `post_pet_nudges` | write | `nudges[≤5]{text ≤120, kind, show_after?, expires_at?, priority, todo_external_ref?, dedupe_key?}`, `replace_pending`                     | Shown only to the owner, only in ENU Town, outside quiet hours (19:30–08:30, weekends, holidays). Rejected items come back in `rejected[{index, reason}]`.                                                                                                                                                                                            |
+| `post_pet_nudges` | write | `nudges[≤5]{text ≤120, kind, show_after?, expires_at?, priority, todo_external_ref?, dedupe_key?}`, `replace_pending`                     | Shown only to the owner, only in ENU Den, outside quiet hours (19:30–08:30, weekends, holidays). Rejected items come back in `rejected[{index, reason}]`.                                                                                                                                                                                             |
 
 Rejection reasons: `pii`, `url`, `too_long`, `empty`, `invalid_time`, `daily_limit`, `unknown_todo`, `unsupported`.
 
@@ -42,7 +42,7 @@ ticket ENU-301.
 
 - The weekly meeting has 3 or more attendees, so it carries the `gcal:<iCalUID>` ref (the iCalUID, identical on every
   attendee's calendar — not the per-calendar event id). When at least three attendees' own Claudes send the same
-  ref and all of them share their activity, ENU Town seats them together at the meeting table.
+  ref and all of them share their activity, ENU Den seats them together at the meeting table.
 - The 1:1 is a `meeting` **without** `ref`, so it is never drawn as a pair. Personal events and HR events (면담·평가·
   채용·징계) are not sent at all.
 - The half-day off is `away` with no reason anywhere; colleagues see only `부재`. It is cut at the next midnight

@@ -1,7 +1,0 @@
-{
-  "name": "enu-town",
-  "version": "0.2.0",
-  "description": "ENU Town(사내 메타버스) 체크인 스킬. ENU Town 커넥터(조직 커스텀 커넥터)와 함께 사용합니다.",
-  "author": { "name": "ENU-Tech" },
-  "keywords": ["enu-town", "work-log", "check-in"]
-}
