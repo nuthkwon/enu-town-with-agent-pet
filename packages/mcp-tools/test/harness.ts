@@ -1,3 +1,4 @@
+import type { Db } from '@enu/db';
 import { LIMITS } from '@enu/shared';
 import { Client, StreamableHTTPClientTransport, type FetchLike } from '@modelcontextprotocol/client';
 import { createMcpHandler, type AuthInfo, type McpHttpHandler } from '@modelcontextprotocol/server';
@@ -10,6 +11,21 @@ export type Mode = (typeof MODES)[number];
 export interface TestIdentity {
   userId?: string;
   clientId: string;
+}
+
+/** A fixed activity ref key (the web route derives the real one from BETTER_AUTH_SECRET). */
+export const TEST_ACTIVITY_REF_KEY = new Uint8Array(32).fill(7);
+export const OFFICE_TZ = 'Asia/Seoul';
+
+/** McpDeps for tests: a fixed ref key and the Asia/Seoul office day. */
+export function testDeps(db: Db, over: Partial<McpDeps> = {}): McpDeps {
+  return {
+    db,
+    publicUrl: 'https://town.example',
+    activityRefKey: TEST_ACTIVITY_REF_KEY,
+    officeTimeZone: OFFICE_TZ,
+    ...over,
+  };
 }
 
 /** Same wiring as apps/web /api/mcp. */

@@ -1,5 +1,13 @@
 import { desks, loadHolidays, profiles, user, type DbOrTx } from '@enu/db';
-import { APP_TIMEZONE_DEFAULT, LINK_STATES, teamLabel, type LinkState, type Visibility } from '@enu/shared';
+import {
+  APP_TIMEZONE_DEFAULT,
+  LINK_STATES,
+  MANUAL_STATUSES,
+  teamLabel,
+  type LinkState,
+  type ManualStatus,
+  type Visibility,
+} from '@enu/shared';
 import { eq } from 'drizzle-orm';
 import { ToolError } from './result';
 
@@ -17,6 +25,10 @@ export interface OwnerContext {
   defaultLogVisibility: Visibility;
   defaultChatSummaryVisibility: Visibility | null;
   shareDmsWithMyClaude: boolean;
+  /** 활동 공유: null = not chosen yet (off). Decide with canShareActivity(). */
+  shareActivity: boolean | null;
+  /** The status the owner set by hand, as stored (it may have expired; see `activeOwnerStatus`). */
+  manualStatus: { status: ManualStatus; until: Date } | null;
   nudgesEnabled: boolean;
   nudgeMinIntervalMin: number;
   quietStart: string;
@@ -49,6 +61,9 @@ export async function findOwnerContext(db: DbOrTx, userId: string): Promise<Owne
       defaultLogVisibility: profiles.defaultLogVisibility,
       defaultChatSummaryVisibility: profiles.defaultChatSummaryVisibility,
       shareDmsWithMyClaude: profiles.shareDmsWithMyClaude,
+      shareActivity: profiles.shareActivity,
+      manualStatus: profiles.manualStatus,
+      manualStatusUntil: profiles.manualStatusUntil,
       nudgesEnabled: profiles.nudgesEnabled,
       nudgeMinIntervalMin: profiles.nudgeMinIntervalMin,
       quietStart: profiles.quietStart,
@@ -74,6 +89,11 @@ export async function findOwnerContext(db: DbOrTx, userId: string): Promise<Owne
     defaultLogVisibility: row.defaultLogVisibility,
     defaultChatSummaryVisibility: row.defaultChatSummaryVisibility,
     shareDmsWithMyClaude: row.shareDmsWithMyClaude,
+    shareActivity: row.shareActivity,
+    manualStatus:
+      row.manualStatus && row.manualStatusUntil && (MANUAL_STATUSES as readonly string[]).includes(row.manualStatus)
+        ? { status: row.manualStatus as ManualStatus, until: row.manualStatusUntil }
+        : null,
     nudgesEnabled: row.nudgesEnabled,
     nudgeMinIntervalMin: row.nudgeMinIntervalMin,
     quietStart: row.quietStart,
@@ -94,4 +114,10 @@ export async function loadOwnerContext(db: DbOrTx, userId: string): Promise<Owne
     );
   }
   return owner;
+}
+
+/** The owner's hand-set status while it lasts, as Claude sees it (`owner_status`); expired values are never returned. */
+export function activeOwnerStatus(owner: OwnerContext, now: Date): { status: ManualStatus; until: string } | null {
+  const m = owner.manualStatus;
+  return m && m.until > now ? { status: m.status, until: m.until.toISOString() } : null;
 }

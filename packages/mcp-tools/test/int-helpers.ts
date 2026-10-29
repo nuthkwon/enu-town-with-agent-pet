@@ -5,7 +5,7 @@ import type { McpHttpHandler } from '@modelcontextprotocol/server';
 import { and, eq } from 'drizzle-orm';
 import { vi } from 'vitest';
 import { SlidingWindowRateLimiter, type McpDeps } from '../src/index';
-import { connectClient, createTestHandler, type Mode } from './harness';
+import { connectClient, createTestHandler, testDeps, type Mode } from './harness';
 
 export const PUBLIC_URL = 'https://town.example';
 export const TZ = 'Asia/Seoul';
@@ -27,15 +27,14 @@ export interface Harness {
 
 export function makeHarness(db: Db, mode: Mode, startAt = THU_14): Harness {
   const clock = new FakeClock(new Date(startAt));
-  const deps: McpDeps = {
-    db,
+  const deps: McpDeps = testDeps(db, {
     publicUrl: PUBLIC_URL,
     now: clock.now,
     rateLimiter: new SlidingWindowRateLimiter(),
     onError: (e) => {
       throw e instanceof Error ? e : new Error(String(e));
     },
-  };
+  });
   const handler = createTestHandler(deps);
   const clients: Awaited<ReturnType<typeof connectClient>>[] = [];
   return {

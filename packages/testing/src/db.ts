@@ -89,15 +89,10 @@ export async function createTestUser(db: Db, input: TestUserInput = {}): Promise
     defaultChatSummaryVisibility: input.defaultChatSummaryVisibility ?? null,
     shareDmsWithMyClaude: input.shareDmsWithMyClaude ?? false,
     linkState: input.linkState ?? 'not_linked',
+    shareActivity: input.shareActivity ?? null,
+    showLive: input.showLive ?? true,
     onboardingCompletedAt: input.onboarded === false ? null : new Date(),
   });
-  if (input.shareActivity !== undefined || input.showLive !== undefined) {
-    // Written only when asked for, as raw SQL until the Drizzle `profiles` table declares these columns.
-    await db.execute(sql`
-      update profiles
-      set share_activity = ${input.shareActivity ?? null}, show_live = ${input.showLive ?? true}
-      where user_id = ${id}`);
-  }
   const consents = [
     ...(input.noticeVersion ? [{ scope: 'service', noticeVersion: input.noticeVersion }] : []),
     // Turning sharing on records its consent, as onboarding and PATCH /me/profile do.

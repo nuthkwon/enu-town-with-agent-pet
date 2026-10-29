@@ -1,9 +1,13 @@
 import type { Db } from '@enu/db';
 import {
+  APP_TIMEZONE_DEFAULT,
   INSTRUCTIONS_VERSION,
   MCP_TOOL_NAMES,
+  formatLocalHm,
   getMyContextInput,
   getMyContextOutput,
+  postActivityInput,
+  postActivityOutput,
   postPetNudgesInput,
   postPetNudgesOutput,
   postWorkLogInput,
@@ -12,16 +16,19 @@ import {
   upsertTodosOutput,
   type GetMyContextOutput,
   type McpToolName,
+  type NowKind,
+  type PostActivityOutput,
   type PostPetNudgesOutput,
   type PostWorkLogOutput,
   type UpsertTodosOutput,
 } from '@enu/shared';
 import { McpServer, type AuthInfo, type CallToolResult, type ToolAnnotations } from '@modelcontextprotocol/server';
 import { SERVER_INSTRUCTIONS, TOOL_DESCRIPTIONS, TOOL_TITLES } from './descriptions';
-import { visibilityKo } from './format';
+import { NOW_KIND_KO, ownerStatusKo, visibilityKo } from './format';
 import { touchClaudeLink, type CallerInfo } from './links';
 import { SlidingWindowRateLimiter, TOOL_RATE_LIMITS, rateLimitKey, type RateLimiter } from './rate-limit';
 import { LINK_REVOKED_MESSAGE, NOT_AUTHENTICATED_MESSAGE, ToolError, errorResult, okResult } from './result';
+import { postActivity } from './services/activity';
 import { getMyContext } from './services/context';
 import { postPetNudges } from './services/nudges';
 import { upsertTodos } from './services/todos';
@@ -31,6 +38,10 @@ export interface McpDeps {
   db: Db;
   /** Public origin of the web app, e.g. https://town.enu-tech.co.kr (used for view_url). */
   publicUrl: string;
+  /** Key of the daily work-ref hash (post_activity); the web route derives it once via HKDF. */
+  activityRefKey: Uint8Array;
+  /** APP_TIMEZONE: the office day of every town rule (activity period_key, ref salt, block validation). */
+  officeTimeZone: string;
   /** Clock override (tests). */
   now?: () => Date;
   /** Per-user tool rate limiter; defaults to one in-memory limiter shared by the process. */
@@ -97,7 +108,21 @@ function makeRunner(deps: McpDeps, caller: CallerInfo | undefined) {
 
 /* ---------- Korean text content (short; the JSON copy follows in a second text block) ---------- */
 
-export function contextSummaryKo(o: GetMyContextOutput, truncated: boolean): string {
+function activityContextKo(a: NonNullable<GetMyContextOutput['activity']>, timeZone: string): string {
+  const owner = ownerStatusKo(a.owner_status, timeZone);
+  if (!a.sharing) return `활동 공유 꺼짐: post_activity를 호출하지 마세요.${owner}`;
+  const now = a.now
+    ? `지금 활동 '${NOW_KIND_KO[a.now.kind]}'(${formatLocalHm(new Date(a.now.until), timeZone)}까지)`
+    : '지금 활동 없음';
+  return `활동 공유 켜짐: 오늘 일정 블록 ${a.schedule.length}개, ${now}.${owner}`;
+}
+
+/** `officeTimeZone` (APP_TIMEZONE) formats the activity times. */
+export function contextSummaryKo(
+  o: GetMyContextOutput,
+  truncated: boolean,
+  officeTimeZone: string = APP_TIMEZONE_DEFAULT,
+): string {
   if (o.skip) return `${o.skip_reason ?? '지금은 체크인 시간이 아니에요.'} 이번 체크인은 여기서 멈추세요(다른 ENU Town 도구를 호출하지 마세요).`;
   const parts = [`ENU Town ${o.today} 컨텍스트(현지 시각 ${o.now_local.slice(11, 16)}).`];
   if (o.today_log !== undefined) {
@@ -116,12 +141,16 @@ export function contextSummaryKo(o: GetMyContextOutput, truncated: boolean): str
         : `읽지 않은 동료 DM ${o.town_messages.unread_count}개(주인이 내용 공유를 켜지 않아 내용은 제공되지 않아요).`,
     );
   }
+  if (o.activity) parts.push(activityContextKo(o.activity, officeTimeZone));
   parts.push(`연결 상태: ${o.link.state}.`);
   if (truncated) parts.push('결과가 너무 길어 일부 항목을 생략했어요.');
   return parts.join(' ');
 }
 
-/** Drops the least important items first: oldest town messages, then latest-due to-dos, then nudges. */
+/**
+ * Drops the least important items first: oldest town messages, then latest-due to-dos, then nudges,
+ * and today's schedule blocks last.
+ */
 function shrinkContext(o: GetMyContextOutput): boolean {
   if (o.town_messages?.items.length) {
     o.town_messages.items.shift();
@@ -133,6 +162,10 @@ function shrinkContext(o: GetMyContextOutput): boolean {
   }
   if (o.pending_nudges?.length) {
     o.pending_nudges.pop();
+    return true;
+  }
+  if (o.activity?.schedule.length) {
+    o.activity.schedule.pop();
     return true;
   }
   return false;
@@ -151,6 +184,22 @@ export function workLogSummaryKo(o: PostWorkLogOutput): string {
     case 'skipped_user_deleted':
       return `주인이 ${o.period_key} 기록을 삭제해서 다시 만들지 않았어요. 오류가 아니니 다시 시도하지 마세요.`;
   }
+}
+
+/** `nowKind` is what was reported (the output carries only its effective until); times in `timeZone`. */
+export function activitySummaryKo(
+  o: PostActivityOutput,
+  ctx: { nowKind: NowKind | null; timeZone: string },
+): string {
+  const owner = ownerStatusKo(o.owner_status, ctx.timeZone);
+  if (o.result === 'skipped_sharing_off') {
+    return `주인이 활동 공유를 켜지 않아 저장하지 않았어요. 오류가 아니니 다시 보내지 마세요.${owner}`;
+  }
+  const now =
+    ctx.nowKind && o.now_until
+      ? `지금 '${NOW_KIND_KO[ctx.nowKind]}'(${formatLocalHm(new Date(o.now_until), ctx.timeZone)}까지)`
+      : '지금 하는 일 없음';
+  return `오늘(${o.period_key}) 활동을 반영했어요: ${now}, 일정 블록 ${o.schedule_blocks}개. 동료에게는 근무 시간에만 보여요.${owner}`;
 }
 
 export function todosSummaryKo(o: UpsertTodosOutput, truncated: boolean): string {
@@ -189,8 +238,8 @@ export function buildEnuTownMcpServer(deps: McpDeps, caller: CallerInfo | undefi
     },
     (args) =>
       run(MCP_TOOL_NAMES.getMyContext, async (c, now) => {
-        const out = await getMyContext(deps.db, c.userId, now, args);
-        return okResult(contextSummaryKo, out, shrinkContext);
+        const out = await getMyContext(deps.db, c.userId, now, args, { officeTimeZone: deps.officeTimeZone });
+        return okResult((o, truncated) => contextSummaryKo(o, truncated, deps.officeTimeZone), out, shrinkContext);
       }),
   );
 
@@ -207,6 +256,27 @@ export function buildEnuTownMcpServer(deps: McpDeps, caller: CallerInfo | undefi
       run(MCP_TOOL_NAMES.postWorkLog, async (c, now) => {
         const out = await postWorkLog(deps.db, c, args, { now, publicUrl: deps.publicUrl });
         return okResult(workLogSummaryKo, out);
+      }),
+  );
+
+  server.registerTool(
+    MCP_TOOL_NAMES.postActivity,
+    {
+      title: TOOL_TITLES.postActivity,
+      description: TOOL_DESCRIPTIONS.postActivity,
+      inputSchema: postActivityInput,
+      outputSchema: postActivityOutput,
+      annotations: WRITE_ANNOTATIONS,
+    },
+    (args) =>
+      run(MCP_TOOL_NAMES.postActivity, async (c, now) => {
+        const out = await postActivity(deps.db, c, args, {
+          now,
+          refKey: deps.activityRefKey,
+          officeTimeZone: deps.officeTimeZone,
+        });
+        const ctx = { nowKind: args.now?.kind ?? null, timeZone: deps.officeTimeZone };
+        return okResult((o) => activitySummaryKo(o, ctx), out);
       }),
   );
 

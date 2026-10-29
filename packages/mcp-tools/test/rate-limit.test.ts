@@ -43,6 +43,7 @@ describe('SlidingWindowRateLimiter', () => {
       post_work_log: { max: 20, windowMs: HOUR },
       upsert_todos: { max: 20, windowMs: HOUR },
       post_pet_nudges: { max: 12, windowMs: HOUR },
+      post_activity: { max: 20, windowMs: HOUR },
     });
   });
 });

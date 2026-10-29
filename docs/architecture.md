@@ -8,7 +8,7 @@
                         ▼                           ▼
               realtime :2567  ◄──LISTEN──  Postgres  ◄──►  web :3000
               Colyseus room office-606     enu_town_events  Next 16: pages, Better Auth (Google + OAuth AS),
-              movement · pets · chat ·                      /api/mcp (MCP tools), /api/v1 REST, realtime ticket
+              director · pets · chat ·                      /api/mcp (MCP tools), /api/v1 REST, realtime ticket
               owner-only pet bubbles               ▲
                                             worker (pg-boss cron: nudge expiry, link state, retention, auth cleanup)
 ```
@@ -20,7 +20,7 @@
   - `validateUserInfo`
   - DB hooks
   - per-request session checks
-- **Realtime:** the web app mints a 60-second HS256 ticket (aud `enu-town-realtime`). The Colyseus `onAuth` verifies it on the matchmake request and re-reads the user from the DB.
+- **Realtime:** the web app mints a 60-second HS256 ticket (aud `enu-town-realtime`). The Colyseus `onAuth` first checks the client's `PROTOCOL_VERSION` (close code 4111 on a mismatch), then verifies the ticket on the matchmake request and re-reads the user from the DB. Users who have not finished onboarding or accepted the current privacy notice are refused with `notice_required` and sent to `/welcome`.
 - **Claude connector:** ENU Town is the OAuth 2.1 authorization server (Better Auth `mcp()` + `cimd()` + `jwt()`). Access tokens are ES256 JWTs with `aud` = `https://<host>/api/mcp`. `resolveMcpCaller` rejects a token in three cases:
   - the user is inactive
   - the user is outside the domain
@@ -29,36 +29,49 @@
 
 ## Data flow of a check-in
 1. Cowork runs the employee's scheduled task, which runs the `enu-town-checkin` skill.
-2. The skill calls `get_my_context`. Outside work hours this returns `skip` and the skill stops.
+2. The skill calls `get_my_context`. Outside work hours this returns `skip` and the skill stops. Its `activity` section tells Claude whether the owner shares activity, what it reported earlier today and any status the owner set by hand.
 3. `post_work_log` upserts the day's log, keyed by `(user, local date)`.
-4. `upsert_todos` upserts by `external_ref`.
-5. `post_pet_nudges` queues bubble text, which is shown verbatim.
-6. Each write commits together with `NOTIFY enu_town_events`.
-7. The realtime `DbEvents` listener reloads the owner's candidates.
-8. `NudgeScheduler` (rules in `packages/domain/src/nudge-policy.ts`) chooses when to show a bubble: on join, on idle, or when something is due. It then sets the `.view()` bubble fields on the owner's pet. Only the owner's `StateView` contains their pet, so colleagues receive just `indicator = 1` ("…").
-9. When a colleague clicks the avatar, the profile card calls `/api/v1/users/:id/card`, which only returns logs that pass `canViewLog`.
+4. `post_activity` (only when the owner shares activity) → `activity_reports` (one row per user and office day: the `now` kind and until, today's calendar blocks, refs as keyed daily hashes) → `activity_changed` → the realtime director.
+5. `upsert_todos` upserts by `external_ref`.
+6. `post_pet_nudges` queues bubble text, which is shown verbatim.
+7. Each write commits together with `NOTIFY enu_town_events`.
+8. The realtime `DbEvents` listener reloads the owner's signals (activity report, log flags) and pet candidates.
+9. `NudgeScheduler` (rules in `packages/domain/src/nudge-policy.ts`) chooses when to show a bubble: on join, when a nudge first becomes eligible, when the owner returns to the tab, or when something is due. It then sets the `.view()` bubble fields on the owner's pet. Only the owner's `StateView` contains their pet; colleagues see just `indicator = 1` ("…"), and only while the owner is shown.
+10. When a colleague clicks an avatar or a desk plate, the profile card calls `/api/v1/users/:id/card`, which only returns logs that pass `canViewLog`.
+
+## Town director
+Nobody steers an avatar ([ADR 0004](adr/0004-town-is-a-visualization.md)). The room keeps one `Player` and one `Pet` per roster member (active, onboarded), whether or not anyone is connected, and the director in `apps/realtime/src/director` places them:
+- **Inputs:** the owner's manual status, the town being open (gated by `show_live`), and, when the owner shares activity, today's `activity_reports` row and the colleague-visible log flags. Nothing else: no tab visibility, input events, mail or commit times.
+- **Rules:** every second (and right after a status change or DB event) it runs `resolveActivity` and `projectForColleagues` for each person, `groupPeople` over the projected group keys, and `allocateSpots` (`packages/map/src/spots.ts`) for the target tiles: own desk, meeting chairs, a visitor tile at a colleague's desk, the pantry or the guest area. `Walker` walks a person to a new spot; arrivals and departures are a sparkle in place.
+- **Labels only:** Claude's `now` report and today's log label an avatar or desk plate; they never make anyone appear.
+- **Office hours:** outside business days 08:30–19:30 (`APP_TIMEZONE`) every `Player` is neutral (hidden, offline), pets sleep and bubbles stay quiet.
+- **No history:** the director persists nothing. Sessions and positions live in memory only, join/leave log lines carry no user id, the manual status is a current value in `profiles`, and `activity_reports` holds the current office day only (the worker purges older rows at 03:17).
 
 ## Packages
 See `CLAUDE.md` for the package map. The key invariants live in pure functions with unit tests:
 
 | File | Invariant |
 |---|---|
-| `packages/domain/src/visibility.ts` | Who may see logs and chat summaries |
+| `packages/domain/src/visibility.ts` | Who may see logs and chat summaries; `canShareActivity` and `canShowLive` gate activity and the online dot; `projectForColleagues` is the single colleague projection (neutral after hours, `부재` without end time) |
+| `packages/domain/src/activity.ts` | `resolveActivity`: who is shown and with which label, from real inputs only; Claude's `now` and the log only label |
+| `packages/domain/src/groups.ts` | `groupPeople`: people are grouped only by mutual corroboration; meetings need 3 or more |
 | `packages/domain/src/worklog-upsert.ts` | Owner edits, deletes and visibility always win |
-| `packages/domain/src/validation.ts` | Text that breaks the rules is rejected, never rewritten |
-| `packages/domain/src/nudge-policy.ts` | When a bubble may show (quiet hours, interval, daily cap, focus mode) |
+| `packages/domain/src/validation.ts` | Text that breaks the rules is rejected, never rewritten; `post_activity` is rejected as a whole |
+| `packages/domain/src/nudge-policy.ts` | When a bubble may show (office hours, quiet hours, interval, daily cap, focus or meeting) |
 | `packages/domain/src/link-state.ts` | Not linked / linked / stale |
+| `packages/map/src/spots.ts` | Where the director may place people and pets; allocation is deterministic and never doubles up a tile |
 
 ## Map
-Generated once from `packages/map/src/layouts/office-606.ts`. After that, `apps/web/public/assets/maps/office-606/office-606.tmj` is the source of truth, and you can edit it in Tiled. `pnpm map:check` validates the map:
+Generated once from `packages/map/src/layouts/office-606.ts`. After that, `apps/web/public/assets/maps/office-606/office-606.tmj` is the source of truth, and you can edit it in Tiled. Team desks are ㄱ-shaped (a one-tile return beside each chair, so each pair sits in the inner corners of mirrored ㄱ shapes); R1 is an executive desk in front of the CEO, who faces L1b, with a return on his right toward the balcony door. `pnpm map:check` validates the map:
 - seats are reachable
 - the partition around the CEO desk works
 - the server room cannot be entered
+- the director spots are usable: meeting seats and pantry spots are walkable and reachable, and every desk has a visitor tile
 
 It also writes the hash that realtime compares against.
 
 ## Art
-All art is original pixel art defined in code (`packages/sprites`): avatars 32×32 in 4 directions with idle-bounce and hop-walk, fairy pets 24×24 with wings, office tiles 32×32 and effects. The web app renders avatar sheets on demand (`/api/sprites/avatar/:key`). The build writes the pets, tiles and default avatars to `apps/web/public/assets`.
+All art is original pixel art defined in code (`packages/sprites`): avatars 32×32 in 4 directions with idle-bounce and hop-walk, fairy pets 24×24 with wings (every employee has a different one), office tiles 32×32 and effects, including the activity icons shown over heads and desk plates. The web app renders avatar sheets on demand (`/api/sprites/avatar/:key`). The build writes the pets, tiles and default avatars to `apps/web/public/assets`.
 
 ## Phase 2 seam
-`computeProximityGroups` in `packages/map/src/proximity.ts` and a no-op media provider are the hooks for adding LiveKit proximity voice and video later.
+A future meeting voice room = the gathered meeting group: the members of an `ActivityGroup` with `family: 'meeting'` and `gather: true` from `groupPeople`. Nothing for voice or video exists yet; adding it needs its own ADR.

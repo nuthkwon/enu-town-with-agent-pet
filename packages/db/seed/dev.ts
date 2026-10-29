@@ -3,12 +3,18 @@
  * sample Claude-style work logs, to-dos, pet nudges and chat. Idempotent: replaces dev.* users.
  * Dev users sign in through the dev-login flow (DEV_LOGIN_ENABLED=1) with their dev email.
  */
-import { APP_TIMEZONE_DEFAULT, ALLOWED_GOOGLE_HD_DEFAULT, addLocalDays, atLocalTime, localDateKey } from '@enu/shared';
+import {
+  APP_TIMEZONE_DEFAULT,
+  ALLOWED_GOOGLE_HD_DEFAULT,
+  PRIVACY_NOTICE_VERSION,
+  addLocalDays,
+  atLocalTime,
+  localDateKey,
+} from '@enu/shared';
 import { like, sql } from 'drizzle-orm';
 import { createDb } from '../src/client';
 import { newId } from '../src/ids';
 import {
-  chatMessageRecipients,
   chatMessages,
   claudeLinks,
   desks,
@@ -113,12 +119,18 @@ await db.transaction(async (tx) => {
       title: seat.title ?? null,
       roleNote: seat.role ?? null,
       defaultChatSummaryVisibility: i % 2 === 0 ? 'company' : 'private',
+      // Demo users share their Claude-derived activity and show up when they open the town.
+      shareActivity: true,
+      showLive: true,
       linkState: linked ? (stale ? 'stale' : 'linked') : 'not_linked',
       lastWorkLogAt: linked ? (stale ? atLocalTime(addLocalDays(now, TZ, -6), TZ, '17:00') : now) : null,
       onboardingCompletedAt: now,
       timezone: TZ,
     });
-    await tx.insert(privacyConsents).values({ id: newId(), userId: id, noticeVersion: '2026-10', scope: 'service' });
+    await tx.insert(privacyConsents).values([
+      { id: newId(), userId: id, noticeVersion: PRIVACY_NOTICE_VERSION, scope: 'service' },
+      { id: newId(), userId: id, noticeVersion: PRIVACY_NOTICE_VERSION, scope: 'activity_sharing' },
+    ]);
     await tx
       .insert(desks)
       .values({
@@ -225,19 +237,6 @@ await db.transaction(async (tx) => {
         createdAt: new Date(t0 + (5 + k) * 60_000),
       });
     }
-    const nearbyId = newId();
-    await tx.insert(chatMessages).values({
-      id: nearbyId,
-      kind: 'nearby',
-      senderId: a,
-      body: '이따 배포 전에 체크리스트 같이 봐요',
-      clientMsgId: 'demo-nearby-0',
-      createdAt: new Date(t0 + 10 * 60_000),
-    });
-    await tx.insert(chatMessageRecipients).values([
-      { messageId: nearbyId, userId: a },
-      { messageId: nearbyId, userId: b },
-    ]);
   }
 });
 

@@ -85,7 +85,15 @@ describe.each(MODES)('post_work_log (%s)', (mode) => {
     expect(listener.forUser(me.id)).toEqual(
       expect.arrayContaining([
         { v: 1, type: 'link_state_changed', user_id: me.id, state: 'linked' },
-        { v: 1, type: 'work_log_changed', user_id: me.id, log_id: created.log_id, visibility: 'company', created: true },
+        {
+          v: 1,
+          type: 'work_log_changed',
+          user_id: me.id,
+          log_id: created.log_id,
+          visibility: 'company',
+          created: true,
+          by: 'claude',
+        },
       ]),
     );
 
@@ -102,7 +110,15 @@ describe.each(MODES)('post_work_log (%s)', (mode) => {
     expect(row?.tasks).toEqual([]);
     await listener.waitFor(() => listener.forUser(me.id).some((e) => e.type === 'work_log_changed'));
     expect(listener.forUser(me.id)).toEqual([
-      { v: 1, type: 'work_log_changed', user_id: me.id, log_id: created.log_id, visibility: 'private', created: false },
+      {
+        v: 1,
+        type: 'work_log_changed',
+        user_id: me.id,
+        log_id: created.log_id,
+        visibility: 'private',
+        created: false,
+        by: 'claude',
+      },
     ]);
 
     // Same content again: unchanged, no NOTIFY, updated_at kept for the feed order.

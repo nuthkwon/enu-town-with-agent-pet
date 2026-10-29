@@ -1,9 +1,20 @@
-import { chatMessages, dmReadState, petNudges, profiles, todos, workLogs, type DbOrTx } from '@enu/db';
-import { checkinSkipReason } from '@enu/domain';
 import {
+  activityReports,
+  chatMessages,
+  dmReadState,
+  petNudges,
+  profiles,
+  todos,
+  workLogs,
+  type DbOrTx,
+} from '@enu/db';
+import { canShareActivity, checkinSkipReason } from '@enu/domain';
+import {
+  APP_TIMEZONE_DEFAULT,
   CONTEXT_SECTIONS,
   INSTRUCTIONS_VERSION,
   NUDGE_STATUSES,
+  SCHEDULE_KINDS,
   TASK_STATUSES,
   TODO_STATUSES,
   localDateKey,
@@ -17,7 +28,7 @@ import {
 } from '@enu/shared';
 import { and, asc, desc, eq, gt, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import { formatLocalIso } from '../format';
-import { loadOwnerContext, type OwnerContext } from '../owner';
+import { activeOwnerStatus, loadOwnerContext, type OwnerContext } from '../owner';
 
 export const CONTEXT_LIMITS = {
   openTodosMax: 50,
@@ -33,6 +44,13 @@ type TownMessages = NonNullable<GetMyContextOutput['town_messages']>;
 type TodayLog = NonNullable<GetMyContextOutput['today_log']>;
 type OpenTodo = NonNullable<GetMyContextOutput['open_todos']>[number];
 type PendingNudge = NonNullable<GetMyContextOutput['pending_nudges']>[number];
+type Activity = NonNullable<GetMyContextOutput['activity']>;
+
+export interface GetMyContextOptions {
+  /** APP_TIMEZONE: the office day that keys `activity_reports` (default Asia/Seoul). */
+  officeTimeZone?: string;
+  owner?: OwnerContext;
+}
 
 /** Effective lower bound for town messages: default 24h ago, never older than 7 days, never after now. */
 export function resolveSince(now: Date, since: string | undefined): Date {
@@ -53,9 +71,9 @@ export async function getMyContext(
   userId: string,
   now: Date,
   input: GetMyContextInput = {},
-  ownerIn?: OwnerContext,
+  opts: GetMyContextOptions = {},
 ): Promise<GetMyContextOutput> {
-  const owner = ownerIn ?? (await loadOwnerContext(db, userId));
+  const owner = opts.owner ?? (await loadOwnerContext(db, userId));
   const tz = owner.timezone;
   const include = new Set<ContextSection>(input.include?.length ? input.include : CONTEXT_SECTIONS);
   const skipReason = checkinSkipReason(now, tz, owner.holidays);
@@ -90,7 +108,45 @@ export async function getMyContext(
   if (include.has('town_messages')) {
     out.town_messages = await loadTownMessages(db, owner, now, resolveSince(now, input.since));
   }
+  if (include.has('activity')) {
+    out.activity = await loadActivity(db, owner, now, opts.officeTimeZone ?? APP_TIMEZONE_DEFAULT);
+  }
   return out;
+}
+
+/**
+ * Whether the owner shares activity, today's stored report (office date; refs never echoed, only
+ * `has_ref`) and the owner's own status. A `now` report past its `until` is no longer current.
+ */
+async function loadActivity(db: DbOrTx, owner: OwnerContext, now: Date, officeTimeZone: string): Promise<Activity> {
+  const sharing = canShareActivity(owner, { active: true });
+  const ownerStatus = activeOwnerStatus(owner, now);
+  if (!sharing) return { sharing, now: null, schedule: [], owner_status: ownerStatus };
+  const [row] = await db
+    .select({
+      nowKind: activityReports.nowKind,
+      nowRefHash: activityReports.nowRefHash,
+      nowUntil: activityReports.nowUntil,
+      schedule: activityReports.schedule,
+    })
+    .from(activityReports)
+    .where(
+      and(
+        eq(activityReports.userId, owner.userId),
+        eq(activityReports.periodKey, localDateKey(now, officeTimeZone)),
+      ),
+    );
+  return {
+    sharing,
+    now:
+      row?.nowKind && row.nowUntil && row.nowUntil > now
+        ? { kind: row.nowKind, has_ref: row.nowRefHash !== null, until: row.nowUntil.toISOString() }
+        : null,
+    schedule: (row?.schedule ?? [])
+      .filter((b) => (SCHEDULE_KINDS as readonly string[]).includes(b.kind))
+      .map((b) => ({ start_at: b.start_at, end_at: b.end_at, kind: b.kind, has_ref: b.ref_hash !== null })),
+    owner_status: ownerStatus,
+  };
 }
 
 async function loadTodayLog(db: DbOrTx, userId: string, periodKey: string): Promise<TodayLog | null> {

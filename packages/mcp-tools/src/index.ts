@@ -1,9 +1,10 @@
 /**
- * @enu/mcp-tools — the four ENU Town MCP tools (get_my_context, post_work_log, upsert_todos,
- * post_pet_nudges) on @modelcontextprotocol/server. Mounted by apps/web at /api/mcp behind
- * token verification; see buildEnuTownMcpServer.
+ * @enu/mcp-tools — the five ENU Town MCP tools (get_my_context, post_work_log, post_activity,
+ * upsert_todos, post_pet_nudges) on @modelcontextprotocol/server. Mounted by apps/web at /api/mcp
+ * behind token verification; see buildEnuTownMcpServer.
  */
 export {
+  activitySummaryKo,
   buildEnuTownMcpServer,
   callerFromAuthInfo,
   contextSummaryKo,
@@ -31,10 +32,17 @@ export {
   type ToolErrorCode,
   type ToolProblem,
 } from './result';
-export { findOwnerContext, loadOwnerContext, type OwnerContext } from './owner';
+export { activeOwnerStatus, findOwnerContext, loadOwnerContext, type OwnerContext } from './owner';
 export { lockOwnerScope, markLinkedAfterWorkLog, recordLinkWrite, touchClaudeLink, type TouchLinkResult } from './links';
-export { formatLocalIso } from './format';
-export { CONTEXT_LIMITS, countUnreadDms, getMyContext, resolveSince } from './services/context';
+export { MANUAL_STATUS_KO, NOW_KIND_KO, formatLocalIso } from './format';
+export { activityRefHash, postActivity, type PostActivityOptions } from './services/activity';
+export {
+  CONTEXT_LIMITS,
+  countUnreadDms,
+  getMyContext,
+  resolveSince,
+  type GetMyContextOptions,
+} from './services/context';
 export { postWorkLog, workLogViewUrl, type PostWorkLogOptions } from './services/work-log';
 export { isRealCalendarDate, prepareTodoItems, upsertTodos } from './services/todos';
 export { firstVisibleTime, postPetNudges } from './services/nudges';

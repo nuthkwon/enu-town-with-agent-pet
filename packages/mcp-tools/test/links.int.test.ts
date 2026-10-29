@@ -4,7 +4,7 @@ import { createTestUser, setupTestDb, truncateAll } from '@enu/testing';
 import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { LINK_REVOKED_MESSAGE, NOT_AUTHENTICATED_MESSAGE } from '../src/index';
-import { MODES, callTool, connectClient, createTestHandler, errorPayload } from './harness';
+import { MODES, callTool, connectClient, createTestHandler, errorPayload, testDeps } from './harness';
 import { PUBLIC_URL, THU_14, auditFor, linkRow, listen, makeHarness, type Harness, type Listener } from './int-helpers';
 
 let handle: DbHandle;
@@ -113,7 +113,7 @@ describe.each(MODES)('claude_links bookkeeping and auth defense (%s)', (mode) =>
   });
 
   it('answers "not authenticated" when the route passes no caller', async () => {
-    const handler = createTestHandler({ db: handle.db, publicUrl: PUBLIC_URL });
+    const handler = createTestHandler(testDeps(handle.db, { publicUrl: PUBLIC_URL }));
     const client = await connectClient(handler, null, mode);
     const out = await callTool(client, MCP_TOOL_NAMES.getMyContext);
     expect(out.isError).toBe(true);

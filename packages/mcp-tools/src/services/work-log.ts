@@ -175,6 +175,7 @@ export async function postWorkLog(
           log_id: logId,
           visibility,
           created: decision.result === 'created',
+          by: 'claude',
         });
       }
 

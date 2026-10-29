@@ -1,8 +1,9 @@
-import type { AvatarPreset } from '@enu/shared';
+import type { AvatarPreset, NowKind, ScheduleKind } from '@enu/shared';
 import { sql } from 'drizzle-orm';
 import {
   bigserial,
   boolean,
+  char,
   check,
   date,
   index,
@@ -43,6 +44,14 @@ export interface WorkLogTaskRow {
   ref?: string;
 }
 
+/** One calendar block of `activity_reports.schedule` (UTC ISO times; the ref is stored only as its keyed hash). */
+export interface ScheduleBlockRow {
+  start_at: string;
+  end_at: string;
+  kind: ScheduleKind;
+  ref_hash: string | null;
+}
+
 export const profiles = pgTable(
   'profiles',
   {
@@ -58,7 +67,15 @@ export const profiles = pgTable(
     team: text('team'),
     /** Short role description shown on the profile card, e.g. 'SQA·V&V·형상 감사'. */
     roleNote: varchar('role_note', { length: 80 }),
+    /** 상태 문구 (human-typed). Colleagues see it only in the realtime state while the owner is shown or away. */
     statusText: varchar('status_text', { length: 80 }),
+    /** 활동 공유: null = not chosen yet = off; only `true` lets Claude-derived activity be shown. */
+    shareActivity: boolean('share_activity'),
+    /** 접속 표시: having the town open may draw the owner and their online dot. */
+    showLive: boolean('show_live').notNull().default(true),
+    /** The owner's own status (MANUAL_STATUSES) and its expiry; set and cleared together. */
+    manualStatus: text('manual_status'),
+    manualStatusUntil: tstz('manual_status_until'),
     timezone: text('timezone').notNull().default('Asia/Seoul'),
     defaultLogVisibility: visibilityEnum('default_log_visibility').notNull().default('company'),
     /** null = the owner has not chosen yet -> treated as private. */
@@ -79,6 +96,11 @@ export const profiles = pgTable(
   (t) => [
     check('profiles_link_state_chk', sql`${t.linkState} in ('not_linked','linked','stale')`),
     check('profiles_interval_chk', sql`${t.nudgeMinIntervalMin} between 10 and 240`),
+    check(
+      'profiles_manual_status_chk',
+      sql`${t.manualStatus} is null or ${t.manualStatus} in ('available','focus','meeting','break','away')`,
+    ),
+    check('profiles_manual_status_pair_chk', sql`(${t.manualStatus} is null) = (${t.manualStatusUntil} is null)`),
   ],
 );
 
@@ -112,7 +134,7 @@ export const privacyConsents = pgTable(
   },
   (t) => [
     uniqueIndex('privacy_consents_user_version_scope_uidx').on(t.userId, t.noticeVersion, t.scope),
-    check('privacy_consents_scope_chk', sql`${t.scope} in ('service','claude_chat_summary')`),
+    check('privacy_consents_scope_chk', sql`${t.scope} in ('service','claude_chat_summary','activity_sharing')`),
   ],
 );
 
@@ -179,6 +201,42 @@ export const workLogs = pgTable(
     check('work_logs_chat_summary_len_chk', sql`${t.claudeChatSummary} is null or char_length(${t.claudeChatSummary}) <= 1000`),
     check('work_logs_set_by_chk', sql`${t.visibilitySetBy} in ('claude','user') and ${t.chatSummaryVisibilitySetBy} in ('claude','user')`),
     check('work_logs_source_chk', sql`${t.source} in ('cowork_scheduled','claude_interactive','claude_code')`),
+  ],
+);
+
+/**
+ * Today's activity report from the owner's own Claude (post_activity): what they are doing now and today's
+ * calendar blocks. Current office day (APP_TIMEZONE) only: older rows are purged and never read, so no
+ * presence or activity history exists. Refs are stored only as 32-hex keyed daily hashes.
+ */
+export const activityReports = pgTable(
+  'activity_reports',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    /** Office date (APP_TIMEZONE). */
+    periodKey: date('period_key', { mode: 'string' }).notNull(),
+    nowKind: text('now_kind').$type<NowKind>(),
+    nowRefHash: char('now_ref_hash', { length: 32 }),
+    nowUntil: tstz('now_until'),
+    schedule: jsonb('schedule').$type<ScheduleBlockRow[]>().notNull().default([]),
+    source: text('source').notNull(),
+    oauthClientId: text('oauth_client_id'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    primaryKey({ name: 'activity_reports_pk', columns: [t.userId, t.periodKey] }),
+    index('activity_reports_period_idx').on(t.periodKey),
+    check('activity_now_kind_chk', sql`${t.nowKind} is null or ${t.nowKind} in ('work','docs','review','collab')`),
+    check('activity_now_pair_chk', sql`(${t.nowKind} is null) = (${t.nowUntil} is null)`),
+    check('activity_now_ref_chk', sql`${t.nowRefHash} is null or ${t.nowKind} is not null`),
+    check(
+      'activity_schedule_chk',
+      sql`jsonb_typeof(${t.schedule}) = 'array' and jsonb_array_length(${t.schedule}) <= 16`,
+    ),
+    check('activity_source_chk', sql`${t.source} in ('cowork_scheduled','claude_interactive','claude_code')`),
   ],
 );
 
@@ -277,7 +335,6 @@ export const chatMessages = pgTable(
   {
     id: uuid('id').primaryKey(),
     kind: chatKindEnum('kind').notNull(),
-    zoneId: text('zone_id'),
     senderId: text('sender_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
@@ -299,21 +356,9 @@ export const chatMessages = pgTable(
       'chat_messages_dm_chk',
       sql`(${t.kind} = 'dm') = (${t.dmLow} is not null and ${t.dmHigh} is not null)`,
     ),
+    // The pg enum keeps 'nearby' (dropping enum values is not transactional); nearby chat no longer exists.
+    check('chat_messages_no_nearby_chk', sql`${t.kind} <> 'nearby'`),
   ],
-);
-
-/** Who actually received a nearby message (so "chats we heard together" is exact). */
-export const chatMessageRecipients = pgTable(
-  'chat_message_recipients',
-  {
-    messageId: uuid('message_id')
-      .notNull()
-      .references(() => chatMessages.id, { onDelete: 'cascade' }),
-    userId: text('user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
-  },
-  (t) => [primaryKey({ columns: [t.messageId, t.userId] }), index('chat_recipients_user_idx').on(t.userId, t.messageId)],
 );
 
 export const dmReadState = pgTable(
@@ -329,17 +374,6 @@ export const dmReadState = pgTable(
   },
   (t) => [primaryKey({ columns: [t.userId, t.peerId] })],
 );
-
-export const userPresence = pgTable('user_presence', {
-  userId: text('user_id')
-    .primaryKey()
-    .references(() => user.id, { onDelete: 'cascade' }),
-  x: smallint('x').notNull(),
-  y: smallint('y').notNull(),
-  dir: smallint('dir').notNull().default(0),
-  zoneId: text('zone_id'),
-  lastSeenAt: tstz('last_seen_at').notNull(),
-});
 
 /** Audit trail without content (who did what, when, through which client). */
 export const auditEvents = pgTable(
