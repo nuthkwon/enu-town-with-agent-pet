@@ -49,6 +49,8 @@ export interface RetentionSummary {
   petMessages: number;
   /** Pet channel tokens expired or revoked more than 30 days ago (their revoked link rows stay). */
   petChannelTokens: number;
+  /** Claude Code channel link rows (the machine's name) whose token is gone. */
+  petChannelLinks: number;
 }
 
 export interface RetentionOptions {
@@ -317,6 +319,18 @@ export async function purgeRetention(
       ),
   );
 
+  // A channel link exists only for its token: once the token is purged, its row (the machine's name) goes too.
+  const petChannelLinkCount = affected(
+    await db
+      .delete(claudeLinks)
+      .where(
+        and(
+          eq(claudeLinks.clientKind, 'claude_code_channel'),
+          sql`not exists (select 1 from ${petChannelTokens} where ${petChannelTokens.linkId} = ${claudeLinks.id})`,
+        ),
+      ),
+  );
+
   const summary: RetentionSummary = {
     dmMessages,
     roomMessages,
@@ -331,6 +345,7 @@ export async function purgeRetention(
     clearedManual,
     petMessages: petMessageCount,
     petChannelTokens: petChannelTokenCount,
+    petChannelLinks: petChannelLinkCount,
   };
   // Counts only (no content): proof that retention ran, kept like any other audit event.
   await audit(db, { actorType: 'system', action: 'retention.purge', metadata: { ...summary } });

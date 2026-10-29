@@ -30,10 +30,15 @@ export function toSearchParams(sp: Record<string, string | string[] | undefined>
   return out;
 }
 
-/** A same-site relative path for ?next= (never an absolute or protocol-relative URL). */
+/**
+ * A same-site relative path for ?next= (never an absolute or protocol-relative URL). Control characters are
+ * refused anywhere: browsers drop tabs and line breaks from URLs, so `/<tab>/evil.example` would become
+ * `//evil.example`.
+ */
 export function safeNextPath(next: string | string[] | null | undefined, fallback = '/'): string {
   const v = Array.isArray(next) ? next[0] : next;
-  if (!v || !v.startsWith('/') || v.startsWith('//') || v.startsWith('/\\') || v.includes('\n'))
+  // eslint-disable-next-line no-control-regex
+  if (!v || !v.startsWith('/') || v.startsWith('//') || v.startsWith('/\\') || /[\x00-\x1f\x7f]/.test(v))
     return fallback;
   if (v.startsWith('/sign-in') || v.startsWith('/api/')) return fallback;
   return v;

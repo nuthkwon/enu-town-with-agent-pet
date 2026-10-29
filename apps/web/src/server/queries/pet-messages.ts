@@ -308,7 +308,10 @@ async function requireMyMessage(
   return row;
 }
 
-/** The owner shows or hides one message (and, with the parent rule, its replies). The owner may raise. */
+/**
+ * The owner shows or hides one message (and, with the parent rule, its replies). The owner may raise, except
+ * that their own text with personal data never becomes company-visible (the same 422 pii_public as sending).
+ */
 export async function setPetMessageVisibility(
   db: Db,
   viewer: Viewer,
@@ -318,6 +321,12 @@ export async function setPetMessageVisibility(
 ): Promise<OwnerPetMessageDto> {
   return db.transaction(async (tx) => {
     const current = await requireMyMessage(tx, viewer, petId, messageId);
+    if (visibility === 'company' && current.author === 'owner') {
+      const prepared = prepareOwnerPetText(current.body);
+      if (prepared.ok && prepared.pii.length > 0) {
+        throw new HttpError(422, 'pii_public', ko.errors.piiRaise, [{ field: 'visibility', reason: 'pii' }]);
+      }
+    }
     const [row] = await tx
       .update(petMessages)
       .set({ visibility, visibilitySetBy: 'owner' })

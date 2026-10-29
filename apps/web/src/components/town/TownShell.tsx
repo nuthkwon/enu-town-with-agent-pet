@@ -19,7 +19,7 @@ import { ChatDock } from './ChatDock';
 import { ConnectionBanner } from './ConnectionBanner';
 import { DmDrawer } from './DmDrawer';
 import { GroupPopover } from './GroupPopover';
-import { useNow } from './hooks';
+import { useNow, useTextFocus } from './hooks';
 import { HoverCard } from './HoverCard';
 import { Legend } from './Legend';
 import { MyPetPanel } from './MyPetPanel';
@@ -45,13 +45,6 @@ import s from './town.module.css';
 /** At this width the team list is a docked right rail (and the chat lives in it); below, a sheet. */
 const RAIL_MEDIA = '(min-width: 1280px)';
 const RAIL_PREF_KEY = 'enu-den:rail-hidden';
-
-function isEditable(el: EventTarget | null): boolean {
-  return (
-    el instanceof HTMLElement &&
-    (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)
-  );
-}
 
 function linkStateFromCode(code: number | undefined, fallback: MeDto['linkState']): MeDto['linkState'] {
   if (code === 0) return 'linked';
@@ -116,7 +109,8 @@ export function TownShell({
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [popover, setPopover] = useState<Popover | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const [textFocused, setTextFocused] = useState(false);
+  // Typing in the overlays counts as busy for the pet (bubbles wait); it never affects the map.
+  const textFocused = useTextFocus();
   const [hover, setHover] = useState<{ userId: string; x: number; y: number } | null>(null);
   const [camera, setCamera] = useState<{ zoom: number; fit: number; atFit: boolean }>({
     zoom: 1,
@@ -335,22 +329,6 @@ export function TownShell({
     return () => offs.forEach((off) => off());
   }, [session, toast, ui, me.userId, directory, router]);
 
-  // Typing in the overlays counts as busy for the pet (bubbles wait); it never affects the map.
-  useEffect(() => {
-    const onIn = (e: FocusEvent) => {
-      if (isEditable(e.target)) setTextFocused(true);
-    };
-    const onOut = (e: FocusEvent) => {
-      if (isEditable(e.target) && !isEditable(e.relatedTarget)) setTextFocused(false);
-    };
-    document.addEventListener('focusin', onIn);
-    document.addEventListener('focusout', onOut);
-    return () => {
-      document.removeEventListener('focusin', onIn);
-      document.removeEventListener('focusout', onOut);
-    };
-  }, []);
-
   // Presence: busy while a panel/menu is open or the user is typing (nudges wait).
   const uiBusy = sheet !== null || popover !== null || textFocused;
   useEffect(() => {
@@ -370,11 +348,11 @@ export function TownShell({
     <TownContext.Provider value={ctx}>
       <div ref={rootRef} className={s.overlay} data-town-root>
         <div className={s.topBar}>
-          <span className={s.brand}>
+          <Link href="/" className={s.brand} title={ko.townUi.topBar.backToMessenger}>
             <span className={s.brandMark} aria-hidden="true" />
             {ko.app.name}
-            <span className={s.brandSub}>{ko.app.tagline}</span>
-          </span>
+            <span className={s.brandSub}>{ko.townUi.topBar.backToMessenger}</span>
+          </Link>
           <span className={s.spacer} />
           <div className={s.pillGroup}>
             <button

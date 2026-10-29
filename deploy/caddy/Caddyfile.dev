@@ -15,7 +15,7 @@
 			}
 		}
 	}
-	@unlogged path /api/v1/pet-channel/poll /api/v1/users/*
+	@unlogged path /api/v1/pet-channel/* /api/v1/me/pet-channel/* /api/v1/me/pets/* /api/v1/users/* /people/*
 	log_skip @unlogged
 	route {
 		request_body /api/mcp {

@@ -55,9 +55,12 @@ export function WelcomeWizard({
     name: me.pet.name,
   }));
   const [chatVis, setChatVis] = useState<Visibility>(me.prefs.defaultChatSummaryVisibility ?? 'private');
-  // Someone who already chose keeps their choice on re-acceptance; a newcomer starts from the preselection.
+  // Only an explicit 나만 보기 is known to be someone's own choice (company is also the column default), so
+  // everyone else starts from the preselection, which may be nothing at all.
   const [petChatVis, setPetChatVis] = useState<Visibility | null>(
-    me.onboardingCompleted ? me.prefs.petChatDefaultVisibility : PET_CHAT_SHARING_PRESELECT,
+    me.onboardingCompleted && me.prefs.petChatDefaultVisibility === 'private'
+      ? 'private'
+      : PET_CHAT_SHARING_PRESELECT,
   );
   // 활동 공유 is an explicit choice: nothing is preselected (null = not chosen yet).
   const [shareActivity, setShareActivity] = useState<boolean | null>(null);

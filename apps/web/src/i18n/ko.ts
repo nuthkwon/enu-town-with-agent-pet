@@ -56,6 +56,7 @@ export const ko = {
   },
 
   nav: {
+    messenger: '대화',
     town: '타운',
     me: '내 정보',
     admin: '관리',
@@ -165,6 +166,7 @@ export const ko = {
     baseReserved: '기본 색은 대표 펫만 쓸 수 있어요. 다른 색을 골라 주세요.',
     defaultPet: '대표 펫은 지울 수 없어요.',
     piiPublic: '전화번호 같은 개인정보가 있어요. 동료에게 공개되지 않게 "나만 보기"로 보내 주세요.',
+    piiRaise: '전화번호 같은 개인정보가 있는 글은 전사 공개로 바꿀 수 없어요.',
     petNotFound: '펫을 찾을 수 없어요.',
     invalidPairCode: '연결 코드가 맞지 않거나 만료되었어요. ENU Den 설정에서 새 코드를 만들어 주세요.',
     tooManyMachines:
@@ -245,7 +247,7 @@ export const ko = {
     cannotTitle: '할 수 없는 일',
     cannot: ['무엇이든 삭제하기', '다른 사람인 척하기', '다른 사람의 비공개 정보 읽기'],
     privacy:
-      'ENU Den은 Claude와 나눈 원본 대화를 받지 않아요. Claude가 도구로 보낸 요약만 저장해요. 연결은 내 정보 > 내 Claude 연결에서 언제든 해제할 수 있어요.',
+      'ENU Den은 Claude와 나눈 원본 대화를 받지 않아요. Claude가 도구로 보낸 요약과 펫에게 쓴 답만 저장해요. 연결은 내 정보 > 내 Claude 연결에서 언제든 해제할 수 있어요.',
     allow: '허용',
     deny: '거부',
     working: '처리 중…',
@@ -331,7 +333,8 @@ export const ko = {
       companyBody:
         '동료가 내 펫 대화방에서 그날부터 볼 수 있어요. 펫별·메시지별로 언제든 나만 보기로 바꿀 수 있어요.',
       privateTitle: '나만 보기',
-      privateBody: '펫 대화는 나만 봐요. 동료에게는 펫 이름과 모습만 보여요.',
+      privateBody:
+        '펫 대화는 나만 봐요. 동료에게는 펫 이름과 모습이 보이고, 업무 로그는 로그마다 정한 공개 범위를 따라요.',
       later:
         '나중에 펫 관리나 내 정보 > 설정에서 바꿀 수 있어요. 개인정보가 보이는 글은 전사 공개로 보낼 수 없어요.',
     },
@@ -417,7 +420,7 @@ export const ko = {
     codeTitle: 'Claude Code에서 쓰기',
     codeCommand: (url: string) => `claude mcp add --transport http enu-den ${url}`,
     faqQ: '회사가 내 Claude 대화를 보나요?',
-    faqA: '아니요. ENU Den은 내 Claude가 도구로 보낸 업무 요약만 받아요. 원본 대화는 받지도 저장하지도 않아요.',
+    faqA: '아니요. ENU Den은 내 Claude가 도구로 보낸 업무 요약과 펫의 답만 받아요. 원본 대화는 받지도 저장하지도 않아요. 펫 대화방에는 내가 직접 쓴 글이 저장돼요.',
   },
 
   me: {
@@ -833,6 +836,7 @@ export const ko = {
       banner: '근무 시간이 아니에요 · 요정들도 쉬는 중 (평일 08:30–19:30에만 동료 상태가 보여요)',
     },
     topBar: {
+      backToMessenger: '← 대화로',
       people: '사람들',
       myPet: '내 펫',
       me: '내 정보',
@@ -1154,6 +1158,7 @@ export const ko = {
       waiting: '답 기다리는 중',
       tabs: { chats: '대화', town: '타운', people: '동료', settings: '설정' },
       tabsLabel: '화면 전환',
+      finishWelcome: '시작하기 마저 하기',
     },
     town: {
       label: '타운',
@@ -1166,6 +1171,7 @@ export const ko = {
     pet: {
       roomLabel: (name: string) => `${name}와의 대화`,
       notFound: '찾을 수 없는 펫이에요. 지워졌거나 내 펫이 아니에요.',
+      loadFailed: '펫 목록을 불러오지 못했어요.',
       backHome: '대표 펫 대화로 가기',
       defaultBadge: '대표 펫',
       emptyTitle: '아직 나눈 대화가 없어요',
@@ -1184,6 +1190,8 @@ export const ko = {
       visibilityNotice: {
         company: '이 대화는 전사 공개예요. 동료는 날짜와 함께 볼 수 있어요(시간은 안 보여요).',
         private: '이 펫과의 대화는 나만 볼 수 있어요.',
+        privateWithShared:
+          '새 메시지는 나만 보기로 보내요. 전에 전사 공개로 보낸 메시지는 동료도 볼 수 있어요(메시지마다 숨길 수 있어요).',
       },
       visibilityOf: { company: '전사 공개', private: '나만 보기' },
       sendAs: '공개 범위',

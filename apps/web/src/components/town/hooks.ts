@@ -133,6 +133,33 @@ export function usePaged<T>(key: string | null, makeUrl: (cursor: string | null)
   };
 }
 
+function isEditable(el: EventTarget | null): boolean {
+  return (
+    el instanceof HTMLElement &&
+    (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)
+  );
+}
+
+/** True while a text field has focus (typing counts as busy for the pet: bubbles wait). */
+export function useTextFocus(): boolean {
+  const [focused, setFocused] = useState(false);
+  useEffect(() => {
+    const onIn = (e: FocusEvent) => {
+      if (isEditable(e.target)) setFocused(true);
+    };
+    const onOut = (e: FocusEvent) => {
+      if (isEditable(e.target) && !isEditable(e.relatedTarget)) setFocused(false);
+    };
+    document.addEventListener('focusin', onIn);
+    document.addEventListener('focusout', onOut);
+    return () => {
+      document.removeEventListener('focusin', onIn);
+      document.removeEventListener('focusout', onOut);
+    };
+  }, []);
+  return focused;
+}
+
 /* Escape handling: one window listener, a stack of handlers; only the top-most (latest opened)
  * overlay closes, so Esc closes a popover before the sheet underneath it. */
 const escapeStack: Array<{ current: () => void }> = [];

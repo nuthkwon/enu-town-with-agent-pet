@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { PetSprite } from '@/components/sprites';
 import { ConnectionBanner } from '@/components/town/ConnectionBanner';
-import { useDirectory } from '@/components/town/hooks';
+import { useDirectory, useTextFocus } from '@/components/town/hooks';
 import { Button, cx } from '@/components/ui';
 import { ko } from '@/i18n/ko';
 import { apiFetch } from '@/lib/api';
@@ -46,11 +46,23 @@ export function DenShell({ children }: { children: ReactNode }) {
   // A navigation closes the mobile list and the town drawer.
   useEffect(() => setDrawer(null), [pathname]);
 
+  // Typing anywhere in the messenger counts as busy for my pet's town bubbles (owner-only scheduler input).
+  const typing = useTextFocus();
+  useEffect(() => {
+    session.setPresence({ uiBusy: typing });
+  }, [session, typing]);
+
   const townVisible = wide || drawer === 'town';
   return (
     <div className={s.shell}>
       <DenNav open={drawer === 'nav'} />
       <main id="main" className={s.main}>
+        {/* 768-1279 px: the town is a drawer, opened from this bar (in the flow, so it never covers a page). */}
+        {!wide && (
+          <div className={s.mainBar}>
+            <TownToggle onOpen={() => setDrawer('town')} />
+          </div>
+        )}
         <ConnectionBanner status={status} session={session} />
         {children}
       </main>
@@ -89,7 +101,6 @@ export function DenShell({ children }: { children: ReactNode }) {
           {t.nav.myInfo}
         </Link>
       </nav>
-      {!wide && drawer !== 'town' && <TownToggle onOpen={() => setDrawer('town')} />}
     </div>
   );
 }
@@ -97,21 +108,22 @@ export function DenShell({ children }: { children: ReactNode }) {
 /** Opens the town drawer between 768 and 1279 px (the tab bar does it below 768 px). */
 function TownToggle({ onOpen }: { onOpen: () => void }) {
   return (
-    <Button
-      size="sm"
-      variant="secondary"
-      className={s.townToggle}
-      style={{ position: 'fixed', right: 16, top: 12, zIndex: 20 }}
-      onClick={onOpen}
-    >
+    <Button size="sm" variant="secondary" onClick={onOpen}>
       {ko.den.town.show}
     </Button>
   );
 }
 
 function TownPanel({ onClose }: { onClose: (() => void) | null }) {
-  const { bridge, mapError, retryMap } = useDen();
+  const { bridge, bus, mapError, retryMap } = useDen();
   const t = ko.den.town;
+
+  // The panel's own bar sits above the canvas: the camera fits the whole canvas (compact below 704 px).
+  useEffect(() => {
+    const emit = () => bus.emit('camera:insets', { top: 0, right: 0, bottom: 0, left: 0 });
+    emit();
+    return bus.on('game:ready', emit);
+  }, [bus]);
   return (
     <>
       <div className={s.townBar}>
@@ -154,15 +166,18 @@ function DenNav({ open }: { open: boolean }) {
   const dmUnread = useDmUnread(session);
   const { people } = useDirectory(directory);
   const [threads, setThreads] = useState<DmThreadDto[]>([]);
+  const [dmTick, setDmTick] = useState(0);
   const t = ko.den.nav;
 
+  // Any DM, sent or received, can start a thread or change its last line.
+  useEffect(() => session.on('dm:msg', () => setDmTick((n) => n + 1)), [session]);
   useEffect(() => {
     const ctrl = new AbortController();
     apiFetch<DmThreadDto[]>('/api/v1/dm/threads', { signal: ctrl.signal })
       .then((list) => setThreads(list ?? []))
       .catch(() => undefined);
     return () => ctrl.abort();
-  }, [dmUnread.total]);
+  }, [dmUnread.total, dmTick]);
 
   const online = useMemo(() => new Set(roster.filter((p) => p.online).map((p) => p.id)), [roster]);
   const colleagues = people.filter((p) => p.userId !== me.userId);
@@ -222,23 +237,26 @@ function DenNav({ open }: { open: boolean }) {
                 <span className={s.navName}>{t.all}</span>
               </Link>
             </li>
-            {threads.map((th) => {
-              const unread = dmUnread.byPeer[th.peerId] ?? 0;
-              return (
-                <li key={th.peerId}>
-                  <Link
-                    href={`/dm/${th.peerId}`}
-                    className={cx(s.navItem, active(`/dm/${th.peerId}`) && s.navItemActive)}
-                  >
-                    <span className={s.navText}>
-                      <span className={s.navName}>{th.peerName}</span>
-                      <span className={s.navLast}>{th.lastText}</span>
-                    </span>
-                    {unread > 0 && <span className={s.count}>{unread}</span>}
-                  </Link>
-                </li>
-              );
-            })}
+            {/* Only active colleagues: a deactivated person's DM page does not exist any more. */}
+            {threads
+              .filter((th) => people.some((p) => p.userId === th.peerId))
+              .map((th) => {
+                const unread = dmUnread.byPeer[th.peerId] ?? 0;
+                return (
+                  <li key={th.peerId}>
+                    <Link
+                      href={`/dm/${th.peerId}`}
+                      className={cx(s.navItem, active(`/dm/${th.peerId}`) && s.navItemActive)}
+                    >
+                      <span className={s.navText}>
+                        <span className={s.navName}>{th.peerName}</span>
+                        <span className={s.navLast}>{th.lastText}</span>
+                      </span>
+                      {unread > 0 && <span className={s.count}>{unread}</span>}
+                    </Link>
+                  </li>
+                );
+              })}
           </ul>
         </section>
 

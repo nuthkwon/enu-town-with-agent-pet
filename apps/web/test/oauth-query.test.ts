@@ -34,6 +34,12 @@ describe('safeNextPath', () => {
     expect(safeNextPath(undefined)).toBe('/');
     expect(safeNextPath(['/admin', '/me'])).toBe('/admin');
   });
+
+  it('refuses control characters browsers would drop (a tab before a slash is a protocol-relative URL)', () => {
+    expect(safeNextPath('/\t/evil.example')).toBe('/');
+    expect(safeNextPath('/\r\n/evil.example')).toBe('/');
+    expect(safeNextPath('/pets/\x00')).toBe('/');
+  });
 });
 
 describe('isLoopbackHost', () => {

@@ -291,7 +291,8 @@ recent[{author, sent_at, text}]}], items[{message_id, pet_id, sent_at, owner_tex
 
 - No audit rows for messages, replies, polls or reads. Audit only configuration: `pet.create`, `pet.update {fields}`,
   `pet.delete`, `pet_messages.hide_history {count}`, `profile.pet_chat_default_visibility`, `pet_channel.pair`.
-- Caddy: `log_skip /api/v1/pet-channel/poll`, `log_skip /api/v1/users/*`, `request_body /api/v1/pet-channel/* 16KB`.
+- Caddy: `log_skip` for `/api/v1/pet-channel/*`, `/api/v1/me/pet-channel/*` (the 30 s status re-read), `/api/v1/me/pets/*`,
+  `/api/v1/users/*` and `/people/*`; `request_body /api/v1/pet-channel/* 16KB`.
 - Retention: `pet_messages` 90 days by `day_key` (`RETENTION_PET_MESSAGE_DAYS`); revoked or expired channel tokens
   deleted after 30 days; expired pairing codes with the auth cleanup.
 - Export `enu-den-export` version 2 adds `pets` (with role instructions) and `petMessages`.

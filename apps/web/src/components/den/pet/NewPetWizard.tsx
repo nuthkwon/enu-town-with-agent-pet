@@ -2,7 +2,7 @@
 
 import { PET_SPECIES, type OwnerPetDto, type PetTint } from '@enu/shared';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui';
 import { ko } from '@/i18n/ko';
 import { apiFetch, describeError } from '@/lib/api';
@@ -29,6 +29,11 @@ export function NewPetWizard() {
     reply_route: 'both',
     default_visibility: null,
   }));
+  // Opened directly, my pets may arrive after the first render: move off a look one of them already has.
+  useEffect(() => {
+    if (taken.has(`${value.species}:${value.tint}`)) setValue((v) => ({ ...v, ...firstFree() }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-check only when my pets change
+  }, [taken]);
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +48,8 @@ export function NewPetWizard() {
         method: 'POST',
         body: petFormBody(value),
       });
-      reloadPets();
+      // The room finds the pet in the shell's list: refresh it first (no "not found" flash).
+      await reloadPets();
       router.push(`/pets/${pet.id}`);
     } catch (e) {
       setError(describeError(e));

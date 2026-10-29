@@ -10,7 +10,15 @@ import {
   type Visibility,
 } from '@enu/shared';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from 'react';
 import { Badge, Button, cx } from '@/components/ui';
 import { formatHm } from '@/components/town/format';
 import { ko } from '@/i18n/ko';
@@ -18,13 +26,25 @@ import { ApiRequestError, apiFetch, describeError } from '@/lib/api';
 import { useOfficeOpen } from '@/realtime/useRealtime';
 import { useDen } from '../DenProvider';
 import { COMPANION_SPRITE, companionState, type CompanionExpr } from '../model/companionState';
-import { buildTimeline, lastUnreadReply, prependPage } from '../model/timeline';
+import { buildTimeline, lastUnreadReply, mergeLogs, prependPage } from '../model/timeline';
 import { waitHint } from '../model/waitHint';
 import { CompanionSprite } from './CompanionSprite';
 import { Timeline } from './Timeline';
 import s from '../den.module.css';
 
 const PAGE = 30;
+
+/** Whether this tab is in front (a reply that arrived while it was hidden is marked read on return). */
+function useDocumentVisible(): boolean {
+  const [visible, setVisible] = useState(true);
+  useEffect(() => {
+    const on = () => setVisible(document.visibilityState === 'visible');
+    on();
+    document.addEventListener('visibilitychange', on);
+    return () => document.removeEventListener('visibilitychange', on);
+  }, []);
+  return visible;
+}
 
 function newClientId(): string {
   return typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -58,6 +78,13 @@ export function OwnerPetRoom({ pet }: { pet: OwnerPetDto }) {
   const seenReplies = useRef<Set<string> | null>(null);
   const readSent = useRef<string | null>(null);
   const scroller = useRef<HTMLDivElement | null>(null);
+  /** Older pages were loaded: a refetch of the newest page keeps their cursor and cards. */
+  const olderLoaded = useRef(false);
+  /** Keep the view at the newest message (unless I scrolled up to read). */
+  const stick = useRef(true);
+  /** Scroll height before an older page was put in front, to keep what I was reading in place. */
+  const prependFrom = useRef<number | null>(null);
+  const visible = useDocumentVisible();
   const t = ko.den.pet;
 
   useEffect(() => setVisibility(pet.effectiveDefaultVisibility), [pet.id, pet.effectiveDefaultVisibility]);
@@ -82,20 +109,27 @@ export function OwnerPetRoom({ pet }: { pet: OwnerPetDto }) {
       const oldestNew = page.items[0]?.createdAt ?? '';
       return [...keep.filter((m) => m.createdAt < oldestNew), ...page.items];
     });
-    setLogs(page.workLogs);
-    setNextCursor((c) => c ?? page.nextCursor);
+    setLogs((shown) => mergeLogs(shown, page.workLogs));
+    setNextCursor((c) => (olderLoaded.current ? c : page.nextCursor));
     setLoaded(true);
   }, [pet.id, pet.name]);
 
-  useEffect(() => {
+  /** Starts the room over from the newest page (another pet, or after hiding the history). */
+  const reload = useCallback(() => {
     setItems([]);
     setLogs([]);
     setNextCursor(null);
     setLoaded(false);
-    seenReplies.current = null;
+    olderLoaded.current = false;
+    stick.current = true;
     readSent.current = null;
-    loadLatest().catch(() => setLoaded(true));
-  }, [pet.id, loadLatest]);
+    return loadLatest().catch(() => setLoaded(true));
+  }, [loadLatest]);
+
+  useEffect(() => {
+    seenReplies.current = null;
+    void reload();
+  }, [pet.id, reload]);
 
   useEffect(() => {
     if (petSignal.n === 0) return;
@@ -115,23 +149,31 @@ export function OwnerPetRoom({ pet }: { pet: OwnerPetDto }) {
   // Reading the room marks my pet's replies read (a current value only; no read time is stored).
   useEffect(() => {
     const unread = lastUnreadReply(items);
-    if (!unread || readSent.current === unread.id || document.hidden) return;
+    if (!unread || readSent.current === unread.id || !visible) return;
     readSent.current = unread.id;
     apiFetch(`/api/v1/me/pets/${pet.id}/read`, { method: 'POST', body: { last_message_id: unread.id } })
       .then(() => reloadPets())
       .catch(() => undefined);
-  }, [items, pet.id, reloadPets]);
+  }, [items, pet.id, reloadPets, visible]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = scroller.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [items.length]);
+    if (!el) return;
+    if (prependFrom.current !== null) {
+      el.scrollTop += el.scrollHeight - prependFrom.current;
+      prependFrom.current = null;
+    } else if (stick.current) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [items.length, logs.length]);
 
   const loadOlder = async () => {
     if (!nextCursor) return;
     const page = await apiFetch<PetThreadPageDto<OwnerPetMessageDto>>(
       `/api/v1/me/pets/${pet.id}/thread?limit=${PAGE}&cursor=${encodeURIComponent(nextCursor)}`,
     );
+    olderLoaded.current = true;
+    prependFrom.current = scroller.current?.scrollHeight ?? null;
     setItems((shown) => prependPage(shown, page.items));
     setLogs((shown) => [...page.workLogs.filter((l) => !shown.some((x) => x.id === l.id)), ...shown]);
     setNextCursor(page.nextCursor);
@@ -145,6 +187,7 @@ export function OwnerPetRoom({ pet }: { pet: OwnerPetDto }) {
         method: 'POST',
         body: { text, client_msg_id: newClientId(), visibility: vis },
       });
+      stick.current = true;
       setItems((shown) => [...shown.filter((m) => m.id !== message.id), message]);
       setDraft('');
       setPiiText(null);
@@ -168,11 +211,16 @@ export function OwnerPetRoom({ pet }: { pet: OwnerPetDto }) {
 
   const patchVisibility = async (m: OwnerPetMessageDto) => {
     const next: Visibility = m.visibility === 'company' ? 'private' : 'company';
-    const updated = await apiFetch<OwnerPetMessageDto>(`/api/v1/me/pets/${pet.id}/messages/${m.id}`, {
-      method: 'PATCH',
-      body: { visibility: next },
-    });
-    setItems((shown) => shown.map((x) => (x.id === updated.id ? updated : x)));
+    setError(null);
+    try {
+      const updated = await apiFetch<OwnerPetMessageDto>(`/api/v1/me/pets/${pet.id}/messages/${m.id}`, {
+        method: 'PATCH',
+        body: { visibility: next },
+      });
+      setItems((shown) => shown.map((x) => (x.id === updated.id ? updated : x)));
+    } catch (e) {
+      setError(describeError(e));
+    }
   };
 
   const remove = async (m: OwnerPetMessageDto) => {
@@ -185,7 +233,8 @@ export function OwnerPetRoom({ pet }: { pet: OwnerPetDto }) {
   const hideHistory = async () => {
     if (!window.confirm(t.hideHistoryConfirm)) return;
     await apiFetch(`/api/v1/me/pets/${pet.id}/hide-history`, { method: 'POST' });
-    await loadLatest();
+    // Older pages I already loaded changed too: start over from the newest page.
+    await reload();
   };
 
   const pending = items.filter((m) => m.author === 'owner' && m.answerState !== 'answered');
@@ -251,7 +300,11 @@ export function OwnerPetRoom({ pet }: { pet: OwnerPetDto }) {
           <Link href="/settings/pets">{t.settingsLink}</Link>
         </div>
       </header>
-      <p className={cx(s.notice, notice === 'private' && s.noticePrivate)}>{t.visibilityNotice[notice]}</p>
+      <p className={cx(s.notice, notice === 'private' && s.noticePrivate)}>
+        {notice === 'private' && items.some((m) => m.visibility === 'company')
+          ? t.visibilityNotice.privateWithShared
+          : t.visibilityNotice[notice]}
+      </p>
       {pet.isDefault && (nudges.length > 0 || todos.length > 0) && (
         <div className={s.pinned} aria-label={t.pinned}>
           {nudges.map((n) => (
@@ -269,7 +322,14 @@ export function OwnerPetRoom({ pet }: { pet: OwnerPetDto }) {
           ))}
         </div>
       )}
-      <div className={s.timeline} ref={scroller}>
+      <div
+        className={s.timeline}
+        ref={scroller}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+        }}
+      >
         {nextCursor && (
           <div className={s.older}>
             <Button size="sm" variant="secondary" onClick={() => void loadOlder()}>

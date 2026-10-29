@@ -77,7 +77,8 @@ Colleagues read a pet room only over REST (`/api/v1/users/:id/pets/:petId/thread
 messages from the same day, and a reply only while its question is company. `ColleaguePetMessageDto` is
 `{id, petId, author, text, dayKey}`: no times, sources, answer or read state. Whether my channel is live is kept only
 in the web process's memory (`server/pet-channel/liveness.ts`); only I see it, through
-`/api/v1/me/pet-channel/status`. Polls, replies and reads are not audited and leave no log lines (Caddy `log_skip`).
+`/api/v1/me/pet-channel/status`. Polls, replies and reads are not audited, and Caddy logs no line for the pet
+channel, my pet rooms, the channel status or colleagues' pages and reads (`log_skip`).
 
 ## Town director
 

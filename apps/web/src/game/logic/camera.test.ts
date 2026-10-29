@@ -6,6 +6,7 @@ import {
   canPan,
   clampFocus,
   fitZoom,
+  overlayScale,
   freeArea,
   overviewFocus,
   panBy,
@@ -27,10 +28,19 @@ describe('fitZoom', () => {
     expect(fitZoom(1366, 712)).toBe(1);
   });
 
-  it('never goes below 1 and never above 4', () => {
-    expect(fitZoom(300, 200)).toBe(1);
-    expect(fitZoom(0, 0)).toBe(1);
+  it('uses a compact fit below the overview at 1 (the town panel, phones), never below 0.5 or above 4', () => {
+    expect(fitZoom(440, 820)).toBe(0.625);
+    expect(fitZoom(439, 820)).toBe(19 / 32);
+    expect(fitZoom(600, 500)).toBe(27 / 32);
+    expect(fitZoom(300, 200)).toBe(0.5);
+    expect(fitZoom(0, 0)).toBe(0.5);
     expect(fitZoom(10_000, 10_000)).toBe(4);
+  });
+
+  it('shrinks overlays only with a compact zoom', () => {
+    expect(overlayScale(0.625)).toBe(0.625);
+    expect(overlayScale(1)).toBe(1);
+    expect(overlayScale(3)).toBe(1);
   });
 
   it('takes the free area: the canvas minus the top bar and the docked rail', () => {

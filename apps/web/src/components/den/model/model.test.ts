@@ -1,7 +1,7 @@
 import type { OwnerPetMessageDto, WorkLogDto } from '@enu/shared';
 import { describe, expect, it } from 'vitest';
 import { COMPANION_TIMING, companionState, type CompanionInput } from './companionState';
-import { buildTimeline, lastUnreadReply, prependPage } from './timeline';
+import { buildTimeline, lastUnreadReply, mergeLogs, prependPage } from './timeline';
 import { waitHint } from './waitHint';
 
 const msg = (id: string, dayKey: string, author: 'owner' | 'pet', over: Partial<OwnerPetMessageDto> = {}) =>
@@ -59,6 +59,15 @@ describe('buildTimeline', () => {
     ).toEqual(['a', 'b', 'c']);
     expect(lastUnreadReply(shown)?.id).toBe('c');
     expect(lastUnreadReply([msg('x', '2026-10-29', 'pet')])).toBeNull();
+  });
+});
+
+describe('mergeLogs', () => {
+  it('keeps the cards of older pages and takes the newest page as the truth for its own cards', () => {
+    const card = (id: string, periodKey: string, summary = id) => ({ id, periodKey, summary }) as WorkLogDto;
+    const shown = [card('a', '2026-10-20'), card('b', '2026-10-28', 'old')];
+    const merged = mergeLogs(shown, [card('b', '2026-10-28', 'new'), card('c', '2026-10-29')]);
+    expect(merged.map((l) => `${l.id}:${l.summary}`)).toEqual(['a:a', 'b:new', 'c:c']);
   });
 });
 

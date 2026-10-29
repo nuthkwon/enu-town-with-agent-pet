@@ -6,7 +6,7 @@ import s from './site.module.css';
 
 export function Logo() {
   return (
-    <Link href="/town" className={s.logo} aria-label={ko.app.name}>
+    <Link href="/" className={s.logo} aria-label={ko.app.name}>
       <span className={s.logoMark} aria-hidden="true">
         ✦
       </span>
@@ -24,6 +24,9 @@ export function SiteHeader({ viewer }: { viewer: { name: string; isAdmin: boolea
         <nav className={s.nav} aria-label={ko.nav.mainMenu}>
           {viewer ? (
             <>
+              <Link href="/" className={s.navLink}>
+                {ko.nav.messenger}
+              </Link>
               <Link href="/town" className={s.navLink}>
                 {ko.nav.town}
               </Link>

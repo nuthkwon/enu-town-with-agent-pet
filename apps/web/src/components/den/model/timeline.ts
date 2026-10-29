@@ -47,6 +47,12 @@ export function prependPage<M extends { id: string }>(shown: readonly M[], older
   return [...older.filter((m) => !seen.has(m.id)), ...shown];
 }
 
+/** Work-log cards after the newest page is fetched again: its cards replace theirs, older pages' cards stay. */
+export function mergeLogs(shown: readonly WorkLogDto[], latest: readonly WorkLogDto[]): WorkLogDto[] {
+  const ids = new Set(latest.map((l) => l.id));
+  return [...shown.filter((l) => !ids.has(l.id)), ...latest];
+}
+
 /** The newest unread pet reply (what `read` should be called with), or null. */
 export function lastUnreadReply(messages: readonly OwnerPetMessageDto[]): OwnerPetMessageDto | null {
   for (let i = messages.length - 1; i >= 0; i--) {

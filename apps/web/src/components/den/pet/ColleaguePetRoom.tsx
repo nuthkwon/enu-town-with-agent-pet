@@ -50,7 +50,10 @@ export function ColleaguePetRoom({
         setNextCursor(page.nextCursor);
       })
       .catch(() => undefined)
-      .finally(() => setLoaded(true));
+      // An aborted request (a newer one replaced it) must not end the newer one's loading state.
+      .finally(() => {
+        if (!ctrl.signal.aborted) setLoaded(true);
+      });
     return () => ctrl.abort();
   }, [base]);
 
@@ -95,6 +98,7 @@ export function ColleaguePetRoom({
             </Button>
           </div>
         )}
+        {!loaded && <div className={s.empty}>{ko.common.loading}</div>}
         {loaded && entries.length === 0 && <div className={s.empty}>{t.empty}</div>}
         <Timeline
           entries={entries}

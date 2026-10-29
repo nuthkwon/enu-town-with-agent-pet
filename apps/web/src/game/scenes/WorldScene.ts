@@ -17,6 +17,7 @@ import {
   canPan,
   clampFocus,
   fitZoom,
+  overlayScale,
   freeArea,
   overviewFocus,
   panBy,
@@ -131,7 +132,17 @@ export class WorldScene extends Phaser.Scene {
     return obj;
   }
 
+  /**
+   * World px -> overlay px. The overlay camera is zoomed by `overlayScale` (1 unless the fit is compact), so
+   * overlay coordinates are screen px divided by it and every overlay shrinks with a compact map.
+   */
   private toScreen(wx: number, wy: number): { x: number; y: number } {
+    const k = this.zoom / overlayScale(this.zoom);
+    return { x: Math.round((wx - this.scrollX) * k), y: Math.round((wy - this.scrollY) * k) };
+  }
+
+  /** World px -> canvas (CSS) px, whatever the overlay scale. */
+  private toCanvas(wx: number, wy: number): { x: number; y: number } {
     return { x: Math.round((wx - this.scrollX) * this.zoom), y: Math.round((wy - this.scrollY) * this.zoom) };
   }
 
@@ -160,10 +171,10 @@ export class WorldScene extends Phaser.Scene {
         return self.zoom;
       },
       get viewWidth() {
-        return self.viewWidth;
+        return self.viewWidth / overlayScale(self.zoom);
       },
       get viewHeight() {
-        return self.viewHeight;
+        return self.viewHeight / overlayScale(self.zoom);
       },
     };
   }
@@ -203,6 +214,8 @@ export class WorldScene extends Phaser.Scene {
     this.mainCam = this.cameras.main;
     this.mainCam.setBackgroundColor('rgba(0,0,0,0)');
     this.overlayCam = this.cameras.add(0, 0, this.scale.width, this.scale.height, false, 'overlay');
+    // Zoomed only by a compact fit (see toScreen), always about the canvas' top-left.
+    this.overlayCam.setOrigin(0, 0);
     this.stage = this.makeStage();
     this.applyViewport(this.scale.width, this.scale.height);
 
@@ -354,6 +367,7 @@ export class WorldScene extends Phaser.Scene {
     this.scrollX = snapToScreenPixel(s.x, this.zoom);
     this.scrollY = snapToScreenPixel(s.y, this.zoom);
     this.mainCam.setZoom(this.zoom);
+    this.overlayCam.setZoom(overlayScale(this.zoom));
     // centerOn() with origin 0.5: the visible rect's top-left lands exactly on (scrollX, scrollY).
     this.mainCam.centerOn(
       this.scrollX + this.viewWidth / (2 * this.zoom),
@@ -914,15 +928,15 @@ export class WorldScene extends Phaser.Scene {
     const hook = {
       avatarScreen: (userId: string) => {
         const v = this.avatars.get(userId);
-        return v?.isShown ? this.toScreen(v.feet.x, v.feet.y - 14) : null;
+        return v?.isShown ? this.toCanvas(v.feet.x, v.feet.y - 14) : null;
       },
       /** The owner's default pet (slot 0) on screen. */
       petScreen: (ownerId: string) => {
         const id = this.bridge.session.petsOf(ownerId)[0]?.petId;
         const v = id ? this.pets.get(id) : undefined;
-        return v && !v.hidden ? this.toScreen(v.feet.x, v.feet.y - 6) : null;
+        return v && !v.hidden ? this.toCanvas(v.feet.x, v.feet.y - 6) : null;
       },
-      tileScreen: (tx: number, ty: number) => this.toScreen(tileCenterX(tx), ty * TILE_PX + TILE_PX / 2),
+      tileScreen: (tx: number, ty: number) => this.toCanvas(tileCenterX(tx), ty * TILE_PX + TILE_PX / 2),
       /** The tile the server director placed someone on, or null while they are not drawn. */
       playerTile: (userId: string) => {
         const p = this.bridge.session.getPlayer(userId);
@@ -943,14 +957,17 @@ export class WorldScene extends Phaser.Scene {
       /** Waves and paper planes drawn on this screen so far. */
       fxDrawn: () => ({ ...this.fxDrawn }),
       /** Screen rectangles of the visible desk plates (CSS px inside the canvas). */
-      plateRects: () =>
-        this.plates.flatMap((p) => {
+      plateRects: () => {
+        const k = overlayScale(this.zoom);
+        return this.plates.flatMap((p) => {
           const r = p.rect;
-          return r ? [{ deskId: p.desk.deskId, ...r }] : [];
-        }),
+          return r ? [{ deskId: p.desk.deskId, x: r.x * k, y: r.y * k, w: r.w * k, h: r.h * k }] : [];
+        });
+      },
       plateScreen: (deskId: string) => {
         const r = this.plateByDesk.get(deskId)?.rect;
-        return r ? { x: r.x + r.w / 2, y: r.y + r.h / 2 } : null;
+        const k = overlayScale(this.zoom);
+        return r ? { x: (r.x + r.w / 2) * k, y: (r.y + r.h / 2) * k } : null;
       },
       zoom: () => this.targetZoom,
       fitZoom: () => this.fit,

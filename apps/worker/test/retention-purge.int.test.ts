@@ -390,7 +390,7 @@ describe('retention.purge', () => {
     expect(remaining(await h.db.select({ id: petMessages.id }).from(petMessages))).toEqual([keepQ]);
   });
 
-  it('removes pet channel tokens 30 days after they expired or were revoked', async () => {
+  it('removes pet channel tokens and their machine names 30 days after they expired or were revoked', async () => {
     const u = await users();
     const machine = async (n: number, link: { revokedAt?: Date }, expiresAt: Date) => {
       const linkId = newId();
@@ -425,7 +425,11 @@ describe('retention.purge', () => {
     expect(remaining(await h.db.select({ id: petChannelTokens.id }).from(petChannelTokens)).sort()).toEqual(
       [live, recentlyExpired, recentlyRevoked].sort(),
     );
-    // The revoked link rows stay in the owner's link list.
-    expect(await h.db.select().from(claudeLinks)).toHaveLength(5);
+    // The link rows of the purged tokens (the machine's name) go with them; other links stay.
+    expect(s.petChannelLinks).toBe(2);
+    const links = await h.db.select({ clientId: claudeLinks.clientId }).from(claudeLinks);
+    expect(links.map((l) => l.clientId).sort()).toEqual(
+      ['enu-den-channel:1', 'enu-den-channel:2', 'enu-den-channel:4'].sort(),
+    );
   });
 });

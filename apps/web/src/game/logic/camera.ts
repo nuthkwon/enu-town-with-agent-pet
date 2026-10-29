@@ -8,7 +8,13 @@
 
 /** Zoom levels (spec §5.2). 1.5 is used only when it is the fit. */
 export const ZOOM_STEPS = [1, 1.5, 2, 3, 4] as const;
-export const MIN_ZOOM = 1;
+/**
+ * Canvases narrower or shorter than the overview at 1 (the messenger's town panel, phones) get a compact fit
+ * below 1, in 1/32 steps so a 32 px tile stays a whole number of pixels: the whole office stays in view and
+ * the screen-space overlays shrink with it (`overlayScale`).
+ */
+export const MIN_ZOOM = 0.5;
+const COMPACT_STEP = 1 / 32;
 export const MAX_ZOOM = 4;
 /** Zoom of `이 사람 보기` (at least; never below the fit). */
 export const FOCUS_ZOOM = 2;
@@ -60,11 +66,18 @@ export function freeArea(viewW: number, viewH: number, insets: Insets = DEFAULT_
 
 /** Largest z in ZOOM_STEPS with 704z ≤ freeW ∧ 576z ≤ freeH (never below 1). */
 export function fitZoom(freeW: number, freeH: number): number {
-  let best: number = MIN_ZOOM;
+  const room = Math.min(freeW / OVERVIEW_RECT.w, freeH / OVERVIEW_RECT.h);
+  if (room < 1) return Math.max(MIN_ZOOM, Math.floor(room / COMPACT_STEP) * COMPACT_STEP);
+  let best = 1;
   for (const z of ZOOM_STEPS) {
     if (OVERVIEW_RECT.w * z <= freeW && OVERVIEW_RECT.h * z <= freeH) best = z;
   }
   return best;
+}
+
+/** Overlays (plates, tags, bubbles) keep their pixel size at 1 and above, and shrink with a compact fit. */
+export function overlayScale(zoom: number): number {
+  return Math.min(1, zoom);
 }
 
 /** The levels the wheel, the ± buttons and the keys step through: the integer steps plus the fit. */

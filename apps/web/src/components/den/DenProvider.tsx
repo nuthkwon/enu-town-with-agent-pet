@@ -27,7 +27,10 @@ export interface DenContextValue {
   mapError: boolean;
   retryMap(): void;
   pets: OwnerPetDto[] | null;
-  reloadPets(): void;
+  /** The last load of my pets failed (pages offer a retry instead of loading forever). */
+  petsError: boolean;
+  /** Resolves once the list is fresh (e.g. before opening a pet just created). */
+  reloadPets(): Promise<void>;
   channel: PetChannelStatusDto | null;
   reloadChannel(): void;
   /** Bumps for every owner-only refetch signal: rooms reload when it names them (or null = all pets). */
@@ -50,6 +53,7 @@ export function DenProvider({ me, children }: { me: MeDto; children: ReactNode }
   const [mapAttempt, setMapAttempt] = useState(0);
   const { session, status } = useRealtime({ userId: me.userId }, map !== null);
   const [pets, setPets] = useState<OwnerPetDto[] | null>(null);
+  const [petsError, setPetsError] = useState(false);
   const [channel, setChannel] = useState<PetChannelStatusDto | null>(null);
   const [petSignal, setPetSignal] = useState<{ petId: string | null; n: number }>({ petId: null, n: 0 });
 
@@ -77,11 +81,16 @@ export function DenProvider({ me, children }: { me: MeDto; children: ReactNode }
     return () => ctrl.abort();
   }, [directory]);
 
-  const reloadPets = useCallback(() => {
-    apiFetch<OwnerPetDto[]>('/api/v1/me/pets')
-      .then(setPets)
-      .catch(() => undefined);
-  }, []);
+  const reloadPets = useCallback(
+    () =>
+      apiFetch<OwnerPetDto[]>('/api/v1/me/pets')
+        .then((list) => {
+          setPets(list);
+          setPetsError(false);
+        })
+        .catch(() => setPetsError(true)),
+    [],
+  );
   const reloadChannel = useCallback(() => {
     apiFetch<PetChannelStatusDto>('/api/v1/me/pet-channel/status')
       .then(setChannel)
@@ -91,8 +100,11 @@ export function DenProvider({ me, children }: { me: MeDto; children: ReactNode }
   useEffect(() => {
     reloadPets();
     reloadChannel();
-    // Whether a Claude Code is listening lives only in the web server's memory: ask again now and then.
-    const timer = setInterval(reloadChannel, 30_000);
+    // Whether a Claude Code is listening lives only in the web server's memory: ask again now and then,
+    // only while this tab is in front (the request is never logged per call; see the Caddyfile).
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') reloadChannel();
+    }, 30_000);
     return () => clearInterval(timer);
   }, [reloadPets, reloadChannel]);
 
@@ -124,6 +136,7 @@ export function DenProvider({ me, children }: { me: MeDto; children: ReactNode }
         setMapAttempt((n) => n + 1);
       },
       pets,
+      petsError,
       reloadPets,
       channel,
       reloadChannel,
@@ -138,6 +151,7 @@ export function DenProvider({ me, children }: { me: MeDto; children: ReactNode }
       bridge,
       mapError,
       pets,
+      petsError,
       reloadPets,
       channel,
       reloadChannel,

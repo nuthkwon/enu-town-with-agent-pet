@@ -8,7 +8,7 @@ import { ko } from '@/i18n/ko';
 import { apiFetch, describeError } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 import type { AdminUserRow } from '@/server/queries/admin';
-import { linkTone } from '../me/LinkTab';
+import { linkTone } from '../../(den)/me/LinkTab';
 import s from './admin.module.css';
 
 const a = ko.admin;

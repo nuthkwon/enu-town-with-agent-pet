@@ -184,8 +184,14 @@ describe('writing to my pet', () => {
       error: 'pii_public',
       fields: [{ field: 'text', reason: 'pii' }],
     });
-    expect(await sent(me.cookie, me.petId, pii, { visibility: 'private' })).toMatchObject({
-      visibility: 'private',
+    const privateNote = await sent(me.cookie, me.petId, pii, { visibility: 'private' });
+    expect(privateNote).toMatchObject({ visibility: 'private' });
+    // ... and it cannot be raised to company afterwards either.
+    const raised = await patchMessage(me.cookie, me.petId, privateNote.id, 'company');
+    expect(raised.status).toBe(422);
+    expect(await jsonOf(raised)).toMatchObject({
+      error: 'pii_public',
+      fields: [{ field: 'visibility', reason: 'pii' }],
     });
 
     await h.db.update(pets).set({ defaultVisibility: 'private' }).where(eq(pets.id, me.petId));
