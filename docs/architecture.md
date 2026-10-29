@@ -1,17 +1,22 @@
 # ENU Den architecture
 
 ```
- employee browser ──HTTPS──┐                ┌── employee's own Claude (claude.ai / Cowork cloud / Claude Code)
-                           ▼                ▼        egress 160.79.104.0/21
-                      Caddy :443  (TLS, strips /colyseus, drops _authToken from logs)
+ employee browser ──HTTPS──┐                ┌── employee's own Claude (claude.ai / Cowork cloud) ── /api/mcp
+ (messenger shell + town)  │                │   employee's PC: Claude Code + enu-den-channel plugin
+                           ▼                ▼        ── bearer edc_ token ── /api/v1/pet-channel/{poll,replies}
+                      Caddy :443  (TLS, strips /colyseus, drops _authToken from logs, skips poll logs)
             /colyseus/* │                           │  /, /api/*, /.well-known/*
                         ▼                           ▼
               realtime :2567  ◄──LISTEN──  Postgres  ◄──►  web :3000
-              Colyseus room office-606     enu_den_events   Next 16: pages, Better Auth (Google + OAuth AS),
-              director · pets · chat ·                      /api/mcp (MCP tools), /api/v1 REST, realtime ticket
-              owner-only pet bubbles               ▲
+              Colyseus room office-606     enu_den_events   Next 16: messenger pages, Better Auth (Google + OAuth AS),
+              director · pets · chat ·                      /api/mcp (MCP tools), /api/v1 REST, pet channel long-poll,
+              owner-only bubbles and                        realtime ticket
+              owner-only `pet:changed`             ▲
                                             worker (pg-boss cron: nudge expiry, link state, retention, auth cleanup)
 ```
+
+The web app writes every row. Realtime only pushes to screens and renders the town; it writes nothing new. The worker
+only purges.
 
 ## Identity
 
@@ -42,6 +47,37 @@
 9. The realtime `DbEvents` listener reloads the owner's signals (activity report, log flags) and pet candidates.
 10. `NudgeScheduler` (rules in `packages/domain/src/nudge-policy.ts`) chooses when to show a bubble: on join, when a nudge first becomes eligible, when the owner returns to the tab, or when something is due. It then sets the `.view()` bubble fields on the owner's pet. Only the owner's `StateView` contains their pet; colleagues see no sign of a bubble at all (the shared `indicator` stays 0): bubbles start only while the owner's tab is visible, so a shared "…" would tell colleagues when the owner looks at the town. A delivery row keeps only what the policy reads (no trigger) and survives only until the next 03:17 purge (today's count, the last 12 h of due keys). When the owner's session ends (leave or a replacing tab), any bubble on the long-lived pet is taken down.
 11. When a colleague clicks an avatar or a desk plate, the profile card calls `/api/v1/users/:id/card`, which only returns logs that pass `canViewLog`.
+
+## Messenger and pet conversations
+
+The messenger is the `app/(den)` route group. Its layout owns the tab's one realtime session (a second tab takes it
+over with 4101), the people directory, the map and my pets, so moving between rooms keeps them. The town is a panel
+nobody steers: beside the conversation at 1280 px and wider, a drawer below that, a tab on phones. `/town` stays as
+the full-screen view. See [ADR 0005](adr/0005-enu-den-messenger-and-pets.md) and `docs/design/messenger-spec.md`.
+
+A message to one of my pets:
+
+1. The room `POST`s `/api/v1/me/pets/:petId/messages` (`client_msg_id` makes it idempotent). The web app stores the
+   row in `pet_messages`, keyed by my local date, and sends `NOTIFY pet_thread_changed` (ids only) in the same
+   transaction. Text with PII is refused as company (`pii_public`); the UI offers to send it as 나만 보기.
+2. After the commit, `wakeOwner` wakes any pet channel long-poll of mine that is waiting in this web process.
+3. **Claude Code channel** ([ADR 0006](adr/0006-claude-code-pet-channel.md)): the `enu-den-channel` plugin on my PC
+   polls `/api/v1/pet-channel/poll` with its `edc_` bearer token. Each poll claims up to 10 messages for 10 minutes and
+   returns my pets' names and role instructions. The plugin turns them into channel events. My Claude Code answers
+   with its `reply` tool → `/api/v1/pet-channel/replies`. This works at any time, because I started it.
+4. **Check-in fallback:** the `pet_inbox` section of `get_my_context` and `post_pet_reply` answer during office hours
+   only. Both lanes go through `postPetReplies`. The first answer wins (`decideReplyAdmission`) and also closes my
+   earlier waiting messages to that pet. A reply is verbatim or rejected, never more visible than its question, and
+   not audited.
+5. Each reply sends `NOTIFY pet_thread_changed`. Realtime tells only the owner (`pet:changed {petId}`), and the room
+   refetches over REST. The companion picks its expression from what happens in that room alone; the expression is
+   never sent anywhere.
+
+Colleagues read a pet room only over REST (`/api/v1/users/:id/pets/:petId/thread`), with no push. They get company
+messages from the same day, and a reply only while its question is company. `ColleaguePetMessageDto` is
+`{id, petId, author, text, dayKey}`: no times, sources, answer or read state. Whether my channel is live is kept only
+in the web process's memory (`server/pet-channel/liveness.ts`); only I see it, through
+`/api/v1/me/pet-channel/status`. Polls, replies and reads are not audited and leave no log lines (Caddy `log_skip`).
 
 ## Town director
 
@@ -75,16 +111,17 @@ Nobody steers an avatar ([ADR 0004](adr/0004-town-is-a-visualization.md)). The r
 
 See `CLAUDE.md` for the package map. The key invariants live in pure functions with unit tests:
 
-| File                                    | Invariant                                                                                                                                                                                                            |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/domain/src/visibility.ts`     | Who may see logs and chat summaries; `canShareActivity` and `canShowLive` gate activity and the online dot; `projectForColleagues` is the single colleague projection (neutral after hours, `부재` without end time) |
-| `packages/domain/src/activity.ts`       | `resolveActivity`: who is shown and with which label, from real inputs only; Claude's `now` and the log only label                                                                                                   |
-| `packages/domain/src/groups.ts`         | `groupPeople`: people are grouped only by mutual corroboration; meetings need 3 or more                                                                                                                              |
-| `packages/domain/src/worklog-upsert.ts` | Owner edits, deletes and visibility always win                                                                                                                                                                       |
-| `packages/domain/src/validation.ts`     | Text that breaks the rules is rejected, never rewritten; `post_activity` is rejected as a whole                                                                                                                      |
-| `packages/domain/src/nudge-policy.ts`   | When a bubble may show (office hours, quiet hours, interval, daily cap, focus or meeting)                                                                                                                            |
-| `packages/domain/src/link-state.ts`     | Not linked / linked / stale                                                                                                                                                                                          |
-| `packages/map/src/spots.ts`             | Where the director may place people and pets; allocation is deterministic and never doubles up a tile                                                                                                                |
+| File                                    | Invariant                                                                                                                                                                                                                                                                             |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/domain/src/visibility.ts`     | Who may see logs, chat summaries, pets and pet messages (a reply only while its question is company); `canShareActivity` and `canShowLive` gate activity and the online dot; `projectForColleagues` is the single colleague projection (neutral after hours, `부재` without end time) |
+| `packages/domain/src/activity.ts`       | `resolveActivity`: who is shown and with which label, from real inputs only; Claude's `now` and the log only label                                                                                                                                                                    |
+| `packages/domain/src/groups.ts`         | `groupPeople`: people are grouped only by mutual corroboration; meetings need 3 or more                                                                                                                                                                                               |
+| `packages/domain/src/worklog-upsert.ts` | Owner edits, deletes and visibility always win                                                                                                                                                                                                                                        |
+| `packages/domain/src/validation.ts`     | Text that breaks the rules is rejected, never rewritten; `post_activity` is rejected as a whole                                                                                                                                                                                       |
+| `packages/domain/src/nudge-policy.ts`   | When a bubble may show (office hours, quiet hours, interval, daily cap, focus or meeting)                                                                                                                                                                                             |
+| `packages/domain/src/link-state.ts`     | Not linked / linked / stale                                                                                                                                                                                                                                                           |
+| `packages/domain/src/pets.ts`           | Pet limits and looks; `decideReplyAdmission`: the first lane to answer wins, claims are 10-minute leases, the connector lane only in office hours                                                                                                                                     |
+| `packages/map/src/spots.ts`             | Where the director may place people and pets; allocation is deterministic and never doubles up a tile                                                                                                                                                                                 |
 
 ## Map
 
@@ -99,7 +136,7 @@ It also writes the hash that realtime compares against.
 
 ## Art
 
-All art is original pixel art defined in code (`packages/sprites`): avatars 32×32 in 4 directions with idle-bounce and hop-walk, fairy pets 24×24 with wings (every employee has a different one), office tiles 32×32 and effects, including the activity icons shown over heads and desk plates. The web app renders avatar sheets on demand (`/api/sprites/avatar/:key`). The build writes the pets, tiles and default avatars to `apps/web/public/assets`.
+All art is original pixel art defined in code (`packages/sprites`): avatars 32×32 in 4 directions with idle-bounce and hop-walk, fairy pets 24×24 with wings (every employee's default pet is a different species; extra pets use one of five tints, mixed into the species' own palette keys), companion expression sheets for the pet rooms (22 frames: idle, blink, listen, think, talk, happy, sleep), office tiles 32×32 and effects, including the activity icons shown over heads and desk plates. The web app renders avatar sheets and tinted pet and companion sheets on demand (`/api/sprites/avatar/:key`, `/api/sprites/pet/:key`). The build writes the pets, tiles and default avatars to `apps/web/public/assets`.
 
 ## Phase 2 seam
 

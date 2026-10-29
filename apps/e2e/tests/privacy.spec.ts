@@ -93,7 +93,7 @@ test('with 접속 표시 off, opening the town no longer draws the owner: only t
   await expect
     .poll(async () => (await playerState(colleaguePage, ownerId))?.online, { timeout: 10_000 })
     .toBe(true);
-  await expect(railRow(colleaguePage, '직원07')).toContainText('타운 접속');
+  await expect(railRow(colleaguePage, '직원07')).toContainText('ENU Den 접속');
 
   const settings = await owner.newPage();
   await saveSettings(settings, 'show-live', false);

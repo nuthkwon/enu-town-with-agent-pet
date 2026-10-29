@@ -1,15 +1,17 @@
 # ENU Den — repository guide for Claude
 
-ENU Den is ENU-Tech's internal Gather-style 2D office (A동 606호, 14 people): a live map of teams working and
-interacting. Nobody steers an avatar; a server director places everyone from their own signals (ADR 0004). Each avatar
-is followed by its own fairy pet that shows to-do check-ins written **only by that employee's own Claude** (via our
-MCP connector). Read `docs/architecture.md` and the ADRs in `docs/adr/` before changing auth, MCP tools, pet text or
-what the town shows.
+ENU Den is ENU-Tech's internal messenger for A동 606호 (14 people). Everyone chats with their own fairy pets (up to 5
+each). A pet's replies are written **only by that employee's own Claude**: Claude Code via the pet channel plugin, or a
+check-in via our MCP connector (ADR 0005, 0006). Beside the chat is a live 2D town of teams working and interacting.
+Nobody steers an avatar; a server director places everyone from their own signals (ADR 0004). Every pet follows its
+owner's avatar and shows to-do check-ins as bubbles. Read `docs/architecture.md`, `docs/design/messenger-spec.md` and
+the ADRs in `docs/adr/` before changing auth, MCP tools, the pet channel, pet text or what colleagues and the town
+show.
 
 ## Non-negotiable rules
 
-- **No server-side LLM.** Never add `@anthropic-ai/*`, `openai`, `ai`, `@ai-sdk/*`, LangChain, etc. Pet bubbles show
-  Claude-authored text verbatim; ENU Den only decides _when_. `scripts/verify-policy.sh` + ESLint enforce this.
+- **No server-side LLM.** Never add `@anthropic-ai/*`, `openai`, `ai`, `@ai-sdk/*`, LangChain, etc. Pet bubbles and pet
+  replies show Claude-authored text verbatim; ENU Den only decides _when_ and never writes for a pet. `scripts/verify-policy.sh` + ESLint enforce this.
 - **Never rewrite Claude's text.** Policy violations (PII, URLs, too long) are _rejected_ with field-level reasons so
   Claude rewrites them (`packages/domain/src/validation.ts`). Only meaning-preserving normalization (NFC, invisible
   and control characters) is allowed. System information (due time, link state) is drawn _outside_ the bubble.
@@ -17,8 +19,18 @@ what the town shows.
 - **MCP tools never set `requiresUserInteraction`** (unattended scheduled runs would stall) and never take a user id
   (or a colleague's name or email).
 - **Visibility** is decided only in `packages/domain/src/visibility.ts` (`canViewLog`, `canViewChatSummary`,
-  `effectiveVisibility`, `canShareActivity`, `canShowLive`, `canViewLogTimestamps`, `projectForColleagues`). Claude may
-  lower visibility, never raise it above the owner default; only the owner turns activity sharing on.
+  `effectiveVisibility`, `canShareActivity`, `canShowLive`, `canViewLogTimestamps`, `projectForColleagues`, `canViewPet`,
+  `canChatWithPet`, `canViewPetPrivateFields`, `canViewPetMessage`, `petDefaultVisibility`, `petMessageVisibility`,
+  `petReplyVisibility`). Claude may lower visibility, never raise it above the owner default; only the owner turns
+  activity sharing on.
+- **Pet conversations.** Only the owner writes to a pet. Colleagues see company messages from the same day, **dates
+  only**. Their DTOs have no times, sources, answer, read or typing state, channel liveness or companion mood. A reply
+  is hidden whenever its question is. Pet chat defaults to company: the owner can lower it per pet or per message,
+  and Claude can only lower it. Text with PII never goes out company-wide.
+- **Pet channel (ADR 0006).** The plugin is inert without `ENU_DEN_PET=1`. It has no pair tool; only the person pairs,
+  in a terminal (`enu-pet pair`). Tokens are stored as hashes. Whether a channel is live is kept only in web memory:
+  never stored, NOTIFY'd, logged or audited. Polls, replies and reads are not audited. Connector (MCP) replies are
+  allowed only in office hours; replies over the owner's own channel are allowed at any time.
 - **Avatars are never steered.** Every avatar state comes from `resolveActivity` + `projectForColleagues` over real
   inputs (the owner's status, an open town, their Claude's calendar blocks) — never fabricate motion or activity.
   Claude's `now` report and the work log only label an avatar or desk plate; people are grouped only when their own
@@ -33,7 +45,9 @@ what the town shows.
 
 ## Layout
 
-- `apps/web` — Next 16 (App Router, `src/`): pages, Better Auth (+ MCP OAuth AS), `/api/mcp`, `/api/v1/*`, Phaser client.
+- `apps/web` — Next 16 (App Router, `src/`): the messenger shell `app/(den)` (pet rooms, new-pet wizard, colleagues'
+  read-only rooms, 전체 방/DM, town panel), `/town` full screen, Better Auth (+ MCP OAuth AS), `/api/mcp`, `/api/v1/*`
+  (incl. bearer-only `/api/v1/pet-channel/*`), Phaser client.
 - `apps/realtime` — Colyseus 0.18 server (room `office-606`): director (server-placed avatars), pets, chat, pet bubbles
   (StateView).
 - `apps/worker` — pg-boss cron jobs (expiry, link state, retention, auth cleanup) + `migrate` entry.
@@ -44,10 +58,14 @@ what the town shows.
 - `packages/protocol` — Colyseus schema state + message types shared by web and realtime.
 - `packages/map` — Tiled `.tmj` parsing, collision grid, A*, zones/desks, director spots; generator for the 606호 map
   (ㄱ-shaped team desks, R1 executive desk).
-- `packages/sprites` — code-defined pixel art → PNG sprite sheets (avatars, pets, office tiles).
+- `packages/sprites` — code-defined pixel art → PNG sprite sheets (avatars, pets with tints, companion expression
+  sheets, office tiles).
 - `packages/db` — Drizzle schema, migrations, client, NOTIFY helper, seeds.
 - `packages/auth` — Better Auth configuration factory. `packages/mcp-tools` — the six MCP tools (+ `postPetReplies`, the reply core shared with the pet channel).
-- `claude/` — Claude org plugin (skills `enu-den-checkin`, `enu-den-setup`). `docs/` — runbooks (Korean).
+- `packages/pet-channel` — the Claude Code channel plugin (stdio server `den`, tools `reply`/`status`, `enu-pet` CLI),
+  bundled into `claude/plugins/enu-den-channel/server/den-channel.mjs`. Commit the bundle; CI checks that it is fresh.
+- `claude/` — Claude org plugins: `enu-den` (skills `enu-den-checkin`, `enu-den-setup`) and `enu-den-channel`.
+  `docs/` — runbooks (Korean).
 
 ## Conventions
 
@@ -71,6 +89,7 @@ pnpm check:policy && pnpm lint && pnpm typecheck && pnpm test
 pnpm test:int                     # needs Postgres; DATABASE_URL_TEST must end with _test
 pnpm --filter @enu/<pkg> test     # one package
 pnpm sprites:build && pnpm map:check
+pnpm --filter @enu/pet-channel bundle   # after changing packages/pet-channel (commit the bundle)
 pnpm db:generate && pnpm db:migrate && pnpm seed:seats
 pnpm dev                          # web :3000, realtime :2567, worker
 pnpm test:e2e

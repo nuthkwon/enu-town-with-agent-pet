@@ -10,7 +10,8 @@ import { claimPetSpecies, grantConsent, recordShareActivity, withdrawConsent } f
 /**
  * Finishes the /welcome wizard in one transaction: consent(s) for the current notice version,
  * pet (409 pet_taken when another active member has that species), seat (assign a free one, keep the
- * current one, or 409 when taken), avatar/chat-summary default, the explicit 활동 공유 choice,
+ * current one, or 409 when taken), avatar/chat-summary default, the explicit 활동 공유 choice, the pet chat
+ * default (pet_chat_sharing consent when company),
  * onboarding timestamp, and NOTIFY profile_changed (+ desks_changed when the seat moved,
  * + activity_changed when sharing changed).
  */
@@ -36,6 +37,9 @@ export async function submitOnboarding(
     if (body.default_chat_summary_visibility === 'company')
       await grantConsent(tx, viewer.userId, 'claude_chat_summary', now);
     else await withdrawConsent(tx, viewer.userId, 'claude_chat_summary', now);
+    if (body.pet_chat_default_visibility === 'company')
+      await grantConsent(tx, viewer.userId, 'pet_chat_sharing', now);
+    else await withdrawConsent(tx, viewer.userId, 'pet_chat_sharing', now);
 
     let seatChanged = false;
     const current = await deskOf(tx, viewer.userId);
@@ -75,6 +79,7 @@ export async function submitOnboarding(
       .set({
         avatar: body.avatar,
         defaultChatSummaryVisibility: body.default_chat_summary_visibility,
+        petChatDefaultVisibility: body.pet_chat_default_visibility,
         shareActivity: body.share_activity,
         onboardingCompletedAt: profile.onboardingCompletedAt ?? now,
       })
@@ -88,6 +93,7 @@ export async function submitOnboarding(
       metadata: {
         noticeVersion: PRIVACY_NOTICE_VERSION,
         chatSummaryVisibility: body.default_chat_summary_visibility,
+        petChatVisibility: body.pet_chat_default_visibility,
         shareActivity: body.share_activity,
       },
     });

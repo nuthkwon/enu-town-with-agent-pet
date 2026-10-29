@@ -79,7 +79,7 @@ describe('§5.3 label table', () => {
         SourceCode.WorkLog,
         SourceCode.Town,
       ].map(sourceLabel),
-    ).toEqual(['', '직접 설정', '캘린더 일정', 'Claude 보고', '업무 로그', '타운 접속']);
+    ).toEqual(['', '직접 설정', '캘린더 일정', 'Claude 보고', '업무 로그', 'ENU Den 접속']);
     expect([PlateNote.None, PlateNote.Away, PlateNote.Absent].map(noteLabel)).toEqual([
       '',
       '자리 비움',
@@ -120,7 +120,7 @@ describe('displayForm', () => {
   });
 
   it('shows only the source when there is no activity', () => {
-    expect(displayForm(p({ shown: true, source: SourceCode.Town }), TZ)).toBe('타운 접속');
+    expect(displayForm(p({ shown: true, source: SourceCode.Town }), TZ)).toBe('ENU Den 접속');
   });
 
   it('shows 부재 alone (no source, no end time) and 자리 비움 with its end time', () => {

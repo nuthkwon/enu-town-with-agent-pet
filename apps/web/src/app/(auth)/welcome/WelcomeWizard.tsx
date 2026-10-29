@@ -1,6 +1,13 @@
 'use client';
 
-import type { AvatarPreset, DeskDto, MeDto, PetSpecies, Visibility } from '@enu/shared';
+import {
+  PET_CHAT_SHARING_PRESELECT,
+  type AvatarPreset,
+  type DeskDto,
+  type MeDto,
+  type PetSpecies,
+  type Visibility,
+} from '@enu/shared';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -17,7 +24,16 @@ import s from './welcome.module.css';
 
 const w = ko.welcome;
 const STEPS = w.steps;
-const STEP = { notice: 0, desk: 1, avatar: 2, pet: 3, chatSummary: 4, activity: 5, link: 6 } as const;
+const STEP = {
+  notice: 0,
+  desk: 1,
+  avatar: 2,
+  pet: 3,
+  chatSummary: 4,
+  petChat: 5,
+  activity: 6,
+  link: 7,
+} as const;
 
 export function WelcomeWizard({
   me,
@@ -39,6 +55,10 @@ export function WelcomeWizard({
     name: me.pet.name,
   }));
   const [chatVis, setChatVis] = useState<Visibility>(me.prefs.defaultChatSummaryVisibility ?? 'private');
+  // Someone who already chose keeps their choice on re-acceptance; a newcomer starts from the preselection.
+  const [petChatVis, setPetChatVis] = useState<Visibility | null>(
+    me.onboardingCompleted ? me.prefs.petChatDefaultVisibility : PET_CHAT_SHARING_PRESELECT,
+  );
   // 활동 공유 is an explicit choice: nothing is preselected (null = not chosen yet).
   const [shareActivity, setShareActivity] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
@@ -50,12 +70,19 @@ export function WelcomeWizard({
       ? accepted
       : step === STEP.pet
         ? petOk
-        : step === STEP.activity
-          ? shareActivity !== null
-          : true;
+        : step === STEP.petChat
+          ? petChatVis !== null
+          : step === STEP.activity
+            ? shareActivity !== null
+            : true;
   const last = step === STEPS.length - 1;
 
   async function finish() {
+    if (petChatVis === null) {
+      setStep(STEP.petChat);
+      setError(w.needPetChat);
+      return;
+    }
     if (shareActivity === null) {
       setStep(STEP.activity);
       setError(w.needActivity);
@@ -74,6 +101,7 @@ export function WelcomeWizard({
           pet_name: pet.name.trim(),
           default_chat_summary_visibility: chatVis,
           share_activity: shareActivity,
+          pet_chat_default_visibility: petChatVis,
         },
       });
       router.replace('/');
@@ -101,9 +129,11 @@ export function WelcomeWizard({
           ? w.needNotice
           : step === STEP.activity
             ? w.needActivity
-            : !pet.name.trim()
-              ? w.needPetName
-              : w.needPet,
+            : step === STEP.petChat
+              ? w.needPetChat
+              : !pet.name.trim()
+                ? w.needPetName
+                : w.needPet,
       );
       return;
     }
@@ -209,6 +239,34 @@ export function WelcomeWizard({
               ))}
             </div>
             <p className={s.help}>{w.chatSummary.later}</p>
+          </div>
+        )}
+
+        {step === STEP.petChat && (
+          <div>
+            <h2>{w.petChat.title}</h2>
+            <p className={s.help}>{w.petChat.help}</p>
+            <div className={s.choices} role="radiogroup" aria-label={w.petChat.title}>
+              {(
+                [
+                  ['company', w.petChat.companyTitle, w.petChat.companyBody],
+                  ['private', w.petChat.privateTitle, w.petChat.privateBody],
+                ] as const
+              ).map(([value, title, body]) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={petChatVis === value}
+                  className={cx(s.choice, petChatVis === value && s.choiceOn)}
+                  onClick={() => setPetChatVis(value)}
+                >
+                  <span className={s.choiceTitle}>{title}</span>
+                  <span className={s.choiceBody}>{body}</span>
+                </button>
+              ))}
+            </div>
+            <p className={s.help}>{w.petChat.later}</p>
           </div>
         )}
 

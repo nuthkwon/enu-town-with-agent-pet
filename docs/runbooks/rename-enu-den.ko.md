@@ -81,8 +81,11 @@ compose로 전부 내리고 함께 올린다.
     - 이름 "ENU Den", URL `https://den.enu-tech.co.kr/api/mcp`, 인증 "Use Claude's published identity"(CIMD)
     - Enterprise라면 새 커넥터의 모든 도구를 역할별로 **Always allow**로 둔다(예전 허용은 커넥터와 함께 사라진다).
 12. 플러그인 마켓플레이스(`claude/`를 미러링하는 비공개 레포): `plugins/enu-town`을 `plugins/enu-den`으로 바꾸고,
-    조직 설정에서 `enu-den`을 기본 설치/필수로, `enu-town`은 제거한다.
+    조직 설정에서 `enu-den`을 기본 설치/필수로, `enu-town`은 제거한다. `enu-den-channel`(펫 채널)은 **사용 가능**으로
+    올리고, 쓰려면 조직의 Channels 기능을 켠다.
 13. Claude Code 관리 설정: `claudeMd`와 `permissions.allow`를 새 서버 이름(`/mcp`에 보이는 이름)으로 다시 배포한다.
+    펫 채널을 쓰면 `channelsEnabled`, `allowedChannelPlugins`, 채널 도구 허용과 자격증명 폴더 차단도 함께 배포한다
+    (`claude/managed-settings/claude-code.managed.example.json`).
 14. 첫 연결 뒤 `audit_events`에 `oauth.client_discovered`가 생기는지 본다.
 
 ## T+1 아침, 직원 (약 5분)
@@ -94,6 +97,8 @@ compose로 전부 내리고 함께 올린다.
 18. Claude Code 사용자: `/plugin`에서 `enu-den@enu-tech`을 설치하고 `enu-town`을 지운다. 서버를 직접 추가했다면
     `claude mcp remove enu-town` 후 `claude mcp add --transport http enu-den https://den.enu-tech.co.kr/api/mcp`.
 19. "ENU Den 체크인 해줘"를 한 번 실행해 업무 로그가 보이는지 확인한다.
+    - (선택) Claude Code 펫 채널: "ENU Den 설정 도와줘"의 안내대로 `enu-pet` 함수를 만들고, `펫 관리`에서 만든
+      코드로 `enu-pet pair <코드>`를 직접 입력한다.
 
 ## 개발자
 

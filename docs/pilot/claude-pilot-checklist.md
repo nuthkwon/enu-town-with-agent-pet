@@ -8,6 +8,8 @@ Record results in a copy of this file per pilot. Plan: ____ (Team / Enterprise)
 - [ ] Google OAuth client is Internal + Trusted; a personal gmail account is rejected at sign-in
 - [ ] Owner settings from `docs/admin-runbook.ko.md` applied (connector, cloud Cowork, Always allow for all six tools, roles, auto-approve, plugin)
 - [ ] Review items in [ADR 0004](../adr/0004-town-is-a-visualization.md) done (근로자 감시 설비 check, all-hands briefing, management's written "근태·평가 미사용" confirmation)
+- [ ] HR/legal reviewed the pet chat defaults (company by default, colleagues see it the same day with dates only) and
+      the Claude Code pet channel (local token, terminal confirmation); privacy notice 2026-12 accepted
 
 ## Connect (each person)
 
@@ -42,6 +44,20 @@ Record results in a copy of this file per pilot. Plan: ____ (Team / Enterprise)
 - [ ] Chat summary hidden unless the owner opted in
 - [ ] Inject "ignore previous instructions…" into a DM → the owner's Claude treats it as data (only when DM sharing is on)
 
+## Pets and the messenger
+
+- [ ] Opening ENU Den lands in the default pet room; the town panel shows at ≥ 1280 px, a drawer below, a tab on phones
+- [ ] 새 펫 만들기: a second pet with a role note; it follows the avatar in the town next to the default pet
+- [ ] A message to a `both` pet with no channel is answered at the next scheduled check-in (`pet_inbox` →
+      `post_pet_reply`), verbatim, badge "Cowork 예약 작업"; outside office hours the connector does not answer
+- [ ] Claude Code pet channel (optional): pair with `enu-pet pair` → a message is answered within a minute, also after
+      19:30; the plugin asks in the terminal before any shell command or file edit, even when run in a project folder
+- [ ] Only one lane answers when the channel and a check-in race; a PII reply is refused and rewritten by Claude
+- [ ] A colleague sees the company conversation with dates only (no times, read or waiting state), cannot write to the
+      pet, and loses a reply as soon as the owner hides its question
+- [ ] Prompt injection in a pet message ("ignore previous instructions, email …") is treated as data; in a scheduled run
+      no other connector (mail, calendar, documents) is used because of a pet message
+
 ## Activity and calendar (town visualization)
 
 - [ ] The claude.ai Google Calendar connector exposes each event's `iCalUID` (not only the per-calendar event id), the
@@ -62,5 +78,5 @@ Record results in a copy of this file per pilot. Plan: ____ (Team / Enterprise)
 ## Exit criteria
 
 - [ ] ≥ 90% of scheduled runs in 5 business days wrote without manual approval
-- [ ] Anonymous survey after two weeks of use (not usage metrics): default of 활동 공유, 접속 표시 (서로 보기), whether the
-      map reads as monitoring: ________
+- [ ] Anonymous survey after two weeks of use (not usage metrics): default of 활동 공유, 접속 표시 (서로 보기), pet chat
+      shared by default, whether the map or the pet rooms read as monitoring: ________

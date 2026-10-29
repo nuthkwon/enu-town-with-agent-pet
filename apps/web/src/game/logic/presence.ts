@@ -60,7 +60,7 @@ export function activityIcon(code: number): EffectName | null {
 }
 
 /**
- * One-line state: `검토 중 · Claude 보고 · ~11:00`, `집중 모드 · 직접 설정`, `타운 접속` (no activity:
+ * One-line state: `검토 중 · Claude 보고 · ~11:00`, `집중 모드 · 직접 설정`, `ENU Den 접속` (no activity:
  * the source only), `자리 비움 · ~15:00`, `부재` (never a source or an end time). '' when nothing is known.
  */
 export function displayForm(p: PresenceFields, timeZone: string): string {

@@ -64,6 +64,8 @@ export const onboardingSubmit = z.object({
   default_chat_summary_visibility: z.enum(VISIBILITIES),
   /** Explicit choice required (the wizard preselects nothing); `true` records the activity_sharing consent. */
   share_activity: z.boolean(),
+  /** Default visibility of my pet conversations; `company` records the pet_chat_sharing consent. */
+  pet_chat_default_visibility: z.enum(VISIBILITIES),
 });
 export type OnboardingSubmit = z.infer<typeof onboardingSubmit>;
 

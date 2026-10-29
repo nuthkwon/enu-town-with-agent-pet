@@ -4,7 +4,7 @@ export const APP_TIMEZONE_DEFAULT = 'Asia/Seoul';
 export const ALLOWED_GOOGLE_HD_DEFAULT = 'enu-tech.co.kr';
 
 /** Current privacy notice version (docs/privacy-notice.ko.md); bump to require re-acceptance. */
-export const PRIVACY_NOTICE_VERSION = '2026-11';
+export const PRIVACY_NOTICE_VERSION = '2026-12';
 
 /** Product name: UI title, MCP server title and the Better Auth app name. */
 export const APP_NAME = 'ENU Den';
@@ -27,6 +27,12 @@ export type McpToolName = (typeof MCP_TOOL_NAMES)[keyof typeof MCP_TOOL_NAMES];
 
 export const VISIBILITIES = ['private', 'company'] as const;
 export type Visibility = (typeof VISIBILITIES)[number];
+
+/**
+ * What the welcome wizard's 펫 대화 공개 step preselects (ADR 0005: company by default). Set it to null if HR
+ * asks for an explicit choice: the step then preselects nothing and cannot be skipped.
+ */
+export const PET_CHAT_SHARING_PRESELECT: Visibility | null = 'company';
 
 export const LINK_STATES = ['not_linked', 'linked', 'stale'] as const;
 export type LinkState = (typeof LINK_STATES)[number];

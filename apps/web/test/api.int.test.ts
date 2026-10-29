@@ -777,6 +777,7 @@ describe('onboarding', () => {
     pet_name: '여울',
     default_chat_summary_visibility: 'company',
     share_activity: false,
+    pet_chat_default_visibility: 'private',
   } as const;
 
   it('requires the current notice version', async () => {
@@ -818,6 +819,7 @@ describe('onboarding', () => {
       .map((c) => c.scope)
       .sort();
     expect(scopes).toEqual(['claude_chat_summary', 'service']);
+    expect(dto.prefs.petChatDefaultVisibility).toBe('private');
 
     // Taken seats are refused; moving to a free seat frees the old one (keeping my own pet is fine).
     const other = await userWithSession();
@@ -856,10 +858,12 @@ describe('onboarding', () => {
     const res = await call(onboardingRoute.POST, '/api/v1/me/onboarding', {
       method: 'POST',
       cookie: me.cookie,
-      body: { ...body, desk_id: null, share_activity: true },
+      body: { ...body, desk_id: null, share_activity: true, pet_chat_default_visibility: 'company' },
     });
     expect(res.status, await res.clone().text()).toBe(200);
-    expect((await jsonOf<MeDto>(res)).shareActivity).toBe(true);
+    const dto = await jsonOf<MeDto>(res);
+    expect(dto.shareActivity).toBe(true);
+    expect(dto.prefs.petChatDefaultVisibility).toBe('company');
     await listener.stop();
     expect(listener.events).toEqual(
       expect.arrayContaining([
@@ -868,10 +872,12 @@ describe('onboarding', () => {
       ]),
     );
     const consents = await h.db.select().from(privacyConsents).where(eq(privacyConsents.userId, me.id));
-    expect(consents.find((c) => c.scope === 'activity_sharing')).toMatchObject({
-      noticeVersion: PRIVACY_NOTICE_VERSION,
-      withdrawnAt: null,
-    });
+    for (const scope of ['activity_sharing', 'pet_chat_sharing']) {
+      expect(consents.find((c) => c.scope === scope)).toMatchObject({
+        noticeVersion: PRIVACY_NOTICE_VERSION,
+        withdrawnAt: null,
+      });
+    }
   });
 
   it('refuses a pet another active member already has (409 pet_taken)', async () => {

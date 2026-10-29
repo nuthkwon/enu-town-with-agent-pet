@@ -167,7 +167,7 @@ test('my status is what colleagues see: 집중 모드 · 직접 설정, and 자�
   await expect(railRow(b.page, '직원11')).toContainText(/~\d{2}:\d{2}/);
   await setMyStatus(a.page, '자동 (일정·Claude·업무 기록 기준)');
   await expect(railRow(b.page, '직원11')).not.toContainText('직접 설정', { timeout: 5_000 });
-  await expect(railRow(b.page, '직원11')).toContainText('타운 접속');
+  await expect(railRow(b.page, '직원11')).toContainText('ENU Den 접속');
 });
 
 test('자리 비움 hides the avatar; the desk plate reads 자리 비움 · ~HH:MM', async () => {

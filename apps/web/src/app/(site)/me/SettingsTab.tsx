@@ -23,6 +23,7 @@ export function SettingsTab({ me, onSaved }: { me: MeDto; onSaved: (me: MeDto) =
   const [quietEnd, setQuietEnd] = useState(p.quietEnd);
   const [defaultLog, setDefaultLog] = useState<Visibility>(p.defaultLogVisibility);
   const [defaultChat, setDefaultChat] = useState<Visibility>(p.defaultChatSummaryVisibility ?? 'private');
+  const [defaultPetChat, setDefaultPetChat] = useState<Visibility>(p.petChatDefaultVisibility);
   const [shareDms, setShareDms] = useState(p.shareDmsWithMyClaude);
   // 활동 공유: null = never chosen (off). Only an actual change is sent (false deletes today's report).
   const [shareActivity, setShareActivity] = useState(me.shareActivity === true);
@@ -44,6 +45,10 @@ export function SettingsTab({ me, onSaved }: { me: MeDto; onSaved: (me: MeDto) =
           quiet_end: quietEnd,
           default_log_visibility: defaultLog,
           default_chat_summary_visibility: defaultChat,
+          // Only a real change is sent: it grants or withdraws the pet_chat_sharing consent.
+          ...(defaultPetChat !== p.petChatDefaultVisibility
+            ? { pet_chat_default_visibility: defaultPetChat }
+            : {}),
           share_dms_with_my_claude: shareDms,
           ...(shareActivity !== (me.shareActivity === true) ? { share_activity: shareActivity } : {}),
           ...(showLive !== me.showLive ? { show_live: showLive } : {}),
@@ -147,6 +152,14 @@ export function SettingsTab({ me, onSaved }: { me: MeDto; onSaved: (me: MeDto) =
             value={defaultChat}
             options={visibilityOptions}
             onChange={setDefaultChat}
+          />
+        </Field>
+        <Field label={t.defaultPetChat} help={t.defaultPetChatHelp}>
+          <Segmented<Visibility>
+            label={t.defaultPetChat}
+            value={defaultPetChat}
+            options={visibilityOptions}
+            onChange={setDefaultPetChat}
           />
         </Field>
       </Card>

@@ -114,7 +114,7 @@ describe('team rail', () => {
     // A roster member without a Player snapshot (not connected yet / not onboarded) has no dot and no label.
     expect(dev[2]).toMatchObject({ online: false, shown: false, form: '' });
     // Shown but not connected (e.g. calendar meeting): drawn, but no online dot.
-    expect(groups[0]!.rows[0]).toMatchObject({ online: false, shown: true, form: '타운 접속' });
+    expect(groups[0]!.rows[0]).toMatchObject({ online: false, shown: true, form: 'ENU Den 접속' });
   });
 });
 
@@ -276,7 +276,7 @@ describe('ProfileCard status line', () => {
       ),
     ).toEqual({
       online: true,
-      text: '타운 접속 · 오후 외근',
+      text: 'ENU Den 접속 · 오후 외근',
     });
     expect(
       profileStatus(
