@@ -23,6 +23,7 @@ import {
   type EmoteMsg,
   type ErrorMsg,
   type NoticeMsg,
+  type PetChangedMsg,
   type PingedMsg,
   type StatusSetMsg,
 } from '@enu/protocol';
@@ -616,10 +617,14 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
             await this.scheduler.reload(event.user_id);
           return;
         case 'profile_changed':
-        case 'pets_changed':
           await this.reloadMember(event.user_id);
           return;
+        case 'pets_changed':
+          await this.reloadMember(event.user_id);
+          this.tellOwner(event.user_id, { petId: null });
+          return;
         case 'pet_thread_changed':
+          this.tellOwner(event.user_id, { petId: event.pet_id });
           return;
         case 'activity_changed':
           await this.reloadSignals([event.user_id]);
@@ -690,6 +695,11 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
     }
     for (const id of this.director.ids()) if (!onRoster.has(id)) this.removeFromTown(id);
     if (created.length > 0) await this.reloadSignals(created);
+  }
+
+  /** Owner-only refetch signal for the messenger (ids only; nobody else's socket ever gets it). */
+  private tellOwner(userId: string, msg: PetChangedMsg): void {
+    this.byUser.get(userId)?.client.send(MSG.petChanged, msg);
   }
 
   /** One member's profile (name, avatar, desk, pet, manual status, 활동 공유, 접속 표시), applied in place. */

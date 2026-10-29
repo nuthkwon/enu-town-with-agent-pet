@@ -6,6 +6,7 @@ import type {
   EmoteMsg,
   ErrorMsg,
   NoticeMsg,
+  PetChangedMsg,
   PingedMsg,
 } from '@enu/protocol';
 
@@ -112,6 +113,8 @@ export interface SessionEvents {
   emote: EmoteMsg;
   pinged: PingedMsg;
   notice: NoticeMsg;
+  /** My pets (`petId: null`) or one of my pet rooms changed: refetch it over REST (owner only). */
+  'pet:refetch': PetChangedMsg;
   /** Server rejected a message (rate limit, invalid payload, …); the connection stays open. */
   'server:error': ErrorMsg;
 }

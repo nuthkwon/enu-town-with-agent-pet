@@ -531,6 +531,19 @@ describe('RealtimeSession', () => {
     expect(h.session.getDmUnread()).toEqual({ total: 1, byPeer: { b: 1 } });
   });
 
+  it('passes the owner-only pet refetch signal on with ids only', async () => {
+    const h = harness();
+    const seen: unknown[] = [];
+    h.session.on('pet:refetch', (m) => seen.push(m));
+    h.session.start();
+    await flush();
+    const room = h.rooms[0] as FakeRoom;
+    room.message(MSG.petChanged, { petId: 'p-1', text: 'ignored' });
+    room.message(MSG.petChanged, { petId: null });
+    room.message(MSG.petChanged, undefined);
+    expect(seen).toEqual([{ petId: 'p-1' }, { petId: null }, { petId: null }]);
+  });
+
   it('presence is sent only when it changes', async () => {
     const h = harness();
     h.session.start();

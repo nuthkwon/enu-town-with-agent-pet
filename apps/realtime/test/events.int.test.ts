@@ -1,5 +1,5 @@
 import { desks, newId, notifyTown, petNudges, pets, profiles, user } from '@enu/db';
-import { Anim, CloseCodes, Indicator, PetLink, type NoticeMsg } from '@enu/protocol';
+import { Anim, CloseCodes, Indicator, MSG, PetLink, type NoticeMsg, type PetChangedMsg } from '@enu/protocol';
 import { TOWN_EVENTS_CHANNEL } from '@enu/shared';
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -123,6 +123,24 @@ describe(`LISTEN ${TOWN_EVENTS_CHANNEL}`, () => {
     expect(notice).toEqual({ kind: 'work_log_published', text: '새 업무 로그가 전사 공개되었어요', logId });
     await sleep(200);
     expect(j.inbox.of('notice')).toHaveLength(1);
+  });
+
+  it('pet_thread_changed and pets_changed reach only the owner, as ids', async () => {
+    const owner = await makeUser(h, { deskId: 'L4b' });
+    const colleague = await makeUser(h, { deskId: 'L5a' });
+    const jo = await joinAs(h, owner.id);
+    const jc = await joinAs(h, colleague.id);
+    const [pet] = await h.db.select().from(pets).where(eq(pets.userId, owner.id));
+    await notifyTown(h.db, { v: 1, type: 'pet_thread_changed', user_id: owner.id, pet_id: pet!.id });
+    expect(await jo.inbox.waitFor<PetChangedMsg>(MSG.petChanged)).toEqual({ petId: pet!.id });
+    await h.db.update(pets).set({ name: '새펫' }).where(eq(pets.id, pet!.id));
+    await notifyTown(h.db, { v: 1, type: 'pets_changed', user_id: owner.id });
+    await waitFor(() => jo.inbox.of(MSG.petChanged).length === 2, { message: 'pets_changed' });
+    expect(jo.inbox.of(MSG.petChanged)[1]).toEqual({ petId: null });
+    // pets_changed also refreshes the pet everyone sees in the town.
+    await waitFor(() => jc.room.state.pets.get(owner.id)?.name === '새펫', { message: 'renamed pet' });
+    await sleep(200);
+    expect(jc.inbox.of(MSG.petChanged)).toEqual([]);
   });
 
   it('profile_changed and desks_changed refresh the synced player and pet in place', async () => {

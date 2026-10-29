@@ -72,6 +72,7 @@ export const MSG = {
   emote: 'emote',
   pinged: 'social:pinged',
   notice: 'notice',
+  petChanged: 'pet:changed',
   error: 'error',
 } as const;
 
@@ -127,6 +128,14 @@ export interface NoticeMsg {
   kind: 'work_log_published' | 'link_state' | 'info';
   text: string;
   logId?: string;
+}
+
+/**
+ * Owner only (MSG.petChanged): one of my pet rooms changed (`petId`), or my pets themselves (`null`). It carries
+ * ids only; the client refetches over REST. Colleagues never receive it.
+ */
+export interface PetChangedMsg {
+  petId: string | null;
 }
 
 /**

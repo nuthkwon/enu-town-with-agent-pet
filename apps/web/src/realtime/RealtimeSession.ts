@@ -11,6 +11,7 @@ import {
   type JoinOptions,
   type NoticeMsg,
   type OfficeState,
+  type PetChangedMsg,
   type PingedMsg,
   type StatusSetMsg,
 } from '@enu/protocol';
@@ -400,6 +401,9 @@ export class RealtimeSession extends TypedEmitter<SessionEvents> {
     on<EmoteMsg>(MSG.emote, (m) => this.emit('emote', m));
     on<PingedMsg>(MSG.pinged, (m) => this.emit('pinged', m));
     on<NoticeMsg>(MSG.notice, (m) => this.emit('notice', m));
+    on<PetChangedMsg>(MSG.petChanged, (m) => {
+      this.emit('pet:refetch', { petId: typeof m?.petId === 'string' ? m.petId : null });
+    });
     on<ErrorMsg>(MSG.error, (m) => {
       if (m) this.emit('server:error', m);
     });
