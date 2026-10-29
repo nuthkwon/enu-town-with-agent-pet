@@ -107,6 +107,7 @@ export class NudgeScheduler {
     const cur = this.owners.get(userId);
     if (cur !== s || s.loadSeq !== seq || !snapshot) return;
     s.snapshot = mergeSnapshot(s.snapshot, snapshot);
+    for (const key of snapshot.history.firedDueKeys) s.flags.firedDueKeys.add(key);
     if (s.active) {
       const active = s.active;
       const ok = await this.deps.loader.isStillShowable(active, this.deps.clock.now());
@@ -202,6 +203,7 @@ export class NudgeScheduler {
       lastShownAt: now,
       shownToday: (snap.history.dayKey === dayKey ? snap.history.shownToday : 0) + 1,
       dayKey,
+      firedDueKeys: snap.history.firedDueKeys,
     };
     candidate.shownCount += 1;
 
@@ -240,6 +242,7 @@ function mergeSnapshot(prev: OwnerSnapshot | null, next: OwnerSnapshot): OwnerSn
     prefs: next.prefs,
     history: {
       dayKey: next.history.dayKey,
+      firedDueKeys: next.history.firedDueKeys,
       shownToday: sameDay ? Math.max(prev.history.shownToday, next.history.shownToday) : next.history.shownToday,
       lastShownAt: lastPrev > lastNext ? prev.history.lastShownAt : next.history.lastShownAt,
     },

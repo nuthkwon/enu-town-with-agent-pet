@@ -79,6 +79,8 @@ export function todoRowToCandidate(row: TodoRow, timing: Pick<PolicyTiming, 'due
 export interface HistorySnapshot extends DeliveryHistory {
   /** Local date key the `shownToday` count belongs to. */
   dayKey: string;
+  /** Due-window keys (`todoId:minutes`) already delivered recently, so a reconnect never repeats them. */
+  firedDueKeys: string[];
 }
 
 export interface OwnerSnapshot {
@@ -170,10 +172,21 @@ export class CandidateLoader {
       .select({ n: count() })
       .from(nudgeDeliveries)
       .where(and(eq(nudgeDeliveries.userId, userId), gte(nudgeDeliveries.shownAt, dayStart)));
+    const dueRows = await db
+      .select({ dueKey: nudgeDeliveries.dueKey })
+      .from(nudgeDeliveries)
+      .where(
+        and(
+          eq(nudgeDeliveries.userId, userId),
+          isNotNull(nudgeDeliveries.dueKey),
+          gte(nudgeDeliveries.shownAt, new Date(now.getTime() - NUDGE_POLICY.candidateHorizonMs)),
+        ),
+      );
     return {
       lastShownAt: last?.lastShownAt ?? null,
       shownToday: today?.n ?? 0,
       dayKey: localDateKey(now, timeZone),
+      firedDueKeys: dueRows.flatMap((r) => (r.dueKey ? [r.dueKey] : [])),
     };
   }
 
