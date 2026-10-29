@@ -166,8 +166,9 @@ export interface WorkLogDto {
   userId: string;
   authorName: string;
   periodKey: string;
-  periodStart: string;
-  periodEnd: string;
+  /** First and last write of the day: owner-only like the other exact timestamps (null for colleagues). */
+  periodStart: string | null;
+  periodEnd: string | null;
   summary: string | null;
   tasks: WorkLogTaskDto[];
   blockers: string[];
@@ -205,7 +206,8 @@ export interface ClaudeSummaryDto {
   logId: string;
   periodKey: string;
   summary: string;
-  updatedAt: string;
+  /** Owner-only (canViewLogTimestamps); colleagues get null and see the day (periodKey). */
+  updatedAt: string | null;
 }
 
 export interface TodoDto {

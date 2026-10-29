@@ -123,8 +123,9 @@ export function toWorkLogDto(
     userId: row.userId,
     authorName: author.name,
     periodKey: row.periodKey,
-    periodStart: isoReq(row.periodStart),
-    periodEnd: isoReq(row.periodEnd),
+    // first and last write of the day: exact times, so owner-only like the other timestamps
+    periodStart: showTimes ? isoReq(row.periodStart) : null,
+    periodEnd: showTimes ? isoReq(row.periodEnd) : null,
     summary: row.summary,
     tasks: (row.tasks ?? []).map((t) =>
       t.ref ? { title: t.title, status: t.status, ref: t.ref } : { title: t.title, status: t.status },
@@ -154,7 +155,7 @@ export function toClaudeSummaryDto(
     logId: row.id,
     periodKey: row.periodKey,
     summary: row.claudeChatSummary,
-    updatedAt: isoReq(row.updatedAt),
+    updatedAt: canViewLogTimestamps(viewer, row.userId) ? isoReq(row.updatedAt) : null,
   };
 }
 

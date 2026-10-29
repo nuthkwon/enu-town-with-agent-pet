@@ -81,15 +81,26 @@ describe('toWorkLogDto', () => {
     const dto = toWorkLogDto(row, author, { userId: 'other' })!;
     expect(dto.provenanceLabel).toBe('김요정님의 Claude가 작성 · 본인 수정');
     expect(dto.editedByUser).toBe(true);
-    expect(dto).toMatchObject({ claudeWrittenAt: null, updatedAt: null, userEditedAt: null });
+    expect(dto).toMatchObject({
+      claudeWrittenAt: null,
+      updatedAt: null,
+      userEditedAt: null,
+      periodStart: null,
+      periodEnd: null,
+    });
     expect(dto.periodKey).toBe('2026-10-29');
     const own = toWorkLogDto(row, author, { userId: OWNER })!;
     expect(own).toMatchObject({
       claudeWrittenAt: now.toISOString(),
       updatedAt: now.toISOString(),
       userEditedAt: now.toISOString(),
+      periodStart: now.toISOString(),
+      periodEnd: now.toISOString(),
       editedByUser: true,
     });
+    const shared = log({ chatSummaryVisibility: 'company' });
+    expect(toClaudeSummaryDto(shared, author, { userId: 'other' })?.updatedAt).toBeNull();
+    expect(toClaudeSummaryDto(shared, author, { userId: OWNER })?.updatedAt).toBe(now.toISOString());
   });
 });
 
