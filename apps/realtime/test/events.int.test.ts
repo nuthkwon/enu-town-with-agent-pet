@@ -158,14 +158,14 @@ describe(`LISTEN ${TOWN_EVENTS_CHANNEL}`, () => {
     const j = await joinAs(h, u.id);
     const killed = await h.handle.pool.query(
       `select pg_terminate_backend(pid) from pg_stat_activity
-        where application_name = 'enu-town-realtime-listen' and datname = current_database()`,
+        where application_name = 'enu-den-realtime-listen' and datname = current_database()`,
     );
     expect(killed.rowCount).toBeGreaterThanOrEqual(1);
     await waitFor(
       async () =>
         (
           await h.handle.pool.query(
-            `select 1 from pg_stat_activity where application_name = 'enu-town-realtime-listen' and datname = current_database()`,
+            `select 1 from pg_stat_activity where application_name = 'enu-den-realtime-listen' and datname = current_database()`,
           )
         ).rowCount === 1,
       { timeoutMs: 8000, message: 'LISTEN reconnected' },

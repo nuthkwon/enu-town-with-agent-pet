@@ -1,5 +1,5 @@
 /**
- * ENU Town realtime server (Colyseus 0.18): room `office-606` with the director (server-placed
+ * ENU Den realtime server (Colyseus 0.18): room `office-606` with the director (server-placed
  * avatars; nobody steers one), pets, chat and DMs, and owner-only pet bubbles. Reached through Caddy at `/colyseus` (prefix stripped), so it serves at root.
  * No LLM calls here: pet bubbles only ever show text the owner's own Claude wrote.
  */
@@ -28,7 +28,7 @@ if (env.NUDGE_JOIN_DELAY_MS !== undefined || env.NUDGE_MIN_INTERVAL_MIN !== unde
   );
 }
 
-const dbHandle = createDb(env.DATABASE_URL, { max: 8, applicationName: 'enu-town-realtime' });
+const dbHandle = createDb(env.DATABASE_URL, { max: 8, applicationName: 'enu-den-realtime' });
 setRealtimeContext({ env, db: dbHandle.db, logger, clock: systemClock });
 
 const server = createRealtimeServer({ env, logger, pool: dbHandle.pool });

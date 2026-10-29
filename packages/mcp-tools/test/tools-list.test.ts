@@ -67,7 +67,7 @@ describe.each(MODES)('tools/list (%s negotiation)', (mode) => {
     await handler.close();
   });
 
-  it('advertises exactly the five ENU Town tools', () => {
+  it('advertises exactly the five ENU Den tools', () => {
     expect(ALL_NAMES).toHaveLength(5);
     expect(tools.map((t) => t.name).sort()).toEqual(ALL_NAMES);
   });

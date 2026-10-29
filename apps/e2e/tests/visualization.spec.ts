@@ -102,7 +102,7 @@ test('a click inside a menu that lies over the map never reaches the map', async
   await expect(dialog).toBeVisible();
   const box = (await dialog.boundingBox())!;
   const canvas = (await a.page.locator('canvas').first().boundingBox())!;
-  const rects = await a.page.evaluate(() => window.__ENU_TOWN_DEBUG__!.plateRects());
+  const rects = await a.page.evaluate(() => window.__ENU_DEN_DEBUG__!.plateRects());
   const centre = (r: (typeof rects)[number]) => ({
     x: canvas.x + r.x + r.w / 2,
     y: canvas.y + r.y + r.h / 2,
@@ -135,7 +135,7 @@ test('the overview fits a maximized 1080p browser at 1.5 and a 1440x900 laptop a
   await expect(rail(a.page)).toBeVisible();
   await expect.poll(() => zoom(a.page)).toBe(1.5);
   const canvas = await a.page.locator('canvas').first().boundingBox();
-  const rects = await a.page.evaluate(() => window.__ENU_TOWN_DEBUG__!.plateRects());
+  const rects = await a.page.evaluate(() => window.__ENU_DEN_DEBUG__!.plateRects());
   expect(rects).toHaveLength(14);
   for (const r of rects) {
     expect(r.x, r.deskId).toBeGreaterThanOrEqual(0);

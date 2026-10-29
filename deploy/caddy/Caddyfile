@@ -1,4 +1,4 @@
-# ENU Town edge (production). Automatic HTTPS for {$PUBLIC_HOST}.
+# ENU Den edge (production). Automatic HTTPS for {$PUBLIC_HOST}.
 {
 	email {$ACME_EMAIL}
 }

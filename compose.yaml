@@ -1,7 +1,7 @@
-# ENU Town production stack: docker compose up -d --build
+# ENU Den production stack: docker compose up -d --build
 # Fill deploy/env/*.env from the *.env.example files first. Top-level vars (PUBLIC_HOST, ACME_EMAIL,
 # M2M_ALLOWED_CIDRS) come from a .env file next to this compose file.
-name: enu-town
+name: enu-den
 
 services:
   postgres:
@@ -18,7 +18,7 @@ services:
 
   migrate:
     build: { context: ., target: worker }
-    image: enu-town/worker:latest
+    image: enu-den/worker:latest
     env_file: deploy/env/worker.env
     command: ['node', 'dist/migrate.mjs']
     depends_on:
@@ -27,7 +27,7 @@ services:
 
   web:
     build: { context: ., target: web }
-    image: enu-town/web:latest
+    image: enu-den/web:latest
     env_file: deploy/env/web.env
     depends_on:
       migrate: { condition: service_completed_successfully }
@@ -35,14 +35,14 @@ services:
 
   realtime:
     build: { context: ., target: realtime }
-    image: enu-town/realtime:latest
+    image: enu-den/realtime:latest
     env_file: deploy/env/realtime.env
     depends_on:
       migrate: { condition: service_completed_successfully }
     restart: unless-stopped
 
   worker:
-    image: enu-town/worker:latest
+    image: enu-den/worker:latest
     env_file: deploy/env/worker.env
     depends_on:
       migrate: { condition: service_completed_successfully }

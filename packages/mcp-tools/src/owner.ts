@@ -118,7 +118,7 @@ export async function loadOwnerContext(db: DbOrTx, userId: string): Promise<Owne
   if (!owner) {
     throw new ToolError(
       'profile_missing',
-      'ENU Town profile not found; ask the owner to sign in to ENU Town and finish onboarding first (ENU Town 첫 입장 설정이 필요합니다)',
+      'ENU Den profile not found; ask the owner to sign in to ENU Den and finish onboarding first (ENU Den 첫 입장 설정이 필요합니다)',
     );
   }
   return owner;

@@ -92,12 +92,12 @@ export async function performConsent(input: {
       url?: string;
     } | null;
     if (!res?.url) {
-      console.error('[enu-town] oauth2 consent returned no redirect URL');
+      console.error('[enu-den] oauth2 consent returned no redirect URL');
       return { kind: 'failed' };
     }
     url = res.url;
   } catch (e) {
-    console.error('[enu-town] oauth2 consent failed', safeErr(e));
+    console.error('[enu-den] oauth2 consent failed', safeErr(e));
     return { kind: 'failed' };
   }
 
@@ -128,7 +128,7 @@ export async function performConsent(input: {
     }
   } catch (e) {
     // The provider already decided; the first MCP call re-creates a missing link row.
-    console.error('[enu-town] recording consent failed', safeErr(e));
+    console.error('[enu-den] recording consent failed', safeErr(e));
   }
   return { kind: 'redirect', url };
 }

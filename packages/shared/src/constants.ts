@@ -7,10 +7,10 @@ export const ALLOWED_GOOGLE_HD_DEFAULT = 'enu-tech.co.kr';
 export const PRIVACY_NOTICE_VERSION = '2026-11';
 
 /** Product name: UI title, MCP server title and the Better Auth app name. */
-export const APP_NAME = 'ENU Town';
+export const APP_NAME = 'ENU Den';
 
 /** serverInfo.name of the remote MCP connector (Claude Code names its tools mcp__<server>__<tool>). */
-export const MCP_SERVER_NAME = 'enu-town';
+export const MCP_SERVER_NAME = 'enu-den';
 
 /** Version of the check-in instructions; the Claude skill compares this to its own. */
 export const INSTRUCTIONS_VERSION = '2026-11-02.1';
@@ -328,8 +328,8 @@ export const ZONE_LABEL_KO: Record<ZoneId, string> = {
 };
 
 /** Realtime ticket audience (HS256 JWT minted by web, verified by realtime). */
-export const REALTIME_TICKET_AUDIENCE = 'enu-town-realtime';
+export const REALTIME_TICKET_AUDIENCE = 'enu-den-realtime';
 export const REALTIME_TICKET_TTL_SECONDS = 60;
 
 /** Postgres NOTIFY channel shared by web/worker (publishers) and realtime (listener). */
-export const TOWN_EVENTS_CHANNEL = 'enu_town_events';
+export const TOWN_EVENTS_CHANNEL = 'enu_den_events';

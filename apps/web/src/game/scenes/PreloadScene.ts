@@ -14,7 +14,7 @@ import {
 import { BRIDGE_REGISTRY_KEY, FONT_REGISTRY_KEY, type GameBridge } from '../bridge';
 import { MAP_PATHS, SPRITE_PATHS } from '../spriteSpec';
 
-export const STATIC_AVATARS_REGISTRY_KEY = 'enu-town-static-avatars';
+export const STATIC_AVATARS_REGISTRY_KEY = 'enu-den-static-avatars';
 
 /** Loads the tileset, effects, pets and the avatar sheets we already know about. */
 export class PreloadScene extends Phaser.Scene {

@@ -5,7 +5,7 @@ import { getEnv } from './env';
 const g = globalThis as unknown as { __enuWebDb?: DbHandle };
 
 export function getDbHandle(): DbHandle {
-  g.__enuWebDb ??= createDb(getEnv().DATABASE_URL, { max: 10, applicationName: 'enu-town-web' });
+  g.__enuWebDb ??= createDb(getEnv().DATABASE_URL, { max: 10, applicationName: 'enu-den-web' });
   return g.__enuWebDb;
 }
 

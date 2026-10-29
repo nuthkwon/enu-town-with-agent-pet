@@ -2,7 +2,7 @@ import type { Db } from '@enu/db';
 import { LIMITS } from '@enu/shared';
 import { Client, StreamableHTTPClientTransport, type FetchLike } from '@modelcontextprotocol/client';
 import { createMcpHandler, type AuthInfo, type McpHttpHandler } from '@modelcontextprotocol/server';
-import { buildEnuTownMcpServer, callerFromAuthInfo, type McpDeps } from '../src/index';
+import { buildEnuDenMcpServer, callerFromAuthInfo, type McpDeps } from '../src/index';
 
 export const MODES = ['legacy', 'auto'] as const;
 export type Mode = (typeof MODES)[number];
@@ -21,7 +21,7 @@ export const OFFICE_TZ = 'Asia/Seoul';
 export function testDeps(db: Db, over: Partial<McpDeps> = {}): McpDeps {
   return {
     db,
-    publicUrl: 'https://town.example',
+    publicUrl: 'https://den.example',
     activityRefKey: TEST_ACTIVITY_REF_KEY,
     officeTimeZone: OFFICE_TZ,
     ...over,
@@ -30,7 +30,7 @@ export function testDeps(db: Db, over: Partial<McpDeps> = {}): McpDeps {
 
 /** Same wiring as apps/web /api/mcp. */
 export function createTestHandler(deps: McpDeps): McpHttpHandler {
-  return createMcpHandler(({ authInfo }) => buildEnuTownMcpServer(deps, callerFromAuthInfo(authInfo)), {
+  return createMcpHandler(({ authInfo }) => buildEnuDenMcpServer(deps, callerFromAuthInfo(authInfo)), {
     legacy: 'stateless',
     responseMode: 'json',
     maxRequestBodySize: LIMITS.mcpBodyMaxBytes,
@@ -54,7 +54,7 @@ export async function connectClient(
     return handler.fetch(req, { authInfo });
   };
   const inProcessFetch: FetchLike = (url, init) => route(new Request(url, init));
-  const client = new Client({ name: 'enu-town-test', version: '0.0.1' }, { versionNegotiation: { mode } });
+  const client = new Client({ name: 'enu-den-test', version: '0.0.1' }, { versionNegotiation: { mode } });
   await client.connect(
     new StreamableHTTPClientTransport(new URL('http://localhost/api/mcp'), { fetch: inProcessFetch }),
   );

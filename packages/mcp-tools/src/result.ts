@@ -1,7 +1,7 @@
 import type { CallToolResult } from '@modelcontextprotocol/server';
 import { LIMITS } from '@enu/shared';
 
-/** A field-level problem reported back to Claude so it can rewrite (ENU Town never edits text). */
+/** A field-level problem reported back to Claude so it can rewrite (ENU Den never edits text). */
 export interface ToolProblem {
   /** Item index for batch tools (upsert_todos items[i]). */
   index?: number;

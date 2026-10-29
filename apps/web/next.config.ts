@@ -2,7 +2,7 @@ import path from 'node:path';
 import type { NextConfig } from 'next';
 
 /**
- * ENU Town web (Next 16, App Router). The per-request CSP (with a script nonce) is set in
+ * ENU Den web (Next 16, App Router). The per-request CSP (with a script nonce) is set in
  * src/proxy.ts; the static security headers below apply to every response, API routes included.
  */
 const isProd = process.env.NODE_ENV === 'production';

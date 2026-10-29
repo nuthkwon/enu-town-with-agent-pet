@@ -215,8 +215,8 @@ const ROSTER_PET_FIELDS = [
   'bubbleUntil',
 ] as const;
 
-const MAP_RELOAD_KEY = 'enu-town:map-reload-at';
-const PROTOCOL_RELOAD_KEY = 'enu-town:protocol-reload-at';
+const MAP_RELOAD_KEY = 'enu-den:map-reload-at';
+const PROTOCOL_RELOAD_KEY = 'enu-den:protocol-reload-at';
 const RELOAD_GUARD_MS = 60_000;
 /** Join error message (onAuth) for a user who has not accepted the current privacy notice yet. */
 export const NOTICE_REQUIRED = 'notice_required';

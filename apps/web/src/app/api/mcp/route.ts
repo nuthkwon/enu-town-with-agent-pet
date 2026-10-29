@@ -1,7 +1,7 @@
 import { hkdfSync } from 'node:crypto';
 import { requireMcpAuth } from '@better-auth/mcp';
 import { invalidTokenChallenge, protectedResourceMetadataUrl, resolveMcpCaller } from '@enu/auth';
-import { buildEnuTownMcpServer, callerFromAuthInfo } from '@enu/mcp-tools';
+import { buildEnuDenMcpServer, callerFromAuthInfo } from '@enu/mcp-tools';
 import { LIMITS } from '@enu/shared';
 import { createMcpHandler, type McpHttpHandler } from '@modelcontextprotocol/server';
 import { authPolicy, getAuth, mcpResource } from '@/server/auth';
@@ -9,7 +9,7 @@ import { getDb } from '@/server/db';
 import { getEnv, internalBaseUrl, publicUrl } from '@/server/env';
 
 /**
- * The ENU Town MCP connector (Streamable HTTP, stateless). Token checks happen in order:
+ * The ENU Den MCP connector (Streamable HTTP, stateless). Token checks happen in order:
  * requireMcpAuth (signature/issuer/audience=this resource/expiry via our JWKS), then
  * resolveMcpCaller (active user, workspace domain, not revoked). Tools only ever see the
  * verified caller through AuthInfo.extra.userId; the raw token is never passed on.
@@ -25,7 +25,7 @@ let protectedPost: ((req: Request) => Promise<Response>) | undefined;
  * It keeps refs unlinkable across days, but anyone holding BETTER_AUTH_SECRET could test guesses.
  */
 function activityRefKey(secret: string): Uint8Array {
-  return new Uint8Array(hkdfSync('sha256', secret, 'enu-town', 'activity-ref/v1', 32));
+  return new Uint8Array(hkdfSync('sha256', secret, 'enu-den', 'activity-ref/v1', 32));
 }
 
 function mcpHandler(): McpHttpHandler {
@@ -34,7 +34,7 @@ function mcpHandler(): McpHttpHandler {
   const refKey = activityRefKey(env.BETTER_AUTH_SECRET);
   mcp = createMcpHandler(
     ({ authInfo }) =>
-      buildEnuTownMcpServer(
+      buildEnuDenMcpServer(
         { db: getDb(), publicUrl: publicUrl(), activityRefKey: refKey, officeTimeZone: env.APP_TIMEZONE },
         callerFromAuthInfo(authInfo),
       ),

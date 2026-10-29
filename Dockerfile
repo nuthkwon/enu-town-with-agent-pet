@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-# Multi-target image build for ENU Town: `--target web | realtime | worker`.
+# Multi-target image build for ENU Den: `--target web | realtime | worker`.
 
 ARG NODE_IMAGE=node:24-bookworm-slim
 

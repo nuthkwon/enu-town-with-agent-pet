@@ -57,8 +57,8 @@ describe('client helpers', () => {
   });
 
   it('derives the protected resource metadata url', () => {
-    expect(protectedResourceMetadataUrl('https://town.enu-tech.co.kr/api/mcp')).toBe(
-      'https://town.enu-tech.co.kr/.well-known/oauth-protected-resource/api/mcp',
+    expect(protectedResourceMetadataUrl('https://den.enu-tech.co.kr/api/mcp')).toBe(
+      'https://den.enu-tech.co.kr/.well-known/oauth-protected-resource/api/mcp',
     );
   });
 });

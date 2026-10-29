@@ -3,7 +3,7 @@ import { createDb, newId, privacyConsents, profiles, user, type Db, type DbHandl
 import { runMigrations } from '@enu/db/migrate';
 import { sql } from 'drizzle-orm';
 
-export const TEST_DB_URL = process.env.DATABASE_URL_TEST ?? 'postgres://enu:enu@127.0.0.1:5432/enu_town_test';
+export const TEST_DB_URL = process.env.DATABASE_URL_TEST ?? 'postgres://enu:enu@127.0.0.1:5432/enu_den_test';
 
 function assertTestDatabase(url: string): void {
   const name = new URL(url).pathname.replace(/^\//, '');
@@ -21,7 +21,7 @@ export async function setupTestDb(): Promise<DbHandle> {
     await runMigrations(TEST_DB_URL);
     migrated = true;
   }
-  return createDb(TEST_DB_URL, { max: 4, applicationName: 'enu-town-test' });
+  return createDb(TEST_DB_URL, { max: 4, applicationName: 'enu-den-test' });
 }
 
 /**

@@ -13,7 +13,7 @@ import { provisionProfile, recordGoogleSub } from './provision';
 
 export interface AuthConfig {
   db: Db;
-  /** Public origin, e.g. https://town.enu-tech.co.kr (no trailing slash). */
+  /** Public origin, e.g. https://den.enu-tech.co.kr (no trailing slash). */
   publicUrl: string;
   secret: string;
   google: { clientId: string; clientSecret: string } | null;

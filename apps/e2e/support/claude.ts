@@ -6,7 +6,7 @@ import { devLogin } from './auth';
 
 /**
  * Plays the role of an employee's Claude: registers a public OAuth client (stand-in for Claude's
- * CIMD identity), runs authorize -> ENU Town consent page (clicked in the browser) -> token,
+ * CIMD identity), runs authorize -> ENU Den consent page (clicked in the browser) -> token,
  * then talks to /api/mcp with the MCP SDK client like a Cowork scheduled task would.
  */
 const REDIRECT = 'http://127.0.0.1:7777/callback';

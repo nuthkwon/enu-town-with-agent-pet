@@ -20,7 +20,7 @@ export function createDb(
   const pool = new pg.Pool({
     connectionString,
     max: opts.max ?? 10,
-    application_name: opts.applicationName ?? 'enu-town',
+    application_name: opts.applicationName ?? 'enu-den',
   });
   const db = drizzle(pool, { schema, casing: 'snake_case' });
   return { db, pool, close: () => pool.end() };

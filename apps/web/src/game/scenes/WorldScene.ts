@@ -934,10 +934,10 @@ export class WorldScene extends Phaser.Scene {
         return { bubbleId, bubbleText, bubbleUntil, indicator };
       },
     };
-    (window as unknown as { __ENU_TOWN_DEBUG__?: typeof hook }).__ENU_TOWN_DEBUG__ = hook;
+    (window as unknown as { __ENU_DEN_DEBUG__?: typeof hook }).__ENU_DEN_DEBUG__ = hook;
     this.offs.push(() => {
-      const w = window as unknown as { __ENU_TOWN_DEBUG__?: typeof hook };
-      if (w.__ENU_TOWN_DEBUG__ === hook) delete w.__ENU_TOWN_DEBUG__;
+      const w = window as unknown as { __ENU_DEN_DEBUG__?: typeof hook };
+      if (w.__ENU_DEN_DEBUG__ === hook) delete w.__ENU_DEN_DEBUG__;
     });
   }
 

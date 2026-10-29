@@ -4,7 +4,7 @@ export interface CspOptions {
   nonce: string;
   /** next dev needs 'unsafe-eval' (React debug stacks) and the HMR websocket. */
   dev: boolean;
-  /** REALTIME_PUBLIC_URL, e.g. wss://town.enu-tech.co.kr/colyseus or ws://localhost:2567 */
+  /** REALTIME_PUBLIC_URL, e.g. wss://den.enu-tech.co.kr/colyseus or ws://localhost:2567 */
   realtimeUrl?: string | undefined;
   /** Extra form-action origins (the OAuth redirect_uri origin on /consent). */
   formActionOrigins?: readonly string[];

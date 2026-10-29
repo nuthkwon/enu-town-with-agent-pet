@@ -13,7 +13,7 @@ const PREPARE_DB = ['migrate', 'seed:seats', 'seed:dev']
   .join(' && ');
 
 /**
- * End-to-end tests against real servers: Next dev (dev login enabled) + Colyseus + Postgres (enu_town_e2e).
+ * End-to-end tests against real servers: Next dev (dev login enabled) + Colyseus + Postgres (enu_den_e2e).
  * The realtime server ignores office hours and pet quiet hours so the town is "open" whenever e2e runs.
  */
 export default defineConfig({

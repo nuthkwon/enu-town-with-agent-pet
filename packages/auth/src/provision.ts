@@ -14,7 +14,7 @@ export function choosePetSpecies(preset: PetSpecies | null, taken: readonly PetS
 }
 
 /**
- * Creates the ENU Town profile for a new user and, when the Google display name matches an
+ * Creates the ENU Den profile for a new user and, when the Google display name matches an
  * unassigned seat label from the roster, assigns that seat and its avatar/pet presets (the pet
  * species only while no other active member has it, see choosePetSpecies).
  * Idempotent: an existing profile is left untouched.

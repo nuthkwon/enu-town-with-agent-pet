@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { loadEnv, realtimeEnvSchema } from '../src/env/index';
 
 const realtime = {
-  DATABASE_URL: 'postgres://enu:enu@127.0.0.1:5432/enu_town_dev',
+  DATABASE_URL: 'postgres://enu:enu@127.0.0.1:5432/enu_den_dev',
   REALTIME_TICKET_SECRET: 'x'.repeat(32),
   MAPS_DIR: 'apps/web/public/assets/maps',
 };

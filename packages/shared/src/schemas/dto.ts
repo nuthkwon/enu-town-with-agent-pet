@@ -274,6 +274,6 @@ export interface AdminSeatsDto {
 export interface RealtimeTicketDto {
   token: string;
   expiresAt: string;
-  /** Browser WebSocket endpoint, e.g. wss://town.enu-tech.co.kr/colyseus */
+  /** Browser WebSocket endpoint, e.g. wss://den.enu-tech.co.kr/colyseus */
   wsUrl: string;
 }

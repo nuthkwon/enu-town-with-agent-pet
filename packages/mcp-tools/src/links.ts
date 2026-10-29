@@ -139,5 +139,5 @@ export async function markLinkedAfterWorkLog(
  * for the rest of the transaction.
  */
 export async function lockOwnerScope(tx: DbOrTx, scope: string, userId: string): Promise<void> {
-  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`enu-town:${scope}:${userId}`}))`);
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`enu-den:${scope}:${userId}`}))`);
 }

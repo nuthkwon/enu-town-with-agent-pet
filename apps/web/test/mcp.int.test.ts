@@ -254,7 +254,7 @@ describe('authorize -> consent -> token -> MCP', () => {
     const [report] = await h.db.select().from(activityReports).where(eq(activityReports.userId, member.id));
     const periodKey = localDateKey(new Date(), 'Asia/Seoul');
     const key = new Uint8Array(
-      hkdfSync('sha256', process.env.BETTER_AUTH_SECRET!, 'enu-town', 'activity-ref/v1', 32),
+      hkdfSync('sha256', process.env.BETTER_AUTH_SECRET!, 'enu-den', 'activity-ref/v1', 32),
     );
     expect(report).toMatchObject({
       periodKey,

@@ -2,7 +2,7 @@ import { expect, type Locator, type Page } from '@playwright/test';
 
 /**
  * Helpers for the town page. The canvas is read through the dev/e2e debug hook that WorldScene installs
- * outside production (`window.__ENU_TOWN_DEBUG__`), so tests never guess pixels.
+ * outside production (`window.__ENU_DEN_DEBUG__`), so tests never guess pixels.
  */
 
 export interface PlayerState {
@@ -62,51 +62,51 @@ export interface PetState {
 
 declare global {
   interface Window {
-    __ENU_TOWN_DEBUG__?: DebugHook;
+    __ENU_DEN_DEBUG__?: DebugHook;
   }
 }
 
 /** Waits until the scene is up and the room state has arrived (the 14 roster actors are always there). */
 export async function waitForTownState(page: Page): Promise<void> {
-  await page.waitForFunction(() => window.__ENU_TOWN_DEBUG__?.officeOpen() === true, null, {
+  await page.waitForFunction(() => window.__ENU_DEN_DEBUG__?.officeOpen() === true, null, {
     timeout: 90_000,
   });
 }
 
 /** My own pet's bubble as drawn on the canvas (null while none is visible). */
 export function petBubble(page: Page): Promise<PetBubbleState | null> {
-  return page.evaluate(() => window.__ENU_TOWN_DEBUG__?.petBubble() ?? null);
+  return page.evaluate(() => window.__ENU_DEN_DEBUG__?.petBubble() ?? null);
 }
 
 /** Someone's pet as this page decoded it from the room state. */
 export function petState(page: Page, ownerId: string): Promise<PetState | null> {
-  return page.evaluate((id) => window.__ENU_TOWN_DEBUG__?.petState(id) ?? null, ownerId);
+  return page.evaluate((id) => window.__ENU_DEN_DEBUG__?.petState(id) ?? null, ownerId);
 }
 
 export function playerState(page: Page, userId: string): Promise<PlayerState | null> {
-  return page.evaluate((id) => window.__ENU_TOWN_DEBUG__?.playerState(id) ?? null, userId);
+  return page.evaluate((id) => window.__ENU_DEN_DEBUG__?.playerState(id) ?? null, userId);
 }
 
 export function playerTile(page: Page, userId: string): Promise<Point | null> {
-  return page.evaluate((id) => window.__ENU_TOWN_DEBUG__?.playerTile(id) ?? null, userId);
+  return page.evaluate((id) => window.__ENU_DEN_DEBUG__?.playerTile(id) ?? null, userId);
 }
 
 export function plate(page: Page, deskId: string): Promise<PlateState | null> {
-  return page.evaluate((id) => window.__ENU_TOWN_DEBUG__?.plate(id) ?? null, deskId);
+  return page.evaluate((id) => window.__ENU_DEN_DEBUG__?.plate(id) ?? null, deskId);
 }
 
 export function zoom(page: Page): Promise<number> {
-  return page.evaluate(() => window.__ENU_TOWN_DEBUG__?.zoom() ?? 0);
+  return page.evaluate(() => window.__ENU_DEN_DEBUG__?.zoom() ?? 0);
 }
 
 export function fxDrawn(page: Page): Promise<{ wave: number; plane: number }> {
-  return page.evaluate(() => window.__ENU_TOWN_DEBUG__?.fxDrawn() ?? { wave: 0, plane: 0 });
+  return page.evaluate(() => window.__ENU_DEN_DEBUG__?.fxDrawn() ?? { wave: 0, plane: 0 });
 }
 
 /** Clicks a map tile (screen position from the debug hook). */
 export async function clickTile(page: Page, tx: number, ty: number): Promise<void> {
   const box = await page.locator('canvas').first().boundingBox();
-  const p = await page.evaluate(([x, y]) => window.__ENU_TOWN_DEBUG__!.tileScreen(x!, y!), [tx, ty]);
+  const p = await page.evaluate(([x, y]) => window.__ENU_DEN_DEBUG__!.tileScreen(x!, y!), [tx, ty]);
   if (!box) throw new Error('no canvas');
   await page.mouse.click(box.x + p.x, box.y + p.y);
 }

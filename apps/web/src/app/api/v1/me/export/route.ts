@@ -18,7 +18,7 @@ export const GET = route(async (req) => {
   return new Response(JSON.stringify(data, null, 2), {
     headers: {
       'content-type': 'application/json; charset=utf-8',
-      'content-disposition': `attachment; filename="enu-town-export-${stamp}.json"`,
+      'content-disposition': `attachment; filename="enu-den-export-${stamp}.json"`,
       'cache-control': 'no-store, private',
     },
   });

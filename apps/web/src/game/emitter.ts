@@ -37,7 +37,7 @@ export class TypedEmitter<E extends EventMap> {
       try {
         fn(args[0]);
       } catch (err) {
-        console.error(`[enu-town] listener for '${String(type)}' failed`, err);
+        console.error(`[enu-den] listener for '${String(type)}' failed`, err);
       }
     }
   }

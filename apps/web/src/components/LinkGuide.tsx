@@ -5,7 +5,7 @@ import { CopyButton } from './CopyButton';
 import { ui } from './ui';
 import s from './link-guide.module.css';
 
-/** How to connect your own Claude to ENU Town (same content as docs/employee-onboarding.ko.md). */
+/** How to connect your own Claude to ENU Den (same content as docs/employee-onboarding.ko.md). */
 export function LinkGuide({ mcpUrl, compact = false }: { mcpUrl: string; compact?: boolean }) {
   const g = ko.linkGuide;
   return (

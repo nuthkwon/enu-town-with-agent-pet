@@ -5,8 +5,8 @@ import { connectClaude, mcpClient, structured } from '../support/claude';
 import { petBubble, petState, playerState, playerTile, railRow, waitForTownState } from '../support/town';
 
 /**
- * The core promise of ENU Town, end to end:
- * an employee's own Claude connects through the ENU Town consent screen, writes the day's work log
+ * The core promise of ENU Den, end to end:
+ * an employee's own Claude connects through the ENU Den consent screen, writes the day's work log
  * and a pet message over MCP; the pet shows that exact text to its owner only; a colleague sees the
  * work log (written by the owner's Claude) on the profile card; when both people's own Claudes report
  * the same work item, a third colleague sees the reviewer standing at the author's desk (mutual

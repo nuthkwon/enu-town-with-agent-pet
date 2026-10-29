@@ -30,7 +30,7 @@ export function createBoss(env: Pick<WorkerEnv, 'DATABASE_URL' | 'PGBOSS_SCHEMA'
     connectionString: env.DATABASE_URL,
     schema: env.PGBOSS_SCHEMA,
     max: 4,
-    application_name: 'enu-town-worker-boss',
+    application_name: 'enu-den-worker-boss',
   });
   // An EventEmitter 'error' without a listener would crash the process.
   boss.on('error', (err) => logger.error({ err }, 'pg-boss error'));

@@ -13,5 +13,5 @@ export interface GameBridge {
   map: MapBundle;
 }
 
-export const BRIDGE_REGISTRY_KEY = 'enu-town-bridge';
-export const FONT_REGISTRY_KEY = 'enu-town-font';
+export const BRIDGE_REGISTRY_KEY = 'enu-den-bridge';
+export const FONT_REGISTRY_KEY = 'enu-den-font';

@@ -43,7 +43,7 @@ import { postWorkLog } from './services/work-log';
 
 export interface McpDeps {
   db: Db;
-  /** Public origin of the web app, e.g. https://town.enu-tech.co.kr (used for view_url). */
+  /** Public origin of the web app, e.g. https://den.enu-tech.co.kr (used for view_url). */
   publicUrl: string;
   /** Key of the daily work-ref hash (post_activity); the web route derives it once via HKDF. */
   activityRefKey: Uint8Array;
@@ -61,7 +61,7 @@ export type { CallerInfo };
 
 /**
  * Reads the caller identity the web route put into AuthInfo after verifying the token:
- * `extra.userId` (ENU Town user id) and `clientId` (the OAuth client). Never from tool input.
+ * `extra.userId` (ENU Den user id) and `clientId` (the OAuth client). Never from tool input.
  */
 export function callerFromAuthInfo(authInfo: AuthInfo | undefined): CallerInfo | undefined {
   const userId = authInfo?.extra?.userId;
@@ -88,7 +88,7 @@ function makeRunner(deps: McpDeps, caller: CallerInfo | undefined) {
   // Never the raw error: a failed Drizzle query carries Claude's text (summaries, nudges, to-dos) as params.
   const report =
     deps.onError ??
-    ((error: unknown, tool: McpToolName) => console.error(`[enu-town mcp] ${tool} failed`, safeErr(error)));
+    ((error: unknown, tool: McpToolName) => console.error(`[enu-den mcp] ${tool} failed`, safeErr(error)));
   return async (toolName: McpToolName, body: ToolBody): Promise<CallToolResult> => {
     if (!caller) return errorResult(new ToolError('not_authenticated', NOT_AUTHENTICATED_MESSAGE));
     const now = deps.now?.() ?? new Date();
@@ -116,7 +116,7 @@ function makeRunner(deps: McpDeps, caller: CallerInfo | undefined) {
       return errorResult(
         new ToolError(
           'internal_error',
-          'ENU Town could not complete this request right now; try again later. Nothing else is needed.',
+          'ENU Den could not complete this request right now; try again later. Nothing else is needed.',
         ),
       );
     }
@@ -141,8 +141,8 @@ export function contextSummaryKo(
   officeTimeZone: string = APP_TIMEZONE_DEFAULT,
 ): string {
   if (o.skip)
-    return `${o.skip_reason ?? '지금은 체크인 시간이 아니에요.'} 이번 체크인은 여기서 멈추세요(다른 ENU Town 도구를 호출하지 마세요).`;
-  const parts = [`ENU Town ${o.today} 컨텍스트(현지 시각 ${o.now_local.slice(11, 16)}).`];
+    return `${o.skip_reason ?? '지금은 체크인 시간이 아니에요.'} 이번 체크인은 여기서 멈추세요(다른 ENU Den 도구를 호출하지 마세요).`;
+  const parts = [`ENU Den ${o.today} 컨텍스트(현지 시각 ${o.now_local.slice(11, 16)}).`];
   if (o.today_log !== undefined) {
     parts.push(
       o.today_log
@@ -198,7 +198,7 @@ export function workLogSummaryKo(o: PostWorkLogOutput): string {
     case 'unchanged':
       return `${o.period_key} 업무 기록과 내용이 같아서 바꾸지 않았어요.`;
     case 'skipped_user_edited':
-      return `주인이 ENU Town에서 ${o.period_key} 기록을 직접 수정해서 덮어쓰지 않았어요. 오류가 아니니 다시 시도하지 마세요.`;
+      return `주인이 ENU Den에서 ${o.period_key} 기록을 직접 수정해서 덮어쓰지 않았어요. 오류가 아니니 다시 시도하지 마세요.`;
     case 'skipped_user_deleted':
       return `주인이 ${o.period_key} 기록을 삭제해서 다시 만들지 않았어요. 오류가 아니니 다시 시도하지 마세요.`;
   }
@@ -234,11 +234,11 @@ export function nudgesSummaryKo(o: PostPetNudgesOutput): string {
 }
 
 /**
- * Builds the ENU Town MCP server for ONE request (createMcpHandler calls the factory per HTTP
+ * Builds the ENU Den MCP server for ONE request (createMcpHandler calls the factory per HTTP
  * request). `caller` comes from the verified token via `callerFromAuthInfo`; when it is missing
  * every tool answers with an isError "not authenticated" result.
  */
-export function buildEnuTownMcpServer(deps: McpDeps, caller: CallerInfo | undefined): McpServer {
+export function buildEnuDenMcpServer(deps: McpDeps, caller: CallerInfo | undefined): McpServer {
   const server = new McpServer(
     { name: MCP_SERVER_NAME, title: APP_NAME, version: INSTRUCTIONS_VERSION },
     { instructions: SERVER_INSTRUCTIONS },

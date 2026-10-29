@@ -26,14 +26,14 @@ export function getEnv(): WebEnv {
       return cached;
     }
     // Build-time only: never cached, so a real request with a fixed env still validates.
-    console.warn('[enu-town] SKIP_ENV_VALIDATION=1 and env is invalid: using build placeholders');
+    console.warn('[enu-den] SKIP_ENV_VALIDATION=1 and env is invalid: using build placeholders');
     return loadEnv(webEnvSchema, { ...BUILD_PLACEHOLDERS, NODE_ENV: 'development' });
   }
   cached = loadEnv(webEnvSchema);
   return cached;
 }
 
-/** Public origin without trailing slash, e.g. https://town.enu-tech.co.kr */
+/** Public origin without trailing slash, e.g. https://den.enu-tech.co.kr */
 export function publicUrl(): string {
   return getEnv().PUBLIC_URL.replace(/\/+$/, '');
 }

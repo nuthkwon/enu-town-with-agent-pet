@@ -83,7 +83,7 @@ describe('onAuth', () => {
     );
     expect(bad.message).toBe('invalid_ticket');
     const aud = await rejection(
-      joinAs(h, u.id, { ticket: await mintTicket(u.id, { aud: 'https://town.example/api/mcp' }) }),
+      joinAs(h, u.id, { ticket: await mintTicket(u.id, { aud: 'https://den.example/api/mcp' }) }),
     );
     expect(aud.message).toBe('invalid_ticket');
     const nowSec = Math.floor(Date.now() / 1000);

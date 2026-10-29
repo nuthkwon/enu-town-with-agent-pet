@@ -134,7 +134,7 @@ export async function upsertTodos(
   if (problems.length) {
     throw new ToolError(
       'validation_failed',
-      'to-dos rejected: ENU Town never edits your text. Fix the listed items (titles: no personal data, no links; notes: no personal data) and resend the whole batch. Nothing was saved.',
+      'to-dos rejected: ENU Den never edits your text. Fix the listed items (titles: no personal data, no links; notes: no personal data) and resend the whole batch. Nothing was saved.',
       { problems },
     );
   }

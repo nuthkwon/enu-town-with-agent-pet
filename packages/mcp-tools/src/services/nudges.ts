@@ -59,7 +59,7 @@ function nudgePrefs(owner: OwnerContext): NudgePrefs {
 
 /**
  * Queues pet bubble texts written by the owner's Claude. Text is stored exactly as normalized
- * by prepareNudgeText; problems reject single nudges with a reason. ENU Town only decides
+ * by prepareNudgeText; problems reject single nudges with a reason. ENU Den only decides
  * WHEN the owner sees them (realtime scheduler + nudge policy).
  */
 export async function postPetNudges(
@@ -282,7 +282,7 @@ function deliveryNote(
   const prefs = nudgePrefs(owner);
   if (actions.length > 0) {
     parts.push(
-      `펫 메시지 ${actions.length}개를 받았어요. 주인이 ENU Town에 접속해 있을 때만, 주인 본인에게만 펫 말풍선으로 보여요(동료에게는 보이지 않아요).`,
+      `펫 메시지 ${actions.length}개를 받았어요. 주인이 ENU Den에 접속해 있을 때만, 주인 본인에게만 펫 말풍선으로 보여요(동료에게는 보이지 않아요).`,
     );
     parts.push(
       `조용한 시간(${owner.quietStart}–${owner.quietEnd})과 주말·공휴일에는 보여 주지 않고, 여러 개는 최소 ${owner.nudgeMinIntervalMin}분 간격을 두고 하나씩 보여 줘요. 각 메시지는 만료 시각 전까지 최대 ${NUDGE_POLICY.maxShows}번까지 보여요.`,
@@ -316,7 +316,7 @@ function deliveryNote(
   }
   if (rejectedCount > 0) {
     parts.push(
-      `거절된 메시지 ${rejectedCount}개는 rejected의 reason을 보고 다시 써서 보내 주세요(ENU Town은 문구를 고치지 않아요).`,
+      `거절된 메시지 ${rejectedCount}개는 rejected의 reason을 보고 다시 써서 보내 주세요(ENU Den은 문구를 고치지 않아요).`,
     );
   }
   return parts.join(' ');

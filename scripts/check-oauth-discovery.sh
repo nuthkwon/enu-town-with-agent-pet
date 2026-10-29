@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Checks what Claude needs to add ENU Town as a custom connector (OAuth discovery for the MCP server).
-# Usage: scripts/check-oauth-discovery.sh https://town.enu-tech.co.kr
+# Checks what Claude needs to add ENU Den as a custom connector (OAuth discovery for the MCP server).
+# Usage: scripts/check-oauth-discovery.sh https://den.enu-tech.co.kr
 set -euo pipefail
 BASE="${1:?usage: $0 <base-url>}"
 BASE="${BASE%/}"

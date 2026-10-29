@@ -2,7 +2,7 @@
  * Better Auth tables (core + jwt + mcp/oauth-provider; cimd adds none), generated from
  * @better-auth/drizzle-adapter 1.7.14 `generateDrizzleSchema()` and kept in sync by hand.
  * Export keys MUST equal Better Auth model names (they are passed to drizzleAdapter({ schema })).
- * ENU Town additions on `user` are declared as `additionalFields` in packages/auth.
+ * ENU Den additions on `user` are declared as `additionalFields` in packages/auth.
  */
 import { boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
@@ -12,7 +12,7 @@ export const user = pgTable('user', {
   email: text('email').notNull().unique(),
   emailVerified: boolean('email_verified').default(false).notNull(),
   image: text('image'),
-  // ENU Town additions (Better Auth additionalFields, input: false)
+  // ENU Den additions (Better Auth additionalFields, input: false)
   googleSub: text('google_sub').unique(),
   hd: text('hd'),
   status: text('status').default('active').notNull(),

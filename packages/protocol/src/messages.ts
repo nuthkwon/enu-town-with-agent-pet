@@ -122,7 +122,7 @@ export interface PingedMsg {
   fromName: string;
 }
 
-/** System notices are ENU Town UI text (never presented as the pet speaking). */
+/** System notices are ENU Den UI text (never presented as the pet speaking). */
 export interface NoticeMsg {
   kind: 'work_log_published' | 'link_state' | 'info';
   text: string;

@@ -38,7 +38,7 @@ export function getAuth(): Auth {
   return g.__enuWebAuth;
 }
 
-/** The MCP resource identifier (token audience), e.g. https://town.enu-tech.co.kr/api/mcp */
+/** The MCP resource identifier (token audience), e.g. https://den.enu-tech.co.kr/api/mcp */
 export function mcpResource(): string {
   return mcpResourceUrl(publicUrl());
 }

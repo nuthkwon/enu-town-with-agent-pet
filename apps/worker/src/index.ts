@@ -1,5 +1,5 @@
 /**
- * ENU Town worker: pg-boss cron jobs (nudge expiry, link state, retention, auth cleanup).
+ * ENU Den worker: pg-boss cron jobs (nudge expiry, link state, retention, auth cleanup).
  * No LLM calls here or anywhere server-side — jobs only change statuses and delete old rows.
  */
 import { createDb } from '@enu/db';
@@ -13,7 +13,7 @@ const logger = createLogger(env);
 
 process.on('unhandledRejection', (err) => logger.error({ err }, 'unhandled rejection'));
 
-const dbHandle = createDb(env.DATABASE_URL, { max: 4, applicationName: 'enu-town-worker' });
+const dbHandle = createDb(env.DATABASE_URL, { max: 4, applicationName: 'enu-den-worker' });
 
 let boss: Awaited<ReturnType<typeof startBoss>>;
 try {

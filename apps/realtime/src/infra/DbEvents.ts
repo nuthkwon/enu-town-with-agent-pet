@@ -14,7 +14,7 @@ export interface DbEventsOptions {
 }
 
 /**
- * Dedicated `LISTEN enu_town_events` connection (a pooled client cannot hold LISTEN).
+ * Dedicated `LISTEN enu_den_events` connection (a pooled client cannot hold LISTEN).
  * Reconnects with exponential backoff and asks the room to resync after every reconnect.
  */
 export class DbEvents {
@@ -57,7 +57,7 @@ export class DbEvents {
     if (this.stopped) return;
     const c = new pg.Client({
       connectionString: this.opts.connectionString,
-      application_name: 'enu-town-realtime-listen',
+      application_name: 'enu-den-realtime-listen',
       keepAlive: true,
     });
     let failed = false;

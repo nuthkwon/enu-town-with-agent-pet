@@ -1,7 +1,7 @@
 import * as z from 'zod';
 import { LINK_STATES, VISIBILITIES } from '../constants';
 
-/** Payloads sent on the `enu_town_events` NOTIFY channel (must stay well under 8000 bytes). */
+/** Payloads sent on the `enu_den_events` NOTIFY channel (must stay well under 8000 bytes). */
 export const townEvent = z.discriminatedUnion('type', [
   z.object({ v: z.literal(1), type: z.literal('nudges_changed'), user_id: z.string() }),
   z.object({ v: z.literal(1), type: z.literal('todos_changed'), user_id: z.string() }),

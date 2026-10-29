@@ -19,8 +19,8 @@ import { and, desc, eq, isNull } from 'drizzle-orm';
 
 /**
  * Claude connector links: one row per (user, OAuth client). A link is created when the
- * employee approves the consent screen in ENU Town (or, as a fallback, on the first MCP call)
- * and revoked from /me. ENU Town never sees claude.ai credentials — only its own tokens.
+ * employee approves the consent screen in ENU Den (or, as a fallback, on the first MCP call)
+ * and revoked from /me. ENU Den never sees claude.ai credentials — only its own tokens.
  */
 
 export function classifyClient(

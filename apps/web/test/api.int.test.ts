@@ -1147,7 +1147,7 @@ describe('profile, pet and links', () => {
     const res = await call(exportRoute.GET, '/api/v1/me/export', { cookie: me.cookie });
     expect(res.status).toBe(200);
     expect(res.headers.get('content-disposition')).toMatch(
-      /^attachment; filename="enu-town-export-\d{8}\.json"$/,
+      /^attachment; filename="enu-den-export-\d{8}\.json"$/,
     );
     const text = await res.text();
     expect(text).toContain('내가 보낸 DM');

@@ -15,7 +15,7 @@ import {
   WORK_REF_PATTERN,
 } from '../constants';
 
-/** Input/output contracts of the five ENU Town MCP tools (snake_case, as Claude sees them). */
+/** Input/output contracts of the five ENU Den MCP tools (snake_case, as Claude sees them). */
 
 export const IsoDateTime = z.iso.datetime({ offset: true });
 export const LocalDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD');
@@ -125,7 +125,7 @@ export const WorkRef = z
   .regex(WORK_REF_PATTERN)
   .describe(
     'Stable id copied verbatim from a connected tool, never invented: gcal:<iCalUID>, jira:ENU-123, ' +
-      'github:<owner>/<repo>#<n>, drive:<fileId>. Never shown to anyone; ENU Town stores only a keyed daily value and ' +
+      'github:<owner>/<repo>#<n>, drive:<fileId>. Never shown to anyone; ENU Den stores only a keyed daily value and ' +
       "uses it to draw people together when colleagues' own Claudes report the same id.",
   );
 

@@ -2,7 +2,7 @@ import { ko } from '@/i18n/ko';
 import { getAuth, isAdminEmail } from './auth';
 import { HttpError } from './http';
 
-/** The signed-in person behind a request (session cookie), with ENU Town's account fields. */
+/** The signed-in person behind a request (session cookie), with ENU Den's account fields. */
 export interface Viewer {
   userId: string;
   email: string;

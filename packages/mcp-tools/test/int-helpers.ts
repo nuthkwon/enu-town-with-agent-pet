@@ -7,7 +7,7 @@ import { vi } from 'vitest';
 import { SlidingWindowRateLimiter, type McpDeps } from '../src/index';
 import { connectClient, createTestHandler, testDeps, type Mode } from './harness';
 
-export const PUBLIC_URL = 'https://town.example';
+export const PUBLIC_URL = 'https://den.example';
 export const TZ = 'Asia/Seoul';
 /** Thursday 2026-10-29 14:00 KST (a business day, inside work hours). */
 export const THU_14 = '2026-10-29T05:00:00.000Z';

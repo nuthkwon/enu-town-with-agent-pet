@@ -14,7 +14,7 @@ export async function runMigrations(
   connectionString: string,
   migrationsFolder = defaultMigrationsDir(),
 ): Promise<void> {
-  const { db, close } = createDb(connectionString, { max: 1, applicationName: 'enu-town-migrate' });
+  const { db, close } = createDb(connectionString, { max: 1, applicationName: 'enu-den-migrate' });
   try {
     await migrate(db, { migrationsFolder });
   } finally {

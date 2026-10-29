@@ -1,11 +1,11 @@
 /**
- * @enu/mcp-tools — the five ENU Town MCP tools (get_my_context, post_work_log, post_activity,
+ * @enu/mcp-tools — the five ENU Den MCP tools (get_my_context, post_work_log, post_activity,
  * upsert_todos, post_pet_nudges) on @modelcontextprotocol/server. Mounted by apps/web at /api/mcp
- * behind token verification; see buildEnuTownMcpServer.
+ * behind token verification; see buildEnuDenMcpServer.
  */
 export {
   activitySummaryKo,
-  buildEnuTownMcpServer,
+  buildEnuDenMcpServer,
   callerFromAuthInfo,
   contextSummaryKo,
   nudgesSummaryKo,

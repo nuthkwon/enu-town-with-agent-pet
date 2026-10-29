@@ -22,7 +22,7 @@ import {
 import { user } from './auth';
 
 /**
- * ENU Town application tables. Ids are UUIDv7 generated in the app (`newId()`), so the
+ * ENU Den application tables. Ids are UUIDv7 generated in the app (`newId()`), so the
  * schema stays compatible with Postgres 16+ (compose runs 18). Exception: `work_logs.id` is a random
  * UUIDv4 (`newOpaqueId()`), because colleagues receive it and a v7 id encodes the owner-only write time.
  * Sets that may still grow are `text` + CHECK instead of pg enums to keep migrations transactional.

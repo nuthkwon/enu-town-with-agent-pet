@@ -34,7 +34,7 @@ if (process.env.NODE_ENV === 'production') {
 
 const TZ = process.env.APP_TIMEZONE ?? APP_TIMEZONE_DEFAULT;
 const HD = process.env.ALLOWED_GOOGLE_HD ?? ALLOWED_GOOGLE_HD_DEFAULT;
-const url = process.env.DATABASE_URL ?? 'postgres://enu:enu@127.0.0.1:5432/enu_town_dev';
+const url = process.env.DATABASE_URL ?? 'postgres://enu:enu@127.0.0.1:5432/enu_den_dev';
 const { db, close } = createDb(url, { max: 2 });
 const { roster } = loadRoster();
 

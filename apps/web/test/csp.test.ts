@@ -8,7 +8,7 @@ describe('buildCsp', () => {
     const csp = buildCsp({
       nonce: 'abc123',
       dev: false,
-      realtimeUrl: 'wss://town.enu-tech.co.kr/colyseus',
+      realtimeUrl: 'wss://den.enu-tech.co.kr/colyseus',
       upgradeInsecureRequests: true,
     });
     expect(directive(csp, 'script-src')).toBe("script-src 'self' 'nonce-abc123' 'strict-dynamic'");
@@ -16,7 +16,7 @@ describe('buildCsp', () => {
     expect(directive(csp, 'img-src')).toBe("img-src 'self' data: blob:");
     expect(directive(csp, 'font-src')).toBe("font-src 'self'");
     expect(directive(csp, 'connect-src')).toBe(
-      "connect-src 'self' wss://town.enu-tech.co.kr https://town.enu-tech.co.kr",
+      "connect-src 'self' wss://den.enu-tech.co.kr https://den.enu-tech.co.kr",
     );
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("base-uri 'self'");

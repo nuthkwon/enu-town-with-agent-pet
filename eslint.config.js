@@ -20,7 +20,7 @@ const LLM_SDK_BAN = {
         'langchain',
         '@langchain/*',
       ],
-      message: 'ENU Town never calls an LLM server-side (see docs/adr/0002-pet-text-source.md).',
+      message: 'ENU Den never calls an LLM server-side (see docs/adr/0002-pet-text-source.md).',
     },
   ],
 };

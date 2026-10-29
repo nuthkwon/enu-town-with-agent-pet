@@ -5,6 +5,6 @@ export default defineConfig({
   schema: './src/schema/index.ts',
   out: './migrations',
   casing: 'snake_case',
-  dbCredentials: { url: process.env.DATABASE_URL ?? 'postgres://enu:enu@127.0.0.1:5432/enu_town_dev' },
+  dbCredentials: { url: process.env.DATABASE_URL ?? 'postgres://enu:enu@127.0.0.1:5432/enu_den_dev' },
   strict: true,
 });

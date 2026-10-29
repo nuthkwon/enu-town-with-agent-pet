@@ -1,6 +1,6 @@
 /**
  * Korean UI strings for the web app (pages, API error messages, labels).
- * Claude-authored text is never stored here; these are ENU Town's own words.
+ * Claude-authored text is never stored here; these are ENU Den's own words.
  */
 import type { ActivityCode, PlateNote, SourceCode } from '@enu/protocol';
 import { APP_NAME } from '@enu/shared';
@@ -211,7 +211,7 @@ export const ko = {
 
   consent: {
     title: 'Claude 커넥터 연결',
-    lead: (client: string) => `${client}이(가) 내 ENU Town 계정에 연결하려고 해요.`,
+    lead: (client: string) => `${client}이(가) 내 ENU Den 계정에 연결하려고 해요.`,
     connectingAs: '다음 계정으로 연결해요',
     otherAccount: '다른 계정으로 로그인',
     redirectTo: '연결 후 돌아갈 곳',
@@ -229,7 +229,7 @@ export const ko = {
     cannotTitle: '할 수 없는 일',
     cannot: ['무엇이든 삭제하기', '다른 사람인 척하기', '다른 사람의 비공개 정보 읽기'],
     privacy:
-      'ENU Town은 Claude와 나눈 원본 대화를 받지 않아요. Claude가 도구로 보낸 요약만 저장해요. 연결은 내 정보 > 내 Claude 연결에서 언제든 해제할 수 있어요.',
+      'ENU Den은 Claude와 나눈 원본 대화를 받지 않아요. Claude가 도구로 보낸 요약만 저장해요. 연결은 내 정보 > 내 Claude 연결에서 언제든 해제할 수 있어요.',
     allow: '허용',
     deny: '거부',
     working: '처리 중…',
@@ -245,7 +245,7 @@ export const ko = {
     pageTitle: '시작하기',
     stepperLabel: '진행 단계',
     title: '환영해요!',
-    lead: (name: string) => `${name}님, ENU Town을 시작하기 전에 몇 가지만 정해 볼게요.`,
+    lead: (name: string) => `${name}님, ENU Den을 시작하기 전에 몇 가지만 정해 볼게요.`,
     steps: ['개인정보 안내', '내 자리', '아바타', '펫', '대화 요약 공개', '활동 공유', 'Claude 연결'],
     stepOf: (i: number, n: number) => `${i} / ${n}`,
     notice: {
@@ -369,17 +369,17 @@ export const ko = {
   linkGuide: {
     title: 'Claude 연결 방법',
     steps: [
-      'Claude(claude.ai 또는 Claude 데스크톱)에서 설정 → 커넥터를 열어요. 회사가 등록한 "ENU Town" 커넥터가 보여요.',
+      'Claude(claude.ai 또는 Claude 데스크톱)에서 설정 → 커넥터를 열어요. 회사가 등록한 "ENU Den" 커넥터가 보여요.',
       '"연결(Connect)"을 누르고 회사 Google 계정으로 로그인해요. 동의 화면에 내 이메일이 맞는지 확인하고 허용해요.',
-      'Claude에게 "ENU Town 체크인 해줘"라고 한 번 말해 보세요. 도구 사용 확인이 뜨면 "항상 허용"을 골라요.',
+      'Claude에게 "ENU Den 체크인 해줘"라고 한 번 말해 보세요. 도구 사용 확인이 뜨면 "항상 허용"을 골라요.',
       'Cowork에서 예약 작업을 만들어 매시간 체크인하게 해요. 근무 시간 밖이나 휴일에는 알아서 건너뛰어요.',
     ],
     urlLabel: '커넥터 주소',
-    urlHelp: '커넥터 목록에 ENU Town이 없으면 관리자에게 이 주소를 알려 주세요.',
+    urlHelp: '커넥터 목록에 ENU Den이 없으면 관리자에게 이 주소를 알려 주세요.',
     codeTitle: 'Claude Code에서 쓰기',
-    codeCommand: (url: string) => `claude mcp add --transport http enu-town ${url}`,
+    codeCommand: (url: string) => `claude mcp add --transport http enu-den ${url}`,
     faqQ: '회사가 내 Claude 대화를 보나요?',
-    faqA: '아니요. ENU Town은 내 Claude가 도구로 보낸 업무 요약만 받아요. 원본 대화는 받지도 저장하지도 않아요.',
+    faqA: '아니요. ENU Den은 내 Claude가 도구로 보낸 업무 요약만 받아요. 원본 대화는 받지도 저장하지도 않아요.',
   },
 
   me: {
@@ -407,7 +407,7 @@ export const ko = {
       revoke: '연결 해제',
       revokeAll: '모든 연결 해제',
       revokeConfirm:
-        '이 연결을 해제할까요? 이 Claude는 더 이상 ENU Town에 기록할 수 없고, 다시 쓰려면 연결 동의부터 다시 해야 해요.',
+        '이 연결을 해제할까요? 이 Claude는 더 이상 ENU Den에 기록할 수 없고, 다시 쓰려면 연결 동의부터 다시 해야 해요.',
       revokeAllConfirm: '모든 Claude 연결을 해제할까요? 발급된 토큰이 모두 무효가 돼요.',
       revokedToast: (n: number) => `${n}개 연결을 해제했어요.`,
     },
@@ -545,7 +545,7 @@ export const ko = {
       {
         heading: '1. 목적',
         paragraphs: [
-          'ENU Town은 ENU-Tech 직원이 A동 606호를 온라인으로 함께 쓰면서, 팀이 일하고 협업하는 모습을 지도로 보여 주고 각자의 Claude가 정리한 업무 상황을 동료와 나누기 위한 사내 서비스입니다.',
+          'ENU Den은 ENU-Tech 직원이 A동 606호를 온라인으로 함께 쓰면서, 팀이 일하고 협업하는 모습을 지도로 보여 주고 각자의 Claude가 정리한 업무 상황을 동료와 나누기 위한 사내 서비스입니다.',
           '업무 공유 목적이며 근태 확인·성과 평가·징계 자료로 사용하지 않습니다.',
         ],
       },
@@ -624,9 +624,9 @@ export const ko = {
       {
         heading: '3. 수집하지 않는 정보',
         bullets: [
-          'Claude와 나눈 원본 대화는 절대 수집하지 않습니다. ENU Town은 내 Claude가 도구로 보낸 요약만 받습니다.',
+          'Claude와 나눈 원본 대화는 절대 수집하지 않습니다. ENU Den은 내 Claude가 도구로 보낸 요약만 받습니다.',
           '회사는 Compliance API 등으로 직원의 Claude 대화를 조회하지 않습니다.',
-          'claude.ai 비밀번호나 토큰을 받거나 저장하지 않습니다. ENU Town이 Claude에 로그인하는 것이 아니라, 내 Claude가 ENU Town에 로그인합니다.',
+          'claude.ai 비밀번호나 토큰을 받거나 저장하지 않습니다. ENU Den이 Claude에 로그인하는 것이 아니라, 내 Claude가 ENU Den에 로그인합니다.',
           '성별은 저장하지 않습니다. 아바타 체형 선택만 저장합니다.',
         ],
       },
@@ -661,20 +661,20 @@ export const ko = {
       {
         heading: '6. 정보가 오가는 곳',
         bullets: [
-          '모든 정보는 회사가 운영하는 ENU Town 서버에 저장됩니다.',
+          '모든 정보는 회사가 운영하는 ENU Den 서버에 저장됩니다.',
           '내가 Claude를 연결한 경우에만, 도구 호출 결과(내 프로필, 오늘 업무 로그, 할 일, 대기 중인 말풍선, 설정한 경우 나에게 온 DM)가 내 Claude(Anthropic)로 전달됩니다.',
           '내가 직접 정한 상태(owner_status)와 오늘 저장된 내 활동·일정은 내 Claude가 다음 체크인 때 읽을 수 있도록 내 Claude에게만 전달됩니다.',
           '다른 사람의 비공개 정보는 어떤 Claude에도 전달되지 않습니다.',
-          'ENU Town 서버는 별도의 AI(LLM)를 호출하지 않습니다. 펫 말풍선은 내 Claude가 쓴 문장 그대로입니다.',
+          'ENU Den 서버는 별도의 AI(LLM)를 호출하지 않습니다. 펫 말풍선은 내 Claude가 쓴 문장 그대로입니다.',
         ],
       },
       {
         heading: '7. 화면이 뜻하는 것과 뜻하지 않는 것',
         bullets: [
-          "아바타는 사람이 조작하지 않습니다. 본인이 정한 상태, 타운 접속, 본인 Claude가 보낸 캘린더 일정으로 ENU Town이 자리에 앉히거나 회의 테이블·동료 자리·탕비실로 옮깁니다. 본인 Claude의 '지금 하는 일'과 오늘 업무 기록은 이름표나 자리 표시판에만 붙습니다.",
+          "아바타는 사람이 조작하지 않습니다. 본인이 정한 상태, 타운 접속, 본인 Claude가 보낸 캘린더 일정으로 ENU Den이 자리에 앉히거나 회의 테이블·동료 자리·탕비실로 옮깁니다. 본인 Claude의 '지금 하는 일'과 오늘 업무 기록은 이름표나 자리 표시판에만 붙습니다.",
           "아바타의 위치와 움직임은 실제 위치가 아니라 업무 상태를 나타냅니다. 자리에 보이는 것은 출근·근무 시간을 뜻하지 않으며, 아바타가 없다는 것은 '지금 알려진 활동이 없다'는 뜻일 뿐입니다.",
           '함께 있는 모습은 각자의 Claude가 같은 일정(3명 이상)이나 같은 작업을 각각 보고했고 모두 활동 공유를 켠 경우에만 보입니다. 1:1 일정은 묶지 않습니다. 다른 사람의 Claude는 내 아바타를 움직일 수 없습니다.',
-          "ENU Town은 키보드·마우스 사용이나 화면을 보고 있는지를 측정하지 않고, 메일·커밋 시각을 받지 않습니다. 활동 공유를 켜면 본인의 Claude가 최근 업무 흔적을 보고 판단한 '지금 하는 일'의 종류만 받아 'Claude 보고'로 표시합니다.",
+          "ENU Den은 키보드·마우스 사용이나 화면을 보고 있는지를 측정하지 않고, 메일·커밋 시각을 받지 않습니다. 활동 공유를 켜면 본인의 Claude가 최근 업무 흔적을 보고 판단한 '지금 하는 일'의 종류만 받아 'Claude 보고'로 표시합니다.",
           '타운을 열면 보통 내 아바타도 보입니다(서로 보기). 설정 > 접속 표시를 끄면 타운을 열어도 나와 접속 표시가 보이지 않습니다.',
           '근무 시간 외·주말·공휴일에는 누구의 상태도 다른 사람에게 보내지 않습니다.',
           'DM·업무 요청·부르기는 누가 누구에게 보냈는지도 다른 사람에게 표시하지 않습니다.',
@@ -694,7 +694,7 @@ export const ko = {
       },
       {
         heading: '9. 문의',
-        paragraphs: ['개인정보 처리에 대한 문의나 요청은 사내 ENU Town 관리자에게 해 주세요.'],
+        paragraphs: ['개인정보 처리에 대한 문의나 요청은 사내 ENU Den 관리자에게 해 주세요.'],
       },
     ] as PrivacySection[],
   },
@@ -748,7 +748,7 @@ export const ko = {
     loadingMap: '사무실을 준비하는 중…',
     mapError: '사무실 지도를 불러오지 못했어요.',
     canvasLabel: 'A동 606호 사무실 지도. 사람을 누르면 메뉴가 열려요. 오른쪽 목록에서도 똑같이 볼 수 있어요.',
-    protocolMismatch: 'ENU Town이 새 버전으로 바뀌었어요. 새로고침할게요.',
+    protocolMismatch: 'ENU Den이 새 버전으로 바뀌었어요. 새로고침할게요.',
     connection: {
       connecting: '타운에 연결하는 중…',
       reconnecting: '연결이 잠깐 끊겼어요. 다시 연결하는 중…',
@@ -827,7 +827,7 @@ export const ko = {
     legend: {
       title: '이 지도 보는 법',
       lines: [
-        '아바타는 사람이 조작하지 않아요. 본인이 정한 상태, 타운 접속, 본인 Claude가 보낸 캘린더 일정으로 ENU Town이 자리를 정해요.',
+        '아바타는 사람이 조작하지 않아요. 본인이 정한 상태, 타운 접속, 본인 Claude가 보낸 캘린더 일정으로 ENU Den이 자리를 정해요.',
         "'Claude 보고'는 본인 Claude가 최근 업무 흔적(문서·커밋·PR·리뷰)을 보고 판단한 지금 하는 일의 종류예요. 이름표나 자리 표시판에만 붙고, 이것만으로 아바타가 나타나지는 않아요.",
         '자리에 보이는 것은 출근·근태를 뜻하지 않아요. 아바타가 없으면 지금 알려진 활동이 없다는 뜻일 뿐이에요.',
         '타운을 열면 보통 내 아바타도 보여요(서로 보기). 설정 > 접속 표시를 끄면 타운을 열어도 보이지 않아요.',
@@ -1033,7 +1033,7 @@ export const ko = {
       due: (t: string) => `마감 ${t}`,
       snoozedUntil: (t: string) => `${t}까지 미룸`,
       checkinTitle: '바로 체크인해 보기',
-      checkinPrompt: 'ENU Town 체크인 해줘',
+      checkinPrompt: 'ENU Den 체크인 해줘',
       checkinHelp: 'Claude에서 이렇게 말하면 오늘 업무 로그와 할 일을 정리해 줘요.',
       openMe: '내 정보에서 자세히 보기',
       actionFailed: '처리하지 못했어요. 다시 시도해 주세요.',

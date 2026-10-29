@@ -46,7 +46,7 @@ export async function postWorkLog(
   if (problems.length) {
     throw new ToolError(
       'validation_failed',
-      'work log rejected: ENU Town never edits your text. Rewrite the listed fields (no personal data such as phone/resident/card/account numbers, no links except https URLs in tasks[].ref) and call post_work_log again. Nothing was saved.',
+      'work log rejected: ENU Den never edits your text. Rewrite the listed fields (no personal data such as phone/resident/card/account numbers, no links except https URLs in tasks[].ref) and call post_work_log again. Nothing was saved.',
       {
         problems: problems.map((p) => ({
           field: p.field,

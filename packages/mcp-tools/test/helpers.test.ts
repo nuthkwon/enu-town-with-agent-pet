@@ -142,6 +142,6 @@ describe('results', () => {
   });
 
   it('builds view urls without double slashes', () => {
-    expect(workLogViewUrl('https://town.example/', 'abc')).toBe('https://town.example/me?log=abc');
+    expect(workLogViewUrl('https://den.example/', 'abc')).toBe('https://den.example/me?log=abc');
   });
 });

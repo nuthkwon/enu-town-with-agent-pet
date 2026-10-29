@@ -15,7 +15,7 @@ import { PRIVACY_NOTICE_VERSION } from '@enu/shared';
 import { asc, eq, isNull, and } from 'drizzle-orm';
 
 /**
- * Everything ENU Town stores about the viewer that they authored or that is about them:
+ * Everything ENU Den stores about the viewer that they authored or that is about them:
  * profile (incl. 활동 공유, 접속 표시 and the hand-set status), logs, today's activity report (refs only
  * as has_ref: the keyed hashes are never handed out), to-dos, pet bubbles, the chat messages they SENT,
  * consents and Claude links. Messages other people sent (including DMs to the viewer) are not included.
@@ -66,7 +66,7 @@ export async function buildExport(db: DbOrTx, userId: string, now = new Date()) 
   const links = await db.select().from(claudeLinks).where(eq(claudeLinks.userId, userId));
 
   return {
-    format: 'enu-town-export',
+    format: 'enu-den-export',
     version: 1,
     exportedAt: now.toISOString(),
     noticeVersion: PRIVACY_NOTICE_VERSION,

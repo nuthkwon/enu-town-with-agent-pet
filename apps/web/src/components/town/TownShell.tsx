@@ -44,7 +44,7 @@ import s from './town.module.css';
 
 /** At this width the team list is a docked right rail (and the chat lives in it); below, a sheet. */
 const RAIL_MEDIA = '(min-width: 1280px)';
-const RAIL_PREF_KEY = 'enu-town:rail-hidden';
+const RAIL_PREF_KEY = 'enu-den:rail-hidden';
 
 function isEditable(el: EventTarget | null): boolean {
   return (

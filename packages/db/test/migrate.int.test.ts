@@ -12,7 +12,7 @@ import { defaultMigrationsDir, runMigrations } from '../src/migrate';
  * (`<name>_migrate_test`) so the shared test database is never reset.
  */
 
-const TEST_URL = process.env.DATABASE_URL_TEST ?? 'postgres://enu:enu@127.0.0.1:5432/enu_town_test';
+const TEST_URL = process.env.DATABASE_URL_TEST ?? 'postgres://enu:enu@127.0.0.1:5432/enu_den_test';
 const testName = new URL(TEST_URL).pathname.replace(/^\//, '');
 if (!/_test$/.test(testName)) {
   throw new Error(`Refusing to run tests against "${testName}": database name must end with _test`);
@@ -58,11 +58,11 @@ const exists = async (relation: string) =>
   (await h.pool.query<{ r: string | null }>('select to_regclass($1) as r', [relation])).rows[0]?.r !== null;
 
 beforeAll(async () => {
-  admin = createDb(TEST_URL, { max: 1, applicationName: 'enu-town-migrate-test' });
+  admin = createDb(TEST_URL, { max: 1, applicationName: 'enu-den-migrate-test' });
   await recreateScratch();
   tmp = truncatedMigrations(2);
   await runMigrations(scratchUrl, tmp);
-  h = createDb(scratchUrl, { max: 2, applicationName: 'enu-town-migrate-test' });
+  h = createDb(scratchUrl, { max: 2, applicationName: 'enu-den-migrate-test' });
 });
 
 afterAll(async () => {

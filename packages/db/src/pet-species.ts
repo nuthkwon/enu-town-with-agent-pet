@@ -10,7 +10,7 @@ import { user } from './schema/auth';
  * two concurrent picks of one species cannot both win.
  */
 export async function lockPetSpecies(tx: DbOrTx): Promise<void> {
-  await tx.execute(sql`select pg_advisory_xact_lock(hashtext('enu_town_pet_species'))`);
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext('enu_den_pet_species'))`);
 }
 
 /**

@@ -13,7 +13,7 @@ import { officeDayBounds } from './activity';
 
 /**
  * Content rules for Claude-authored text. Violations are rejected (never rewritten)
- * so that whatever ENU Town shows is exactly what the owner's Claude wrote.
+ * so that whatever ENU Den shows is exactly what the owner's Claude wrote.
  */
 
 export interface FieldProblem {
