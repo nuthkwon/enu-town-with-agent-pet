@@ -13,7 +13,6 @@ import {
   MANUAL_STATUSES,
   PRIVACY_NOTICE_VERSION,
   SCHEDULE_KINDS,
-  VISIBILITIES,
   avatarSpriteKey,
   localDateKey,
   teamLabel,
@@ -22,11 +21,10 @@ import {
   type ManualStatusDto,
   type MeDto,
   type PetSpecies,
-  type Visibility,
 } from '@enu/shared';
 import { and, eq, isNull } from 'drizzle-orm';
 import { mcpResource } from '../auth';
-import { asLinkState, asTeamId, normalizeAvatar, petOrDefault, type ProfileRow } from '../dto';
+import { asLinkState, asTeamId, asVisibility, normalizeAvatar, petOrDefault, type ProfileRow } from '../dto';
 import { getEnv } from '../env';
 import type { Viewer } from '../session';
 
@@ -70,9 +68,6 @@ export async function hasAcceptedNotice(
     .limit(1);
   return Boolean(c);
 }
-
-const asVisibility = (v: string | null): Visibility | null =>
-  v && (VISIBILITIES as readonly string[]).includes(v) ? (v as Visibility) : null;
 
 /** The owner's hand-set status while it lasts (expired values are never returned). */
 export function activeManualStatus(p: ProfileRow, now: Date): ManualStatusDto | null {
@@ -153,6 +148,7 @@ export function toMeDto(p: ProfileRow, viewer: Viewer, ctx: MeContext, now: Date
       defaultLogVisibility: asVisibility(p.defaultLogVisibility) ?? 'company',
       defaultChatSummaryVisibility: asVisibility(p.defaultChatSummaryVisibility),
       shareDmsWithMyClaude: p.shareDmsWithMyClaude,
+      petChatDefaultVisibility: asVisibility(p.petChatDefaultVisibility) ?? 'company',
       nudgesEnabled: p.nudgesEnabled,
       nudgeMinIntervalMin: p.nudgeMinIntervalMin,
       maxBubblesPerDay: p.maxBubblesPerDay,

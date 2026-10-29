@@ -1,10 +1,13 @@
-import type { chatMessages, claudeLinks, petNudges, profiles, todos, workLogs } from '@enu/db';
-import { canViewChatSummary, canViewLog, canViewLogTimestamps } from '@enu/domain';
+import type { chatMessages, claudeLinks, petNudges, pets, profiles, todos, workLogs } from '@enu/db';
+import { canViewChatSummary, canViewLog, canViewLogTimestamps, petDefaultVisibility } from '@enu/domain';
 import {
   DEFAULT_AVATAR,
   LINK_STATES,
   NUDGE_KINDS,
   NUDGE_STATUSES,
+  PET_REPLY_ROUTES,
+  PET_SPECIES,
+  PET_TINTS,
   TEAM_IDS,
   TODO_STATUSES,
   VISIBILITIES,
@@ -19,8 +22,13 @@ import {
   type DeskDto,
   type LinkState,
   type NudgeDto,
+  type OwnerPetDto,
   type PersonDto,
   type PetDto,
+  type PetInfoDto,
+  type PetReplyRoute,
+  type PetSpecies,
+  type PetTint,
   type TeamId,
   type TodoDto,
   type Visibility,
@@ -237,5 +245,48 @@ export function toDeskDto(
     userId: desk.userId,
     displayName: occupant?.displayName ?? desk.labelName ?? null,
     team: asTeamId(occupant?.team ?? desk.team),
+  };
+}
+
+export const asVisibility = (v: string | null): Visibility | null =>
+  v !== null && (VISIBILITIES as readonly string[]).includes(v) ? (v as Visibility) : null;
+
+export type PetRow = typeof pets.$inferSelect;
+
+/** A pet as anyone may see it (canViewPet is checked by the caller): name and look only. */
+export function toPetInfoDto(p: PetRow): PetInfoDto {
+  return {
+    id: p.id,
+    ownerId: p.userId,
+    name: p.name,
+    species: (PET_SPECIES as readonly string[]).includes(p.species)
+      ? (p.species as PetSpecies)
+      : PET_SPECIES[0],
+    tint: (PET_TINTS as readonly string[]).includes(p.tint) ? (p.tint as PetTint) : 'base',
+    isDefault: p.isDefault,
+    sortOrder: p.sortOrder,
+  };
+}
+
+export interface PetMessageStats {
+  unread: number;
+  pendingCount: number;
+  last: OwnerPetDto['last'];
+}
+
+export const NO_PET_MESSAGES: PetMessageStats = { unread: 0, pendingCount: 0, last: null };
+
+/** A pet as its owner sees it (owner-only fields: canViewPetPrivateFields). */
+export function toOwnerPetDto(p: PetRow, profileDefault: Visibility, stats: PetMessageStats): OwnerPetDto {
+  const defaultVisibility = asVisibility(p.defaultVisibility);
+  return {
+    ...toPetInfoDto(p),
+    roleInstructions: p.roleInstructions,
+    replyRoute: (PET_REPLY_ROUTES as readonly string[]).includes(p.replyRoute)
+      ? (p.replyRoute as PetReplyRoute)
+      : 'both',
+    defaultVisibility,
+    effectiveDefaultVisibility: petDefaultVisibility(defaultVisibility, profileDefault),
+    ...stats,
   };
 }

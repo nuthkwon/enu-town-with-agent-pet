@@ -158,6 +158,13 @@ export const ko = {
     selfDeactivate: '자기 자신은 비활성화할 수 없어요.',
     invalidAvatarKey: '아바타 키 형식이 올바르지 않습니다.',
     contentRejected: '공개하기 어려운 내용이 있어요. 표시된 항목을 고쳐 주세요.',
+    rateLimited: '요청이 너무 잦아요. 잠시 후 다시 시도해 주세요.',
+    petLimit: '펫은 한 사람당 다섯 마리까지 만들 수 있어요.',
+    lookTaken: '내 다른 펫과 같은 모습이에요. 종류나 색을 바꿔 주세요.',
+    baseReserved: '기본 색은 대표 펫만 쓸 수 있어요. 다른 색을 골라 주세요.',
+    defaultPet: '대표 펫은 지울 수 없어요.',
+    piiPublic: '전화번호 같은 개인정보가 있어요. 동료에게 공개되지 않게 "나만 보기"로 보내 주세요.',
+    petNotFound: '펫을 찾을 수 없어요.',
   },
 
   fieldReason: {
@@ -172,6 +179,8 @@ export const ko = {
     invalid_format: '형식이 올바르지 않아요',
     unrecognized_keys: '알 수 없는 항목이 있어요',
     taken: '이미 다른 동료가 쓰고 있어요',
+    look_taken: '내 다른 펫과 모습이 같아요',
+    base_reserved: '기본 색은 대표 펫만 쓸 수 있어요',
   } as Record<string, string>,
 
   signIn: {

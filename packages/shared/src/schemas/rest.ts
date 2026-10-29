@@ -40,6 +40,8 @@ export const profilePatch = z
     default_log_visibility: z.enum(VISIBILITIES),
     default_chat_summary_visibility: z.enum(VISIBILITIES),
     share_dms_with_my_claude: z.boolean(),
+    /** Default visibility of my pet conversations (company records the pet_chat_sharing consent). */
+    pet_chat_default_visibility: z.enum(VISIBILITIES),
     /** 활동 공유: Claude-derived activity may be shown to colleagues. `false` deletes today's report. */
     share_activity: z.boolean(),
     /** 접속 표시: having the town open may draw me and my online dot. */

@@ -89,6 +89,8 @@ export interface NudgePrefsDto {
   /** null = not chosen yet (treated as private). */
   defaultChatSummaryVisibility: Visibility | null;
   shareDmsWithMyClaude: boolean;
+  /** Default visibility of my pet conversations (a pet may override it; ADR 0005). */
+  petChatDefaultVisibility: Visibility;
   nudgesEnabled: boolean;
   nudgeMinIntervalMin: number;
   maxBubblesPerDay: number;

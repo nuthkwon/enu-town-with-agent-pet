@@ -616,7 +616,10 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
             await this.scheduler.reload(event.user_id);
           return;
         case 'profile_changed':
+        case 'pets_changed':
           await this.reloadMember(event.user_id);
+          return;
+        case 'pet_thread_changed':
           return;
         case 'activity_changed':
           await this.reloadSignals([event.user_id]);

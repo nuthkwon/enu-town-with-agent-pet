@@ -45,7 +45,7 @@ export async function grantConsent(
 export async function withdrawConsent(
   tx: DbOrTx,
   userId: string,
-  scope: 'claude_chat_summary' | 'activity_sharing',
+  scope: Exclude<ConsentScope, 'service'>,
   now: Date,
 ): Promise<void> {
   await tx
@@ -146,6 +146,8 @@ export async function patchProfile(
   if (patch.default_chat_summary_visibility !== undefined)
     set.defaultChatSummaryVisibility = patch.default_chat_summary_visibility;
   if (patch.share_dms_with_my_claude !== undefined) set.shareDmsWithMyClaude = patch.share_dms_with_my_claude;
+  if (patch.pet_chat_default_visibility !== undefined)
+    set.petChatDefaultVisibility = patch.pet_chat_default_visibility;
   if (patch.share_activity !== undefined) set.shareActivity = patch.share_activity;
   if (patch.show_live !== undefined) set.showLive = patch.show_live;
   if (patch.nudges_enabled !== undefined) set.nudgesEnabled = patch.nudges_enabled;
@@ -181,6 +183,22 @@ export async function patchProfile(
         targetId: viewer.userId,
         metadata: { from: chatBefore, to: chatAfter },
       });
+    }
+    const petBefore = (current.petChatDefaultVisibility ?? 'company') as Visibility;
+    const petAfter = patch.pet_chat_default_visibility;
+    if (petAfter !== undefined && petAfter !== petBefore) {
+      // Sharing pet conversations with colleagues is a consent of its own (ADR 0005); future messages follow it.
+      if (petAfter === 'company') await grantConsent(tx, viewer.userId, 'pet_chat_sharing', now);
+      else await withdrawConsent(tx, viewer.userId, 'pet_chat_sharing', now);
+      await audit(tx, {
+        actorType: 'user',
+        actorUserId: viewer.userId,
+        action: 'profile.pet_chat_default_visibility',
+        targetType: 'user',
+        targetId: viewer.userId,
+        metadata: { from: petBefore, to: petAfter },
+      });
+      await notifyTown(tx, { v: 1, type: 'pets_changed', user_id: viewer.userId });
     }
     if (
       patch.default_log_visibility !== undefined &&

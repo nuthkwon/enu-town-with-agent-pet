@@ -4,6 +4,7 @@ import {
   claudeLinks,
   desks,
   petNudges,
+  pets,
   privacyConsents,
   profiles,
   todos,
@@ -18,7 +19,7 @@ import { asc, eq, isNull, and } from 'drizzle-orm';
  * Everything ENU Den stores about the viewer that they authored or that is about them:
  * profile (incl. 활동 공유, 접속 표시 and the hand-set status), logs, today's activity report (refs only
  * as has_ref: the keyed hashes are never handed out), to-dos, pet bubbles, the chat messages they SENT,
- * consents and Claude links. Messages other people sent (including DMs to the viewer) are not included.
+ * consents, Claude links and my pets (with their role instructions). Messages other people sent (including DMs to the viewer) are not included.
  */
 export async function buildExport(db: DbOrTx, userId: string, now = new Date()) {
   const [account] = await db
@@ -62,12 +63,13 @@ export async function buildExport(db: DbOrTx, userId: string, now = new Date()) 
     .from(activityReports)
     .where(eq(activityReports.userId, userId))
     .orderBy(asc(activityReports.periodKey));
+  const myPets = await db.select().from(pets).where(eq(pets.userId, userId)).orderBy(asc(pets.createdAt));
   const consents = await db.select().from(privacyConsents).where(eq(privacyConsents.userId, userId));
   const links = await db.select().from(claudeLinks).where(eq(claudeLinks.userId, userId));
 
   return {
     format: 'enu-den-export',
-    version: 1,
+    version: 2,
     exportedAt: now.toISOString(),
     noticeVersion: PRIVACY_NOTICE_VERSION,
     account: account ?? null,
@@ -109,6 +111,19 @@ export async function buildExport(db: DbOrTx, userId: string, now = new Date()) 
       updatedAt: r.updatedAt,
     })),
     todos: myTodos,
+    pets: myPets.map((p) => ({
+      id: p.id,
+      name: p.name,
+      species: p.species,
+      tint: p.tint,
+      isDefault: p.isDefault,
+      roleInstructions: p.roleInstructions,
+      replyRoute: p.replyRoute,
+      defaultVisibility: p.defaultVisibility,
+      sortOrder: p.sortOrder,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+    })),
     petNudges: nudges,
     sentChatMessages: sent.map((m) => ({
       id: m.id,
