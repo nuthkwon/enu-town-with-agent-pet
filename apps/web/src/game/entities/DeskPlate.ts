@@ -35,8 +35,11 @@ const PILL_H = 16;
 const PAD_X = 6;
 const CARD_PAD_X = 6;
 const CARD_PAD_Y = 3;
-/** Widest text line of a card (it then grows toward the aisle or the wall, never into a neighbour). */
-const CARD_TEXT_MAX = 110;
+/**
+ * Widest text line of a card (it then grows toward the aisle or the wall, never into a neighbour). It must fit
+ * the away label `자리 비움 · ~HH:MM` at any time: 111 px in Galmuri11 12 px when the time has no narrow '1'.
+ */
+const CARD_TEXT_MAX = 112;
 const ICON = 16;
 const DOT_R = 3;
 

@@ -11,7 +11,7 @@ const world = loadOfficeWorld(
 const layouts = world.desks.map((d) => plateLayout(world, d));
 
 /** Worst cases measured in Galmuri: `오늘 업무 기록` with its icon (+ padding) and a 4-syllable name pill. */
-const CARD = { w: 122, h: 50 };
+const CARD = { w: 124, h: 50 };
 const PILL = { w: 74, h: 16 };
 /** Two-line card (`부재`, or `자리 비움 · ~HH:MM` without a 상태 문구). */
 const SMALL_CARD_H = 37;
