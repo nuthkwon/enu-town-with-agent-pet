@@ -51,7 +51,8 @@ show.
 - `apps/realtime` — Colyseus 0.18 server (room `office-606`): director (server-placed avatars), pets, chat, pet bubbles
   (StateView).
 - `apps/worker` — pg-boss cron jobs (expiry, link state, retention, auth cleanup) + `migrate` entry.
-- `apps/e2e` — Playwright tests (uses the preinstalled Chromium; `@playwright/test` pinned to 1.63.0).
+- `apps/e2e` — Playwright tests (uses the preinstalled Chromium; `@playwright/test` pinned to 1.63.0); `demo/` records
+  the usage demo video against a local demo stack (not in CI; pseudonyms only).
 - `packages/shared` — constants, Asia/Seoul time helpers, text hygiene, zod schemas (MCP I/O, events, REST, env).
 - `packages/domain` — pure business rules (visibility, activity precedence and groups, work-log upsert, link state,
   nudge policy, validation). No clocks or randomness: callers pass `now`.

@@ -125,10 +125,11 @@ async function api(ctx: BrowserContext, method: 'GET' | 'POST' | 'PATCH', url: s
 
 /** One meeting block shared by everyone who attends (same calendar id on each person's own calendar). */
 function meetingBlock(serverNow: number) {
-  const start = new Date(Math.floor((serverNow - 60_000) / 60_000) * 60_000);
+  const FIVE_MIN = 5 * 60_000;
+  const start = new Date(Math.floor(serverNow / FIVE_MIN) * FIVE_MIN);
   return {
     start_at: start.toISOString(),
-    end_at: new Date(start.getTime() + 40 * 60_000).toISOString(),
+    end_at: new Date(start.getTime() + 30 * 60_000).toISOString(),
     kind: 'meeting' as const,
     ref: 'gcal:csms-weekly-review@enu-tech.co.kr',
   };
@@ -293,7 +294,7 @@ test('ENU Den demo: a CSMS morning with pets and Claude', async ({ browser }) =>
     await glideClick(page, page.getByRole('link', { name: '펫 설정' }));
     await expect(page.getByRole('heading', { name: '펫 관리' })).toBeVisible();
     await pause(2500);
-    cc.say('보안이를 위로 올려 볼게요. 대표 펫은 언제나 맨 위, 지울 수도 없어요.');
+    cc.say('보안이를 위로 올려 볼게요. 대표 펫은 언제나 맨 위에 있고 지울 수 없어요.');
     await glideClick(page, page.getByRole('button', { name: '위로' }).last());
     await pause(2600);
     cc.say('역할 지시문도 언제든 고칠 수 있어요.');
@@ -480,7 +481,7 @@ test('ENU Den demo: a CSMS morning with pets and Claude', async ({ browser }) =>
     cc.say('내 Claude가 남긴 알림을 펫이 말풍선으로 보여 줘요. 말풍선은 나에게만 보여요.');
     await expect.poll(async () => (await petBubble(page))?.text ?? null, { timeout: 15_000 }).not.toBeNull();
     await pause(6000);
-    cc.say('10시, 세 사람의 Claude가 각자의 캘린더에서 같은 회의를 보고해요.');
+    cc.say('회의 시간이 되자 세 사람의 Claude가 각자의 캘린더에서 같은 회의를 보고해요.');
     const block = meetingBlock(serverNow());
     for (const c of [claude.lead, claude.qa, claude.dev]) {
       await c.callTool({ name: 'post_activity', arguments: { now: null, schedule: [block] } });
