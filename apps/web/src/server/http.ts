@@ -153,3 +153,9 @@ export function parseLimit(url: URL, def = 20, max = 50): number {
   if (!Number.isFinite(n) || n < 1) return def;
   return Math.min(n, max);
 }
+
+/** Path ids are UUIDs; anything else is simply "not found" (never a 500 from a bad cast). */
+export function uuidParam(v: string | undefined): string {
+  if (!v || !isUuid(v)) throw new HttpError(404, 'not_found', ko.errors.notFound);
+  return v.toLowerCase();
+}
