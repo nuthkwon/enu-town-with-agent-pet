@@ -19,7 +19,12 @@ const TZ = 'Asia/Seoul';
 const kst = (hm: string, day = '2026-11-02') => new Date(`${day}T${hm}:00+09:00`);
 const now = kst('10:00');
 
-const block = (kind: ScheduleBlockIn['kind'], from: string, to: string, refHash: string | null = null): ScheduleBlockIn => ({
+const block = (
+  kind: ScheduleBlockIn['kind'],
+  from: string,
+  to: string,
+  refHash: string | null = null,
+): ScheduleBlockIn => ({
   start: kst(from),
   end: kst(to),
   kind,
@@ -43,18 +48,36 @@ describe('resolveActivity: precedence rows 2-10', () => {
     [
       '2 manual away hides with a plate note',
       { manual: { status: 'away', until: manualUntil }, live: true },
-      { shown: false, note: 'away', activity: 'none', source: 'manual', until: manualUntil, groupKey: null, dnd: false },
+      {
+        shown: false,
+        note: 'away',
+        activity: 'none',
+        source: 'manual',
+        until: manualUntil,
+        groupKey: null,
+        dnd: false,
+      },
     ],
     [
       '3 manual status draws',
       { manual: { status: 'break', until: manualUntil } },
-      { shown: true, note: 'none', activity: 'break', source: 'manual', until: manualUntil, groupKey: null, dnd: false },
+      {
+        shown: true,
+        note: 'none',
+        activity: 'break',
+        source: 'manual',
+        until: manualUntil,
+        groupKey: null,
+        dnd: false,
+      },
     ],
     [
       '3 manual meeting joins the current meeting block',
       {
         manual: { status: 'meeting', until: manualUntil },
-        report: report({ schedule: [block('focus', '09:00', '12:00'), block('meeting', '09:30', '10:30', meetingRef)] }),
+        report: report({
+          schedule: [block('focus', '09:00', '12:00'), block('meeting', '09:30', '10:30', meetingRef)],
+        }),
       },
       {
         shown: true,
@@ -68,8 +91,21 @@ describe('resolveActivity: precedence rows 2-10', () => {
     ],
     [
       '4 calendar away hides as absent, even while live',
-      { live: true, report: report({ schedule: [block('away', '00:00', '18:00'), block('meeting', '09:30', '10:30', meetingRef)] }) },
-      { shown: false, note: 'absent', activity: 'none', source: 'calendar', until: kst('18:00'), groupKey: null, dnd: false },
+      {
+        live: true,
+        report: report({
+          schedule: [block('away', '00:00', '18:00'), block('meeting', '09:30', '10:30', meetingRef)],
+        }),
+      },
+      {
+        shown: false,
+        note: 'absent',
+        activity: 'none',
+        source: 'calendar',
+        until: kst('18:00'),
+        groupKey: null,
+        dnd: false,
+      },
     ],
     [
       '5 calendar meeting draws with its meeting key',
@@ -87,12 +123,28 @@ describe('resolveActivity: precedence rows 2-10', () => {
     [
       '5 a meeting without a ref has no key',
       { report: report({ schedule: [block('meeting', '09:30', '10:30')] }) },
-      { shown: true, note: 'none', activity: 'meeting', source: 'calendar', until: kst('10:30'), groupKey: null, dnd: true },
+      {
+        shown: true,
+        note: 'none',
+        activity: 'meeting',
+        source: 'calendar',
+        until: kst('10:30'),
+        groupKey: null,
+        dnd: true,
+      },
     ],
     [
       '6 calendar focus draws',
       { report: report({ schedule: [block('focus', '10:00', '12:00')] }) },
-      { shown: true, note: 'none', activity: 'focus', source: 'calendar', until: kst('12:00'), groupKey: null, dnd: true },
+      {
+        shown: true,
+        note: 'none',
+        activity: 'focus',
+        source: 'calendar',
+        until: kst('12:00'),
+        groupKey: null,
+        dnd: true,
+      },
     ],
     [
       '7 a fresh now report labels a live avatar',
@@ -110,17 +162,41 @@ describe('resolveActivity: precedence rows 2-10', () => {
     [
       '8 a colleague-visible log with work labels a live avatar',
       { live: true, todayLog: workedLog },
-      { shown: true, note: 'none', activity: 'today', source: 'work_log', until: null, groupKey: null, dnd: false },
+      {
+        shown: true,
+        note: 'none',
+        activity: 'today',
+        source: 'work_log',
+        until: null,
+        groupKey: null,
+        dnd: false,
+      },
     ],
     [
       '9 live draws with the town as source',
       { live: true },
-      { shown: true, note: 'none', activity: 'none', source: 'town', until: null, groupKey: null, dnd: false },
+      {
+        shown: true,
+        note: 'none',
+        activity: 'none',
+        source: 'town',
+        until: null,
+        groupKey: null,
+        dnd: false,
+      },
     ],
     [
       '10 otherwise hidden with nothing',
       {},
-      { shown: false, note: 'none', activity: 'none', source: 'none', until: null, groupKey: null, dnd: false },
+      {
+        shown: false,
+        note: 'none',
+        activity: 'none',
+        source: 'none',
+        until: null,
+        groupKey: null,
+        dnd: false,
+      },
     ],
   ];
   it.each(rows)('%s', (_name, over, expected) => {
@@ -143,7 +219,9 @@ describe('resolveActivity: combinations', () => {
   });
 
   it('manual beats blocks', () => {
-    expect(resolve({ manual: { status: 'available', until: manualUntil }, report: everything })).toMatchObject({
+    expect(
+      resolve({ manual: { status: 'available', until: manualUntil }, report: everything }),
+    ).toMatchObject({
       activity: 'available',
       source: 'manual',
       groupKey: null,
@@ -157,13 +235,19 @@ describe('resolveActivity: combinations', () => {
 
   it('an away block beats live, a now report and the log', () => {
     const r = report({ now: fresh, schedule: [block('away', '08:00', '12:00')] });
-    expect(resolve({ live: true, report: r, todayLog: workedLog })).toMatchObject({ shown: false, note: 'absent' });
+    expect(resolve({ live: true, report: r, todayLog: workedLog })).toMatchObject({
+      shown: false,
+      note: 'absent',
+    });
   });
 
   it('meeting > focus > now > log > live', () => {
     const at = { live: true, todayLog: workedLog };
     expect(resolve({ ...at, report: everything }).activity).toBe('meeting');
-    expect(resolve({ ...at, report: report({ now: fresh, schedule: [block('focus', '09:00', '12:00')] }) }).activity).toBe('focus');
+    expect(
+      resolve({ ...at, report: report({ now: fresh, schedule: [block('focus', '09:00', '12:00')] }) })
+        .activity,
+    ).toBe('focus');
     expect(resolve({ ...at, report: report({ now: fresh }) }).activity).toBe('review');
     expect(resolve({ ...at, report: report() }).activity).toBe('today');
     expect(resolve({ live: true, report: report() }).source).toBe('town');
@@ -193,9 +277,13 @@ describe('resolveActivity: combinations', () => {
       source: 'none',
     });
     const absent = report({ schedule: [block('away', '00:00', '24:00')] });
-    expect(resolve({ share: false, live: true, report: absent })).toMatchObject({ shown: true, source: 'town' });
+    expect(resolve({ share: false, live: true, report: absent })).toMatchObject({
+      shown: true,
+      source: 'town',
+    });
     expect(
-      resolve({ share: false, manual: { status: 'meeting', until: manualUntil }, report: everything }).groupKey,
+      resolve({ share: false, manual: { status: 'meeting', until: manualUntil }, report: everything })
+        .groupKey,
     ).toBeNull();
   });
 
@@ -205,7 +293,9 @@ describe('resolveActivity: combinations', () => {
   });
 
   it('a now report at its until is not fresh', () => {
-    expect(resolve({ live: true, report: report({ now: { ...fresh, until: now } }) })).toMatchObject({ source: 'town' });
+    expect(resolve({ live: true, report: report({ now: { ...fresh, until: now } }) })).toMatchObject({
+      source: 'town',
+    });
   });
 
   it('a planned-only, private or deleted log gives no label', () => {
@@ -228,7 +318,9 @@ describe('resolveActivity: combinations', () => {
   });
 
   it('ignores past and future blocks', () => {
-    const r = report({ schedule: [block('meeting', '08:00', '10:00', meetingRef), block('focus', '10:01', '11:00')] });
+    const r = report({
+      schedule: [block('meeting', '08:00', '10:00', meetingRef), block('focus', '10:01', '11:00')],
+    });
     expect(resolve({ report: r })).toMatchObject({ shown: false, source: 'none' });
   });
 });
@@ -257,13 +349,19 @@ describe('resolveActivity: truthfulness by enumeration', () => {
     [block('focus', '10:01', '11:00')],
   ];
   const reports = [null, ...nows.flatMap((n) => schedules.map((schedule) => report({ now: n, schedule })))];
-  const logs = [null, workedLog, { colleagueVisible: true, hasWorkTask: false }, { colleagueVisible: false, hasWorkTask: true }];
+  const logs = [
+    null,
+    workedLog,
+    { colleagueVisible: true, hasWorkTask: false },
+    { colleagueVisible: false, hasWorkTask: true },
+  ];
 
   const cases: ActivityInputs[] = [];
   for (const live of [false, true])
     for (const manual of manuals)
       for (const share of [false, true])
-        for (const r of reports) for (const todayLog of logs) cases.push({ now, live, manual, share, report: r, todayLog });
+        for (const r of reports)
+          for (const todayLog of logs) cases.push({ now, live, manual, share, report: r, todayLog });
 
   it(`holds for all ${cases.length} input combinations`, () => {
     expect(cases.length).toBeGreaterThan(4000);
@@ -299,6 +397,13 @@ describe('currentBlock', () => {
     expect(currentBlock([meetingEarly, meetingShort], now)).toBe(meetingShort);
     const away = block('away', '10:00', '10:05');
     expect(currentBlock([focus, meetingShort, away], now)).toBe(away);
+  });
+
+  it('does not depend on the input order, even for otherwise identical blocks', () => {
+    const x = block('meeting', '09:30', '10:30', 'x');
+    const y = block('meeting', '09:30', '10:30', 'y');
+    expect(currentBlock([x, y], now)).toBe(x);
+    expect(currentBlock([y, x], now)).toBe(x);
   });
 });
 
@@ -345,8 +450,14 @@ describe('manualStatusUntil (Asia/Seoul)', () => {
   });
 
   it('bounds the office day in the office time zone', () => {
-    expect(officeDayBounds(kst('00:00'), TZ)).toEqual({ start: kst('00:00'), end: kst('00:00', '2026-11-03') });
-    expect(officeDayBounds(kst('23:59'), TZ)).toEqual({ start: kst('00:00'), end: kst('00:00', '2026-11-03') });
+    expect(officeDayBounds(kst('00:00'), TZ)).toEqual({
+      start: kst('00:00'),
+      end: kst('00:00', '2026-11-03'),
+    });
+    expect(officeDayBounds(kst('23:59'), TZ)).toEqual({
+      start: kst('00:00'),
+      end: kst('00:00', '2026-11-03'),
+    });
   });
 });
 

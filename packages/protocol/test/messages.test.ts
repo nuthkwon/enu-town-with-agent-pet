@@ -20,7 +20,10 @@ describe('protocol messages', () => {
   });
 
   it('status:set takes a manual status or auto with an optional duration', () => {
-    expect(C2S.statusSet.parse({ status: 'focus', duration: '30m' })).toEqual({ status: 'focus', duration: '30m' });
+    expect(C2S.statusSet.parse({ status: 'focus', duration: '30m' })).toEqual({
+      status: 'focus',
+      duration: '30m',
+    });
     expect(C2S.statusSet.parse({ status: 'auto' })).toEqual({ status: 'auto' });
     expect(C2S.statusSet.parse({ status: 'break', text: '점심' })).toEqual({ status: 'break', text: '점심' });
     expect(C2S.statusSet.safeParse({ status: 0 }).success).toBe(false);

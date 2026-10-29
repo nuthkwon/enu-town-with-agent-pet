@@ -79,9 +79,14 @@ function main(): number {
   writeFileSync(OFFICE_606_META_PATH, `${JSON.stringify(meta, null, 2)}\n`);
 
   const walkable = world.collision.reduce((n, c) => n + (c === 0 ? 1 : 0), 0);
+  const { spots } = world;
   console.log(
     `map:check OK ${meta.mapId} ${world.width}x${world.height} @${world.tileSize}px, ` +
       `${world.desks.length} desks, ${world.zones.length} zones, ${walkable} walkable tiles`,
+  );
+  console.log(
+    `map:check spots: ${spots.meetingSeats.length} meeting seats, ${spots.breakSpots.length} break spots, ` +
+      `${spots.guestSpots.length} guest spots, ${spots.overflowTiles.length} overflow tiles`,
   );
   console.log(
     `map:check wrote ${relative(process.cwd(), OFFICE_606_META_PATH)} (sha256 ${meta.sha256.slice(0, 12)}...)`,

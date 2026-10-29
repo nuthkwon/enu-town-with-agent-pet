@@ -13,6 +13,10 @@ const LLM_SDK_BAN = {
   ],
 };
 
+const CLOCK_MESSAGE =
+  'Pure town rules never read the clock or randomness: take `now` (and `nowMs`) as arguments ' +
+  '(docs/design/town-visualization-spec.md §6.8).';
+
 export default tseslint.config(
   {
     ignores: [
@@ -69,6 +73,22 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         { patterns: [...LLM_SDK_BAN.patterns, { group: ['@enu/realtime', '@enu/realtime/*'], message: 'use @enu/protocol' }] },
+      ],
+    },
+  },
+  {
+    // Business rules and the town director are pure functions of (inputs, now): the caller passes the clock.
+    files: ['packages/domain/src/**/*.ts', 'apps/realtime/src/director/**/*.ts'],
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        { object: 'Math', property: 'random', message: CLOCK_MESSAGE },
+        { object: 'Date', property: 'now', message: CLOCK_MESSAGE },
+        { object: 'performance', property: 'now', message: CLOCK_MESSAGE },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        { selector: "NewExpression[callee.name='Date'][arguments.length=0]", message: CLOCK_MESSAGE },
       ],
     },
   },

@@ -99,7 +99,15 @@
         "exclaim": 12,
         "check": 13,
         "note": 14,
-        "question": 15
+        "question": 15,
+        "headset": 16,
+        "focus": 17,
+        "cup": 18,
+        "laptop": 19,
+        "magnifier": 20,
+        "link": 21,
+        "clipboard": 22,
+        "plane": 23
       },
       "anims": {
         "sparkle": {

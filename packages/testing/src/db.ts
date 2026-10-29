@@ -1,5 +1,5 @@
-import { DEFAULT_AVATAR, type AvatarPreset } from '@enu/shared';
-import { createDb, newId, profiles, user, type Db, type DbHandle } from '@enu/db';
+import { DEFAULT_AVATAR, PRIVACY_NOTICE_VERSION, type AvatarPreset } from '@enu/shared';
+import { createDb, newId, privacyConsents, profiles, user, type Db, type DbHandle } from '@enu/db';
 import { runMigrations } from '@enu/db/migrate';
 import { sql } from 'drizzle-orm';
 
@@ -51,6 +51,17 @@ export interface TestUserInput {
   defaultChatSummaryVisibility?: 'private' | 'company' | null;
   shareDmsWithMyClaude?: boolean;
   linkState?: 'not_linked' | 'linked' | 'stale';
+  /** 활동 공유 (`profiles.share_activity`). Default: the column default, null = not chosen = off. */
+  shareActivity?: boolean | null;
+  /** 접속 표시 (`profiles.show_live`). Default: the column default, true. */
+  showLive?: boolean;
+  /** Sets `onboarding_completed_at` (default true; the town roster only holds onboarded users). */
+  onboarded?: boolean;
+  /**
+   * Records a `service` consent for this privacy notice version (e.g. PRIVACY_NOTICE_VERSION, which the
+   * realtime ticket requires). Default null: no consent row, like a user who has not finished /welcome.
+   */
+  noticeVersion?: string | null;
 }
 
 let counter = 0;
@@ -78,7 +89,24 @@ export async function createTestUser(db: Db, input: TestUserInput = {}): Promise
     defaultChatSummaryVisibility: input.defaultChatSummaryVisibility ?? null,
     shareDmsWithMyClaude: input.shareDmsWithMyClaude ?? false,
     linkState: input.linkState ?? 'not_linked',
-    onboardingCompletedAt: new Date(),
+    onboardingCompletedAt: input.onboarded === false ? null : new Date(),
   });
+  if (input.shareActivity !== undefined || input.showLive !== undefined) {
+    // Written only when asked for, as raw SQL until the Drizzle `profiles` table declares these columns.
+    await db.execute(sql`
+      update profiles
+      set share_activity = ${input.shareActivity ?? null}, show_live = ${input.showLive ?? true}
+      where user_id = ${id}`);
+  }
+  const consents = [
+    ...(input.noticeVersion ? [{ scope: 'service', noticeVersion: input.noticeVersion }] : []),
+    // Turning sharing on records its consent, as onboarding and PATCH /me/profile do.
+    ...(input.shareActivity === true
+      ? [{ scope: 'activity_sharing', noticeVersion: input.noticeVersion ?? PRIVACY_NOTICE_VERSION }]
+      : []),
+  ];
+  if (consents.length) {
+    await db.insert(privacyConsents).values(consents.map((c) => ({ id: newId(), userId: id, ...c })));
+  }
   return { id, email, name };
 }

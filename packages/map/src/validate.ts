@@ -50,7 +50,8 @@ const fmt = (p: Point): string => `(${p.x},${p.y})`;
 /**
  * Semantic checks for the 606호 map (what `pnpm map:check` enforces): tileset matches the sprite
  * catalog, exactly the 14 desks, seats walkable + reachable from spawn and facing their own desk,
- * desk surfaces blocked, server room unreachable, zones / spawn in bounds.
+ * desk surfaces blocked, server room unreachable, zones / spawn in bounds, and the director spots
+ * (meeting seats, break spots, a visitor tile per desk) usable.
  */
 export function validateOfficeMap(map: TiledMap, world: OfficeWorld): MapCheckReport {
   const errors: string[] = [];
@@ -131,6 +132,32 @@ export function validateOfficeMap(map: TiledMap, world: OfficeWorld): MapCheckRe
         if (world.isWalkable(x, y))
           errors.push(`${d.deskId}: desk surface tile (${x},${y}) does not collide`);
       }
+    }
+  }
+
+  // director spots. Seats are reachable from the spawn (above), so a spot reachable from the spawn is
+  // reachable from every seat; visitor tiles are walkable neighbours of a seat, and the pet perch is the
+  // tile the seat faces (checked above), so neither needs its own reachability check.
+  const { spots } = world;
+  if (spots.meetingSeats.length === 0) {
+    errors.push(`no meeting seats ('meeting_chair' tiles next to a 'meeting_table' in the 'meeting' zone)`);
+  }
+  if (spots.breakSpots.length === 0) errors.push(`no break spots (walkable tiles in the 'pantry' zone)`);
+  for (const [what, list] of [
+    ['meeting seat', spots.meetingSeats],
+    ['break spot', spots.breakSpots],
+  ] as const) {
+    for (const s of list) {
+      if (!world.isWalkable(s.x, s.y)) errors.push(`${what} ${fmt(s)} is not walkable`);
+      else if (spawnTiles.length > 0 && !reachable(s.x, s.y))
+        errors.push(`${what} ${fmt(s)} is not reachable from the spawn`);
+    }
+  }
+  for (const d of world.desks) {
+    if (spots.visitorTiles(d.deskId).length === 0) {
+      errors.push(
+        `${d.deskId}: no visitor tile next to seat (${d.seatX},${d.seatY}) (a walkable tile left, right, above or below it that is not a seat or chair)`,
+      );
     }
   }
 

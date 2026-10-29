@@ -1,6 +1,7 @@
 import { DESK_IDS, TILE_CATALOG, ZONE_IDS, ZONE_LABEL_KO, type DeskId, type ZoneId } from '@enu/shared';
 import { COLLISION_LAYER_NAMES, MAP_LAYERS, OFFICE_TILESET_NAME } from './constants';
 import type { Facing } from './layouts/office-606';
+import { buildSpots, type OfficeSpots } from './spots';
 import {
   findObjectLayer,
   findTileLayers,
@@ -65,6 +66,8 @@ export interface OfficeWorld {
   readonly desks: readonly DeskInfo[];
   readonly zones: readonly ZoneInfo[];
   readonly spawn: MapArea;
+  /** Where the director places avatars and pets (meeting seats, break / guest spots, visitor tiles, perches). */
+  readonly spots: OfficeSpots;
   /** Tile coordinates; fractional values are floored (also for the lookups below). */
   inBounds(x: number, y: number): boolean;
   isWalkable(x: number, y: number): boolean;
@@ -74,6 +77,9 @@ export interface OfficeWorld {
   deskById(deskId: string): DeskInfo | null;
   seatOf(deskId: string): Point | null;
 }
+
+/** `OfficeWorld` before its spots are derived (what `buildSpots` reads). */
+export type OfficeWorldBase = Omit<OfficeWorld, 'spots'>;
 
 export const FACINGS: readonly Facing[] = ['up', 'down', 'left', 'right'];
 
@@ -258,9 +264,10 @@ function readSpawn(map: TiledMap, tileSize: number): MapArea {
 // world
 
 /**
- * Builds the walkability grid and the desk / zone / spawn indexes from a parsed map.
- * A tile is blocked when any `floor`, `walls` or `furniture` tile on it collides (tileset property
- * `collides`, falling back to `TILE_CATALOG`), or when it lies in a zone with `walkable=false`.
+ * Builds the walkability grid, the desk / zone / spawn indexes and the director spots (`buildSpots`)
+ * from a parsed map. A tile is blocked when any `floor`, `walls` or `furniture` tile on it collides
+ * (tileset property `collides`, falling back to `TILE_CATALOG`), or when it lies in a zone with
+ * `walkable=false`.
  */
 export function buildWorld(map: TiledMap): OfficeWorld {
   const { width, height } = map;
@@ -313,7 +320,7 @@ export function buildWorld(map: TiledMap): OfficeWorld {
     return tx >= 0 && ty >= 0 && tx < width && ty < height ? ty * width + tx : -1;
   };
 
-  return {
+  const base: OfficeWorldBase = {
     width,
     height,
     tileSize,
@@ -340,4 +347,5 @@ export function buildWorld(map: TiledMap): OfficeWorld {
       return d ? { x: d.seatX, y: d.seatY } : null;
     },
   };
+  return { ...base, spots: buildSpots(map, base) };
 }

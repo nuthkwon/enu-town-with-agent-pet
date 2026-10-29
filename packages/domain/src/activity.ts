@@ -1,5 +1,12 @@
 import type { ManualDuration, ManualStatus, NowKind, ScheduleKind, TaskStatus } from '@enu/shared';
-import { WORK_HOURS, addLocalDays, atLocalTime, isBusinessDay, isWithinLocalRange, startOfLocalDay } from '@enu/shared';
+import {
+  WORK_HOURS,
+  addLocalDays,
+  atLocalTime,
+  isBusinessDay,
+  isWithinLocalRange,
+  startOfLocalDay,
+} from '@enu/shared';
 
 /**
  * What a roster member is doing right now, from their own signals only (no steering, no guessing).
@@ -9,16 +16,7 @@ import { WORK_HOURS, addLocalDays, atLocalTime, isBusinessDay, isWithinLocalRang
  */
 
 export type ActivityName =
-  | 'none'
-  | 'available'
-  | 'focus'
-  | 'meeting'
-  | 'break'
-  | 'work'
-  | 'docs'
-  | 'review'
-  | 'collab'
-  | 'today';
+  'none' | 'available' | 'focus' | 'meeting' | 'break' | 'work' | 'docs' | 'review' | 'collab' | 'today';
 export type ActivitySource = 'none' | 'manual' | 'calendar' | 'claude' | 'work_log' | 'town';
 export type PlateNoteName = 'none' | 'away' | 'absent';
 
@@ -70,7 +68,15 @@ function resolved(
   until: Date | null,
   groupKey: ResolvedActivity['groupKey'] = null,
 ): ResolvedActivity {
-  return { shown, note, activity, source, until, groupKey, dnd: activity === 'focus' || activity === 'meeting' };
+  return {
+    shown,
+    note,
+    activity,
+    source,
+    until,
+    groupKey,
+    dnd: activity === 'focus' || activity === 'meeting',
+  };
 }
 
 function meetingKey(block: ScheduleBlockIn | null): ResolvedActivity['groupKey'] {
@@ -88,15 +94,18 @@ export function resolveActivity(i: ActivityInputs): ResolvedActivity {
 
   if (manual?.status === 'away') return resolved(false, 'away', 'none', 'manual', manual.until);
   if (manual) {
-    const meeting =
-      manual.status === 'meeting' ? currentBlock(blocks.filter((b) => b.kind === 'meeting'), i.now) : null;
-    return resolved(true, 'none', manual.status, 'manual', manual.until, meetingKey(meeting));
+    // A hand-set 회의 중 still joins the meeting the owner's Claude reported for now.
+    const meetings = manual.status === 'meeting' ? blocks.filter((b) => b.kind === 'meeting') : [];
+    const key = meetingKey(currentBlock(meetings, i.now));
+    return resolved(true, 'none', manual.status, 'manual', manual.until, key);
   }
 
   const block = currentBlock(blocks, i.now);
   // The end of an away block is owner-side truth only; the projection never shows it.
   if (block?.kind === 'away') return resolved(false, 'absent', 'none', 'calendar', block.end);
-  if (block?.kind === 'meeting') return resolved(true, 'none', 'meeting', 'calendar', block.end, meetingKey(block));
+  if (block?.kind === 'meeting') {
+    return resolved(true, 'none', 'meeting', 'calendar', block.end, meetingKey(block));
+  }
   if (block?.kind === 'focus') return resolved(true, 'none', 'focus', 'calendar', block.end);
 
   const reported = report?.now;
@@ -135,18 +144,33 @@ export function currentBlock(blocks: readonly ScheduleBlockIn[], now: Date): Sch
 }
 
 /** Business day (weekends and `holidays` excluded) within WORK_HOURS; `ignore` is the dev/e2e override. */
-export function isOfficeOpen(now: Date, timeZone: string, holidays: ReadonlySet<string>, ignore = false): boolean {
+export function isOfficeOpen(
+  now: Date,
+  timeZone: string,
+  holidays: ReadonlySet<string>,
+  ignore = false,
+): boolean {
   if (ignore) return true;
-  return isBusinessDay(now, timeZone, holidays) && isWithinLocalRange(now, timeZone, WORK_HOURS.start, WORK_HOURS.end);
+  return (
+    isBusinessDay(now, timeZone, holidays) &&
+    isWithinLocalRange(now, timeZone, WORK_HOURS.start, WORK_HOURS.end)
+  );
 }
 
 /** The office day containing `now`: [00:00, next 00:00) in `timeZone`. */
 export function officeDayBounds(now: Date, timeZone: string): { start: Date; end: Date } {
-  return { start: startOfLocalDay(now, timeZone), end: startOfLocalDay(addLocalDays(now, timeZone, 1), timeZone) };
+  return {
+    start: startOfLocalDay(now, timeZone),
+    end: startOfLocalDay(addLocalDays(now, timeZone, 1), timeZone),
+  };
 }
 
 const MIN = 60_000;
-const DURATION_MS: Record<Exclude<ManualDuration, 'today'>, number> = { '30m': 30 * MIN, '1h': 60 * MIN, '2h': 120 * MIN };
+const DURATION_MS: Record<Exclude<ManualDuration, 'today'>, number> = {
+  '30m': 30 * MIN,
+  '1h': 60 * MIN,
+  '2h': 120 * MIN,
+};
 
 /**
  * When a manual status set at `now` expires. It never outlives the office day: `today` means the end of

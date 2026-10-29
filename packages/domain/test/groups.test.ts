@@ -13,7 +13,12 @@ const meeting = (userId: string, deskId: string | null, hash = H1): GroupMember 
   shown: true,
   key: { family: 'meeting', hash },
 });
-const working = (userId: string, deskId: string | null, activity: GroupMember['activity'] = 'work', shown = true): GroupMember => ({
+const working = (
+  userId: string,
+  deskId: string | null,
+  activity: GroupMember['activity'] = 'work',
+  shown = true,
+): GroupMember => ({
   userId,
   deskId,
   activity,
@@ -30,7 +35,12 @@ describe('groupPeople', () => {
   });
 
   it('groups only people whose own reports carry the same ref', () => {
-    const people = [meeting('a', 'L1a'), meeting('b', 'L1b'), meeting('c', 'L2a', H2), meeting('d', 'L2b', H2)];
+    const people = [
+      meeting('a', 'L1a'),
+      meeting('b', 'L1b'),
+      meeting('c', 'L2a', H2),
+      meeting('d', 'L2b', H2),
+    ];
     expect(groupPeople(people, opts)).toEqual([]);
   });
 
@@ -41,10 +51,20 @@ describe('groupPeople', () => {
   });
 
   it('different families with the same hash do not merge', () => {
-    const groups = groupPeople([meeting('a', 'L1a'), meeting('b', 'L1b'), working('c', 'L2a'), working('d', 'L2b')], opts);
-    expect(groups).toEqual([]);
+    // Merged, these four would make a meeting; apart, the two meeting members are too few.
+    const groups = groupPeople(
+      [meeting('a', 'L1a'), meeting('b', 'L1b'), working('c', 'L2a'), working('d', 'L2b')],
+      opts,
+    );
+    expect(groups).toMatchObject([{ family: 'work', members: ['c', 'd'] }]);
     const both = groupPeople(
-      [meeting('a', 'L1a'), meeting('b', 'L1b'), meeting('e', 'L3a'), working('c', 'L2a'), working('d', 'L2b')],
+      [
+        meeting('a', 'L1a'),
+        meeting('b', 'L1b'),
+        meeting('e', 'L3a'),
+        working('c', 'L2a'),
+        working('d', 'L2b'),
+      ],
       opts,
     );
     expect(both.map((g) => [g.family, g.members]).sort()).toEqual([
@@ -98,9 +118,12 @@ describe('groupPeople', () => {
     expect(groupPeople(nobodyHasADesk, opts)).toMatchObject([{ hostId: null, gather: false }]);
   });
 
-  it('sorts members by desk order, people without a desk last, then by id', () => {
-    const [g] = groupPeople([meeting('z', null), meeting('m', 'R3b'), meeting('b', 'L1a'), meeting('a', null)], opts);
-    expect(g?.members).toEqual(['b', 'm', 'a', 'z']);
+  it('sorts members by desk order, people without a known desk last, then by id', () => {
+    const [g] = groupPeople(
+      [meeting('z', null), meeting('m', 'R3b'), meeting('b', 'L1a'), meeting('a', null), meeting('c', 'X9')],
+      opts,
+    );
+    expect(g?.members).toEqual(['b', 'm', 'a', 'c', 'z']);
   });
 
   it('ids are stable within a day and differ across days', () => {
@@ -109,7 +132,12 @@ describe('groupPeople', () => {
     expect(groupPeople(people, opts)[0]?.id).toBe(today);
     expect(groupPeople(people, { ...opts, periodKey: '2026-11-03' })[0]?.id).not.toBe(today);
     // The id is derived from the day and the members, never from the ref hash.
-    expect(groupPeople(people.map((p) => ({ ...p, key: { family: 'meeting' as const, hash: H2 } })), opts)[0]?.id).toBe(today);
+    expect(
+      groupPeople(
+        people.map((p) => ({ ...p, key: { family: 'meeting' as const, hash: H2 } })),
+        opts,
+      )[0]?.id,
+    ).toBe(today);
   });
 
   it('a shuffled input gives the same output', () => {
