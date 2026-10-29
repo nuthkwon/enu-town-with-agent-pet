@@ -1,0 +1,123 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: saturate(1.4) blur(10px);
+  background: rgba(255, 255, 255, 0.72);
+  border-bottom: 1px solid var(--c-line);
+}
+
+.headerInner {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--c-ink);
+}
+
+.logo:hover {
+  color: var(--c-ink);
+}
+
+.logoMark {
+  font-size: 18px;
+  background: linear-gradient(135deg, var(--c-lavender-deep), var(--c-pink-deep));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.logoText {
+  font-family: var(--font-pixel);
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.logoSub {
+  font-size: 12px;
+  color: var(--c-muted);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.navLink {
+  padding: 6px 12px;
+  border-radius: 999px;
+  color: var(--c-ink-soft);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.navLink:hover {
+  color: var(--c-lavender-deep);
+  background: var(--c-lavender-soft);
+}
+
+.main {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: 28px 20px 48px;
+}
+
+.footer {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: 18px 20px 36px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: var(--c-muted);
+}
+
+.footer a {
+  color: var(--c-ink-soft);
+}
+
+.authShell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  gap: 18px;
+}
+
+.authLogo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .logoSub {
+    display: none;
+  }
+
+  .headerInner {
+    padding: 8px 12px;
+  }
+
+  .main {
+    padding: 18px 12px 36px;
+  }
+}

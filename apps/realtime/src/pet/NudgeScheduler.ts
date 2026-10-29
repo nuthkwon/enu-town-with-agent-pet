@@ -28,7 +28,7 @@ export interface OwnerState {
 }
 
 export interface NudgeSchedulerDeps {
-  loader: CandidateLoader;
+  loader: Pick<CandidateLoader, 'load' | 'isStillShowable'>;
   presenter: BubblePresenter;
   clock: Clock;
   timing: PolicyTiming;

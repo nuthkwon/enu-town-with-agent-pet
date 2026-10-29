@@ -1,0 +1,146 @@
+.editor {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+.previewCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  position: sticky;
+  top: 16px;
+}
+
+.previewLabel {
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  color: var(--c-muted);
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.groupLabel {
+  font-weight: 600;
+  font-size: 13.5px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  border: 1px solid var(--c-line-strong);
+  background: #fff;
+  color: var(--c-ink-soft);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    border-color 0.12s ease,
+    background-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.chip:hover {
+  border-color: var(--c-lavender);
+  color: var(--c-ink);
+}
+
+.chip[aria-pressed='true'] {
+  background: var(--c-lavender-soft);
+  border-color: var(--c-lavender);
+  color: var(--c-lavender-deep);
+  font-weight: 600;
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--c-line-strong);
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.swatch:hover {
+  transform: scale(1.08);
+}
+
+.swatch[aria-pressed='true'] {
+  box-shadow:
+    0 0 0 2px var(--c-lavender-deep),
+    0 3px 8px rgba(124, 87, 214, 0.35);
+}
+
+.petGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 10px;
+}
+
+.petOption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--c-line);
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--c-ink-soft);
+  transition:
+    border-color 0.12s ease,
+    box-shadow 0.12s ease,
+    transform 0.12s ease;
+}
+
+.petOption:hover {
+  transform: translateY(-2px);
+  border-color: var(--c-pink);
+}
+
+.petOption[aria-pressed='true'] {
+  border-color: var(--c-pink-deep);
+  background: var(--c-pink-soft);
+  color: var(--c-pink-deep);
+  font-weight: 700;
+  box-shadow: 0 6px 16px rgba(217, 79, 147, 0.18);
+}
+
+@media (max-width: 640px) {
+  .editor {
+    grid-template-columns: 1fr;
+  }
+
+  .previewCol {
+    position: static;
+  }
+}

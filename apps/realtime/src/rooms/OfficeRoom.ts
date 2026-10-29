@@ -34,7 +34,6 @@ import {
   type ZoneId,
 } from '@enu/shared';
 import { eq } from 'drizzle-orm';
-import type * as z from 'zod';
 import { TicketError, isOriginAllowed, verifyTicket, type AuthData } from '../auth/verifyTicket';
 import { ChatService, prepareChatText } from '../chat/ChatService';
 import { monotonicMs } from '../clock';
@@ -92,7 +91,11 @@ interface Session {
   ended: boolean;
 }
 
-type Handler<S extends z.ZodType> = (session: Session, msg: z.infer<S>) => void | Promise<void>;
+/** The part of a zod schema the room uses (zod itself is a dependency of @enu/protocol only). */
+interface SafeParser<T> {
+  safeParse(input: unknown): { success: true; data: T } | { success: false };
+}
+type Handler<T> = (session: Session, msg: T) => void | Promise<void>;
 
 /**
  * The one office room (`office-606`). Server-authoritative grid movement, pets, chat and the
@@ -327,10 +330,10 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
   /** Disconnects a session for good (no reconnection), e.g. replaced by a new tab or deactivated. */
   private endSession(s: Session, code: number): void {
     s.ended = true;
-    if (s.reconnection) {
-      s.reconnection.reject(new Error('session ended'));
-      s.reconnection = null;
-    }
+    const pending = s.reconnection;
+    s.reconnection = null;
+    // allowReconnection() returns a plain rejected promise for clients that never fully joined.
+    if (pending && typeof pending.reject === 'function') pending.reject(new Error('session ended'));
     s.client.leave(code);
   }
 
@@ -389,7 +392,7 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
   }
 
   /** Validates with the shared zod schema; invalid payloads get an `error` reply (no kick). */
-  private on<S extends z.ZodType>(type: string, schema: S, handler: Handler<S>): void {
+  private on<T>(type: string, schema: SafeParser<T>, handler: Handler<T>): void {
     this.onMessage(type, (client: OfficeClient, payload: unknown) => {
       const s = this.sessions.get(client.sessionId);
       if (!s || s.ended || this.byUser.get(s.userId) !== s) return;
