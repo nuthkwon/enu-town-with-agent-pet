@@ -5,6 +5,7 @@
 #  3. Real employee names / seat roster must not be committed (public repository).
 #  4. Local only (config/seats.local.json present): no roster name appears in any tracked file.
 #     Only file paths are reported, never the names.
+#  5. The product is ENU Den: the previous brand may appear only in this script and the cutover runbook.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 fail=0
@@ -40,6 +41,15 @@ for (const f of files) {
     echo "✗ a name from config/seats.local.json appears in tracked files (names not printed):"
     echo "$roster_hits"; fail=1
   fi
+fi
+legacy='enu[ _-]?town|town\.enu-tech\.co\.kr|town-dev\.'
+legacy_allow=(':(exclude)scripts/verify-policy.sh' ':(exclude)docs/runbooks/rename-enu-den.ko.md')
+if git grep -qIiE "$legacy" -- . "${legacy_allow[@]}"; then
+  echo "✗ previous brand found (use ENU Den / enu-den / enu_den):"
+  git grep -nIiE "$legacy" -- . "${legacy_allow[@]}"; fail=1
+fi
+if git ls-files | grep -qiE 'enu[-_]?town'; then
+  echo "✗ previous brand in a tracked path:"; git ls-files | grep -iE 'enu[-_]?town'; fail=1
 fi
 if [ "$fail" -eq 0 ]; then echo "✓ policy checks passed"; fi
 exit "$fail"
