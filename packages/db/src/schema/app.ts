@@ -1,4 +1,4 @@
-import type { AvatarPreset, NowKind, ScheduleKind } from '@enu/shared';
+import type { AvatarPreset, NowKind, ScheduleKind, WorkLogChange } from '@enu/shared';
 import { sql } from 'drizzle-orm';
 import {
   type AnyPgColumn,
@@ -382,6 +382,41 @@ export const workLogs = pgTable(
       'work_logs_source_chk',
       sql`${t.source} in ('cowork_scheduled','claude_interactive','claude_code')`,
     ),
+  ],
+);
+
+/**
+ * The work overview's feed (ADR 0007): one row per Claude write of a company work log that changed something
+ * visible. `day_key` is the office day (APP_TIMEZONE). `written_at` is kept for the current office day only: the
+ * nightly purge merges past days into one `day` row per log without a time. Ids are UUIDv4 (no time); `seq` orders a
+ * log's rows and never leaves the server. The owner's edit or delete of the log removes its rows.
+ */
+export const workLogEntries = pgTable(
+  'work_log_entries',
+  {
+    id: uuid('id').primaryKey(),
+    logId: uuid('log_id')
+      .notNull()
+      .references(() => workLogs.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    dayKey: date('day_key', { mode: 'string' }).notNull(),
+    seq: integer('seq').notNull(),
+    writtenAt: tstz('written_at'),
+    inOfficeHours: boolean('in_office_hours').notNull(),
+    kind: text('kind').notNull(),
+    changes: jsonb('changes').$type<WorkLogChange[]>().notNull(),
+  },
+  (t) => [
+    uniqueIndex('work_log_entries_log_seq_uidx').on(t.logId, t.seq),
+    index('work_log_entries_day_idx').on(t.dayKey),
+    check('work_log_entries_kind_chk', sql`${t.kind} in ('created','updated','day')`),
+    check(
+      'work_log_entries_changes_chk',
+      sql`jsonb_typeof(${t.changes}) = 'array' and jsonb_array_length(${t.changes}) between 1 and 64`,
+    ),
+    check('work_log_entries_day_time_chk', sql`${t.kind} <> 'day' or ${t.writtenAt} is null`),
   ],
 );
 

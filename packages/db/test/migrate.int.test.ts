@@ -361,6 +361,25 @@ describe('migrations 0002_town_visualization and 0003_no_presence_traces', () =>
       constraint: 'pet_channel_tokens_link_uidx',
     });
 
+    // 0008: work feed entries follow their log, hold 1..64 changes and lose their time once merged into a day.
+    const logId = ((await q(`select id from work_logs where user_id = 'u-a'`)).rows[0] as { id: string }).id;
+    const entry = (seq: number, kind: string, changes: string, writtenAt = 'now()') =>
+      `insert into work_log_entries (id, log_id, user_id, day_key, seq, written_at, in_office_hours, kind, changes)
+       values (gen_random_uuid(), '${logId}', 'u-a', '2026-10-28', ${seq}, ${writtenAt}, true, '${kind}', '${changes}'::jsonb)`;
+    const oneChange = JSON.stringify([{ type: 'summary', text: '요약' }]);
+    await violation('work_log_entries_kind_chk', entry(1, 'deleted', oneChange));
+    await violation('work_log_entries_changes_chk', entry(1, 'created', '[]'));
+    await violation('work_log_entries_changes_chk', entry(1, 'created', '{}'));
+    await violation('work_log_entries_day_time_chk', entry(1, 'day', oneChange));
+    await q(entry(1, 'created', oneChange));
+    await q(entry(2, 'day', oneChange, 'null'));
+    expect(await failure(entry(2, 'updated', oneChange))).toMatchObject({
+      code: '23505',
+      constraint: 'work_log_entries_log_seq_uidx',
+    });
+    await q(`delete from work_logs where id = '${logId}'`);
+    expect((await q('select count(*)::int as n from work_log_entries')).rows).toEqual([{ n: 0 }]);
+
     /** An activity report for u-b with `extra` columns (name -> SQL expression). */
     const report = (extra: Record<string, string>, source = "'cowork_scheduled'") => {
       const cols = ['user_id', 'period_key', 'source', ...Object.keys(extra)].join(', ');

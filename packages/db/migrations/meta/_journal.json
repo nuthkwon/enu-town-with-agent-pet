@@ -57,6 +57,13 @@
       "when": 1793285340189,
       "tag": "0007_pet_channel",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793318198659,
+      "tag": "0008_work_log_entries",
+      "breakpoints": true
     }
   ]
 }
