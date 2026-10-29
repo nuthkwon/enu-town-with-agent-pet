@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "test": "playwright test",
-    "typecheck": "tsc -p ."
+    "typecheck": "tsc -p .",
+    "demo": "playwright test -c demo/playwright.demo.config.ts"
   },
   "devDependencies": {
     "@enu/config": "workspace:*",
