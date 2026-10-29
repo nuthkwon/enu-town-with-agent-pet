@@ -1,0 +1,15 @@
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+**/coverage
+**/*.log
+.git
+.github
+deploy/env/*.env
+config/seats.local.json
+apps/e2e/playwright-report
+apps/e2e/test-results
+apps/e2e/screenshots
+**/.env
+**/.env.*

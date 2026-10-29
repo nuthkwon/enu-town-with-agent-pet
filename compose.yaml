@@ -1,0 +1,71 @@
+# ENU Town production stack: docker compose up -d --build
+# Fill deploy/env/*.env from the *.env.example files first. Top-level vars (PUBLIC_HOST, ACME_EMAIL,
+# M2M_ALLOWED_CIDRS) come from a .env file next to this compose file.
+name: enu-town
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    env_file: deploy/env/postgres.env
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  migrate:
+    build: { context: ., target: worker }
+    image: enu-town/worker:latest
+    env_file: deploy/env/worker.env
+    command: ['node', 'dist/migrate.mjs']
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: 'no'
+
+  web:
+    build: { context: ., target: web }
+    image: enu-town/web:latest
+    env_file: deploy/env/web.env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: unless-stopped
+
+  realtime:
+    build: { context: ., target: realtime }
+    image: enu-town/realtime:latest
+    env_file: deploy/env/realtime.env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: unless-stopped
+
+  worker:
+    image: enu-town/worker:latest
+    env_file: deploy/env/worker.env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.11-alpine
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:?set PUBLIC_HOST in .env}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+      M2M_ALLOWED_CIDRS: ${M2M_ALLOWED_CIDRS:-0.0.0.0/0 ::/0}
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web, realtime]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
