@@ -5,6 +5,7 @@ import { expect, test, type Browser, type BrowserContext, type Page } from '@pla
 import { BASE_URL, ROOT, devEmail } from '../env';
 import { devLogin, userIdOf } from '../support/auth';
 import { connectClaude, mcpClient, structured } from '../support/claude';
+import { petBubble } from '../support/town';
 import { Captions, VIDEO } from './captions';
 import { FakeClaudeCode, pairChannel, type ScriptedReply } from './channel';
 import {
@@ -461,13 +462,24 @@ test('ENU Den demo: a CSMS morning with pets and Claude', async ({ browser }) =>
     /* -------------------------------------------------------------- 7. the town: bubbles and the meeting */
     cc.as(CAST.lead.label);
     await loginAs(rec, CAST.lead.desk);
+    await openOffCamera('/town');
+    cc.say('타운 크게 보기. 내 펫 세 마리가 아바타를 따라다녀요.');
+    await pause(3500);
+    // 직원07's Claude (Cowork) leaves a reminder: the default pet says it, to its owner only.
     await claude.lead.callTool({
       name: 'post_pet_nudges',
-      arguments: { nudges: [{ text: '회의 전에 TARA 변경 이력 한 번 더 확인해 볼까요?', priority: 1 }] },
+      arguments: {
+        nudges: [
+          {
+            text: '회의 전에 TARA 변경 이력을 한 번 더 확인해 볼까요? 위협 시나리오 3건이 새로 들어갔어요.',
+            priority: 1,
+          },
+        ],
+      },
     });
-    await openOffCamera('/town');
-    cc.say('타운 크게 보기. 내 펫들이 아바타를 따라다니고, 펫 말풍선은 나에게만 보여요.');
-    await pause(7000);
+    cc.say('내 Claude가 남긴 알림을 펫이 말풍선으로 보여 줘요. 말풍선은 나에게만 보여요.');
+    await expect.poll(async () => (await petBubble(page))?.text ?? null, { timeout: 15_000 }).not.toBeNull();
+    await pause(6000);
     cc.say('10시, 세 사람의 Claude가 각자의 캘린더에서 같은 회의를 보고해요.');
     const block = meetingBlock(serverNow());
     for (const c of [claude.lead, claude.qa, claude.dev]) {

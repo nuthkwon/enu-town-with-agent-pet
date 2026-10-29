@@ -1,5 +1,5 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
-import { devEmail } from '../env';
+import { BASE_URL, devEmail } from '../env';
 import { devLogin, openTown, userIdOf } from '../support/auth';
 import { connectClaude, mcpClient, structured } from '../support/claude';
 import { fxDrawn, plate, playerState, railRow, waitForTownState } from '../support/town';
@@ -73,15 +73,19 @@ test('turning 활동 공유 off removes the Claude-derived activity within 2 s',
   await expect(railRow(colleaguePage, '직원07')).toContainText('집중 모드 · 캘린더 일정');
   expect((await playerState(colleaguePage, ownerId))?.shown).toBe(true);
 
-  const settings = await owner.newPage();
-  await saveSettings(settings, 'share-activity', false);
+  // Any open ENU Den page (내 정보 included) shows the owner as present, so this switch goes through the
+  // same API the settings page calls (the page itself is exercised in the next test).
+  const off = await owner.request.patch(`${BASE_URL}/api/v1/me/profile`, {
+    headers: { origin: BASE_URL },
+    data: { share_activity: false },
+  });
+  expect(off.status(), await off.text()).toBe(200);
   await expect
     .poll(async () => (await playerState(colleaguePage, ownerId))?.shown, { timeout: 2_000 })
     .toBe(false);
   await expect(railRow(colleaguePage, '직원07')).not.toContainText('캘린더 일정', { timeout: 1_000 });
   // Sharing off also drops the work-log label: only the name is left on the plate.
   expect((await plate(colleaguePage, 'R2b'))?.lines).toEqual(['직원07']);
-  await settings.close();
 });
 
 test('with 접속 표시 off, opening the town no longer draws the owner: only the name on the plate', async () => {
