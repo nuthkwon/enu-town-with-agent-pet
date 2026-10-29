@@ -79,6 +79,55 @@
         "y": 0.9583333333333334
       }
     },
+    "companion": {
+      "frameWidth": 24,
+      "frameHeight": 24,
+      "columns": 22,
+      "expressions": {
+        "idle": {
+          "start": 0,
+          "frames": 4,
+          "frameRate": 6,
+          "repeat": -1
+        },
+        "blink": {
+          "start": 4,
+          "frames": 2,
+          "frameRate": 8,
+          "repeat": 0
+        },
+        "listen": {
+          "start": 6,
+          "frames": 2,
+          "frameRate": 3,
+          "repeat": -1
+        },
+        "think": {
+          "start": 8,
+          "frames": 4,
+          "frameRate": 4,
+          "repeat": -1
+        },
+        "talk": {
+          "start": 12,
+          "frames": 4,
+          "frameRate": 8,
+          "repeat": -1
+        },
+        "happy": {
+          "start": 16,
+          "frames": 4,
+          "frameRate": 10,
+          "repeat": -1
+        },
+        "sleep": {
+          "start": 20,
+          "frames": 2,
+          "frameRate": 2,
+          "repeat": -1
+        }
+      }
+    },
     "effects": {
       "frameWidth": 16,
       "frameHeight": 16,
@@ -233,6 +282,24 @@
     "whale": "/assets/sprites/pets/whale.png",
     "lamb": "/assets/sprites/pets/lamb.png"
   },
+  "companions": {
+    "cat": "/assets/sprites/companions/cat.png",
+    "bunny": "/assets/sprites/companions/bunny.png",
+    "fox": "/assets/sprites/companions/fox.png",
+    "chick": "/assets/sprites/companions/chick.png",
+    "hamster": "/assets/sprites/companions/hamster.png",
+    "dragon": "/assets/sprites/companions/dragon.png",
+    "puppy": "/assets/sprites/companions/puppy.png",
+    "panda": "/assets/sprites/companions/panda.png",
+    "penguin": "/assets/sprites/companions/penguin.png",
+    "owl": "/assets/sprites/companions/owl.png",
+    "hedgehog": "/assets/sprites/companions/hedgehog.png",
+    "koala": "/assets/sprites/companions/koala.png",
+    "frog": "/assets/sprites/companions/frog.png",
+    "unicorn": "/assets/sprites/companions/unicorn.png",
+    "whale": "/assets/sprites/companions/whale.png",
+    "lamb": "/assets/sprites/companions/lamb.png"
+  },
   "effects": "/assets/sprites/effects.png",
   "tileset": "/assets/maps/office-606/office-tiles.png",
   "avatars": {
@@ -267,6 +334,22 @@
     "/assets/sprites/avatars/av-m-swept-black-mint-warm.png",
     "/assets/sprites/avatars/av-m-swept-black-navy-light.png",
     "/assets/sprites/avatars/av-m-swept-brown-navy-warm.png",
+    "/assets/sprites/companions/bunny.png",
+    "/assets/sprites/companions/cat.png",
+    "/assets/sprites/companions/chick.png",
+    "/assets/sprites/companions/dragon.png",
+    "/assets/sprites/companions/fox.png",
+    "/assets/sprites/companions/frog.png",
+    "/assets/sprites/companions/hamster.png",
+    "/assets/sprites/companions/hedgehog.png",
+    "/assets/sprites/companions/koala.png",
+    "/assets/sprites/companions/lamb.png",
+    "/assets/sprites/companions/owl.png",
+    "/assets/sprites/companions/panda.png",
+    "/assets/sprites/companions/penguin.png",
+    "/assets/sprites/companions/puppy.png",
+    "/assets/sprites/companions/unicorn.png",
+    "/assets/sprites/companions/whale.png",
     "/assets/sprites/effects.png",
     "/assets/sprites/pets/bunny.png",
     "/assets/sprites/pets/cat.png",

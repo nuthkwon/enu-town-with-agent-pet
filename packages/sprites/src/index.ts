@@ -5,8 +5,9 @@
  * routes). `render*Image` return raw RGBA canvases (no PNG/zlib) for in-browser texture creation.
  * All functions are pure and deterministic: same input -> identical bytes.
  */
-import type { AvatarPreset, PetSpecies } from '@enu/shared';
+import type { AvatarPreset, PetSpecies, PetTint } from '@enu/shared';
 import { renderAvatarImage } from './avatar';
+import { renderCompanionImage } from './companion';
 import { renderEffectsImage } from './effects';
 import { renderPetImage } from './pet';
 import { encodePng } from './png';
@@ -18,6 +19,8 @@ export type { RGBA } from './draw/color';
 export { encodePng, decodePng } from './png';
 export { renderAvatarImage, renderAvatarFrame } from './avatar';
 export { renderPetImage, renderPetFrame } from './pet';
+export { renderCompanionImage, renderCompanionFrame } from './companion';
+export { PET_TINT_COLOR, tintColors } from './variants';
 export { renderTilesetImage } from './tileset';
 export { renderEffectsImage, renderEffectFrame } from './effects';
 export { paintTile } from './parts/tiles';
@@ -29,8 +32,13 @@ export function renderAvatarSheet(preset: AvatarPreset): Buffer {
 }
 
 /** Pet sheet PNG: 12 columns (idle 4, hop 6, sleep 2) x 2 rows (left, right) of 24x24. */
-export function renderPetSheet(species: PetSpecies, opts?: { sleeping?: boolean }): Buffer {
+export function renderPetSheet(species: PetSpecies, opts?: { sleeping?: boolean; tint?: PetTint }): Buffer {
   return encodePng(renderPetImage(species, opts));
+}
+
+/** Companion sheet PNG: one row of 22 frames of 24x24 (COMPANION_EXPRESSIONS). */
+export function renderCompanionSheet(species: PetSpecies, tint: PetTint = 'base'): Buffer {
+  return encodePng(renderCompanionImage(species, tint));
 }
 
 /** `office-tiles.png`: one 32x32 tile per TILE_CATALOG entry, TILESET_COLUMNS per row. */

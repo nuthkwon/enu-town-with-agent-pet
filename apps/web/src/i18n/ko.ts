@@ -157,6 +157,7 @@ export const ko = {
     emptyPatch: '바꿀 내용이 없어요.',
     selfDeactivate: '자기 자신은 비활성화할 수 없어요.',
     invalidAvatarKey: '아바타 키 형식이 올바르지 않습니다.',
+    invalidPetKey: '펫 이미지 키 형식이 올바르지 않습니다.',
     contentRejected: '공개하기 어려운 내용이 있어요. 표시된 항목을 고쳐 주세요.',
     rateLimited: '요청이 너무 잦아요. 잠시 후 다시 시도해 주세요.',
     petLimit: '펫은 한 사람당 다섯 마리까지 만들 수 있어요.',

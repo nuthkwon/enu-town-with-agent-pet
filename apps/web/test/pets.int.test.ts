@@ -8,12 +8,14 @@ import {
   type PetInfoDto,
   type TownEvent,
 } from '@enu/shared';
+import { decodePng, renderCompanionSheet, renderPetSheet } from '@enu/sprites';
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import * as exportRoute from '@/app/api/v1/me/export/route';
 import * as petRoute from '@/app/api/v1/me/pets/[petId]/route';
 import * as petsRoute from '@/app/api/v1/me/pets/route';
 import * as profileRoute from '@/app/api/v1/me/profile/route';
+import * as petSpriteRoute from '@/app/api/sprites/pet/[key]/route';
 import * as userPetsRoute from '@/app/api/v1/users/[id]/pets/route';
 import { closeDb } from '@/server/db';
 import { resetRateLimits } from '@/server/rate-limit';
@@ -306,5 +308,25 @@ describe('profile default for pet conversations', () => {
     expect((await jsonOf<MeDto>(res)).pet).toEqual({ species: 'cat', name: '모찌' });
     const [row] = await h.db.select().from(pets).where(eq(pets.userId, me.id));
     expect(row?.name).toBe('모찌');
+  });
+});
+
+describe('GET /api/sprites/pet/:key', () => {
+  const get = (key: string) => call(petSpriteRoute.GET, `/api/sprites/pet/${key}`, { params: { key } });
+
+  it('renders tinted town and companion sheets, immutable', async () => {
+    const town = await get('pt-owl-mint.png');
+    expect(town.status).toBe(200);
+    expect(town.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
+    expect(Buffer.from(await town.arrayBuffer()).equals(renderPetSheet('owl', { tint: 'mint' }))).toBe(true);
+    const png = Buffer.from(await (await get('pc-owl-mint')).arrayBuffer());
+    expect(png.equals(renderCompanionSheet('owl', 'mint'))).toBe(true);
+    expect(decodePng(png).width).toBe(22 * 24);
+  });
+
+  it('refuses unknown keys', async () => {
+    const res = await get('pt-owl-gold');
+    expect(res.status).toBe(400);
+    expect(await jsonOf(res)).toMatchObject({ error: 'invalid_pet_key' });
   });
 });

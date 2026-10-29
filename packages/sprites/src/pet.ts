@@ -1,12 +1,13 @@
-import type { PetSpecies } from '@enu/shared';
+import type { PetSpecies, PetTint } from '@enu/shared';
 import { Canvas } from './draw/canvas';
-import { type ColorMap, stamp, templateWidth } from './draw/template';
+import { type ColorMap, type Template, stamp, templateWidth } from './draw/template';
 import { INK, SPARKLE, inkFor } from './palette';
-import { PET_ART } from './parts/pets';
+import { PET_ART, type PetArt } from './parts/pets';
 import { drawPetWing } from './parts/wings';
 import { PET_ANIMS, PET_COLUMNS, PET_DIRECTIONS, PET_FRAME, type PetAnim, type PetDirection } from './spec';
+import { tintColors } from './variants';
 
-interface PetPose {
+export interface PetPose {
   /** Lowest body row (fill, before outline). */
   bottom: number;
   /** +1 squash, -1 stretch. */
@@ -35,10 +36,10 @@ const SLEEP: readonly PetPose[] = [
   { bottom: 21, squash: 0, wing: 'folded', sleep: true, sparkle: -1 },
   { bottom: 21, squash: 1, wing: 'folded', sleep: true, sparkle: -1 },
 ];
-const POSES: Record<PetAnim, readonly PetPose[]> = { idle: IDLE, hop: HOP, sleep: SLEEP };
+export const PET_POSES: Record<PetAnim, readonly PetPose[]> = { idle: IDLE, hop: HOP, sleep: SLEEP };
 
 /** Removes (squash) or duplicates (stretch) one row; everything above it moves. */
-function bend(c: Canvas, row: number, amount: number): Canvas {
+export function bend(c: Canvas, row: number, amount: number): Canvas {
   if (!amount) return c;
   const out = new Canvas(c.width, c.height);
   for (let y = 0; y < c.height; y++) {
@@ -60,7 +61,7 @@ const SPARKLE_SPOTS: readonly [number, number][] = [
   [17, 2],
 ];
 
-function drawSparkle(c: Canvas, x: number, y: number, big: boolean): void {
+export function drawSparkle(c: Canvas, x: number, y: number, big: boolean): void {
   c.plot(x, y, SPARKLE.core);
   const arm = big ? SPARKLE.gold : SPARKLE.pink;
   c.plot(x - 1, y, arm);
@@ -69,23 +70,26 @@ function drawSparkle(c: Canvas, x: number, y: number, big: boolean): void {
   c.plot(x, y + 1, arm);
 }
 
-/** One 24x24 pet frame (pure). */
-export function renderPetFrame(species: PetSpecies, dir: PetDirection, anim: PetAnim, i: number): Canvas {
-  const art = PET_ART[species];
-  const poses = POSES[anim];
-  const pose = poses[i % poses.length]!;
-  const w = templateWidth(art.body);
-  const h = art.body.length;
+/** The colours of one frame: the species' colours with the tint, eyes closed when asleep. */
+export function petFrameColors(art: PetArt, tint: PetTint, asleep: boolean): ColorMap {
+  const colors = tintColors(art.colors, tint, art.tintKeys);
+  return asleep ? { ...colors, w: colors.b, e: colors.b, E: INK, ...art.asleep } : colors;
+}
+
+/**
+ * Draws one facing-left pet frame from an explicit template, colours and pose (the town sheet and the companion
+ * expressions share it). The art's own template and colours give exactly the town sheet's pixels.
+ */
+export function drawPet(art: PetArt, body: Template, colors: ColorMap, pose: PetPose): Canvas {
+  const w = templateWidth(body);
+  const h = body.length;
   const x0 = Math.floor((PET_FRAME - w) / 2) - 1;
   const y0 = pose.bottom - h + 1;
 
-  const colors: ColorMap = pose.sleep
-    ? { ...art.colors, w: art.colors.b, e: art.colors.b, E: INK, ...art.asleep }
-    : art.colors;
-  let body = new Canvas(PET_FRAME, PET_FRAME);
-  stamp(body, art.body, x0, y0, colors);
-  body = bend(body, y0 + art.bendRow, pose.squash);
-  body.outline(INK, { tint: inkFor });
+  let canvas = new Canvas(PET_FRAME, PET_FRAME);
+  stamp(canvas, body, x0, y0, colors);
+  canvas = bend(canvas, y0 + art.bendRow, pose.squash);
+  canvas.outline(INK, { tint: inkFor });
 
   const wingY = y0 + art.wingAt[1] + (pose.squash > 0 ? 1 : 0);
   const wingX = x0 + art.wingAt[0];
@@ -95,11 +99,26 @@ export function renderPetFrame(species: PetSpecies, dir: PetDirection, anim: Pet
 
   const out = new Canvas(PET_FRAME, PET_FRAME);
   out.blit(wings, 0, 0);
-  out.blit(body, 0, 0);
+  out.blit(canvas, 0, 0);
   if (pose.sparkle >= 0) {
     const [sx, sy] = SPARKLE_SPOTS[pose.sparkle]!;
     drawSparkle(out, sx, sy, pose.sparkle % 2 === 0);
   }
+  return out;
+}
+
+/** One 24x24 pet frame (pure). `tint` 'base' is the species' own colours. */
+export function renderPetFrame(
+  species: PetSpecies,
+  dir: PetDirection,
+  anim: PetAnim,
+  i: number,
+  tint: PetTint = 'base',
+): Canvas {
+  const art = PET_ART[species];
+  const poses = PET_POSES[anim];
+  const pose = poses[i % poses.length]!;
+  const out = drawPet(art, art.body, petFrameColors(art, tint, pose.sleep), pose);
   return dir === 'right' ? out.flipX() : out;
 }
 
@@ -107,14 +126,21 @@ export function renderPetFrame(species: PetSpecies, dir: PetDirection, anim: Pet
  * Full pet sheet as RGBA pixels: 12 columns (idle 4, hop 6, sleep 2) x 2 rows (left, right).
  * `sleeping: false` leaves the two sleep cells empty (layout never changes).
  */
-export function renderPetImage(species: PetSpecies, opts: { sleeping?: boolean } = {}): Canvas {
+export function renderPetImage(
+  species: PetSpecies,
+  opts: { sleeping?: boolean; tint?: PetTint } = {},
+): Canvas {
   const sheet = new Canvas(PET_COLUMNS * PET_FRAME, PET_DIRECTIONS.length * PET_FRAME);
   PET_DIRECTIONS.forEach((dir, row) => {
     for (const anim of Object.keys(PET_ANIMS) as PetAnim[]) {
       if (anim === 'sleep' && opts.sleeping === false) continue;
       const def = PET_ANIMS[anim];
       for (let i = 0; i < def.frames; i++) {
-        sheet.blit(renderPetFrame(species, dir, anim, i), (def.start + i) * PET_FRAME, row * PET_FRAME);
+        sheet.blit(
+          renderPetFrame(species, dir, anim, i, opts.tint ?? 'base'),
+          (def.start + i) * PET_FRAME,
+          row * PET_FRAME,
+        );
       }
     }
   });

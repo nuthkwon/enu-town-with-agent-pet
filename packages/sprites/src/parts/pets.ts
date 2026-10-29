@@ -38,6 +38,13 @@ export interface PetArt {
    * face) override `w`/`e` (and `E` when ink would not show).
    */
   asleep?: Readonly<Record<string, RGBA>>;
+  /** The colour keys a tint changes (default `b`, `B`, `l`): the species' dominant colour, never eyes or ink. */
+  tintKeys?: readonly string[];
+  /**
+   * Where the companion opens its mouth: the first (topmost, then leftmost) cell of `key`, moved by (dx, dy).
+   * Default: the nose/mouth ink `n`.
+   */
+  mouth?: { key: string; dx?: number; dy?: number };
 }
 
 const BLUSH = hex('#ff8fb1', 170);
@@ -153,6 +160,7 @@ export const PET_ART: Record<PetSpecies, PetArt> = {
     },
     wingAt: [11, 4],
     bendRow: 8,
+    mouth: { key: 'y' },
   },
   hamster: {
     body: [
@@ -295,6 +303,7 @@ export const PET_ART: Record<PetSpecies, PetArt> = {
     asleep: { w: hex('#fbfcff'), e: hex('#fbfcff') },
     wingAt: [11, 4],
     bendRow: 9,
+    mouth: { key: 'y' },
   },
   owl: {
     body: [
@@ -324,6 +333,7 @@ export const PET_ART: Record<PetSpecies, PetArt> = {
     asleep: { w: hex('#fff3dc'), e: hex('#fff3dc') },
     wingAt: [11, 5],
     bendRow: 8,
+    mouth: { key: 'y' },
   },
   hedgehog: {
     body: [
@@ -350,6 +360,7 @@ export const PET_ART: Record<PetSpecies, PetArt> = {
     asleep: { w: hex('#f7dcbc'), e: hex('#f7dcbc') },
     wingAt: [10, 4],
     bendRow: 8,
+    tintKeys: ['d', 'D'],
   },
   koala: {
     body: [
@@ -376,6 +387,7 @@ export const PET_ART: Record<PetSpecies, PetArt> = {
     },
     wingAt: [11, 4],
     bendRow: 8,
+    mouth: { key: 'N', dy: 2 },
   },
   frog: {
     body: [
@@ -487,5 +499,6 @@ export const PET_ART: Record<PetSpecies, PetArt> = {
     asleep: { w: hex('#fff3ea'), e: hex('#fff3ea') },
     wingAt: [11, 3],
     bendRow: 8,
+    tintKeys: ['o', 'O'],
   },
 };

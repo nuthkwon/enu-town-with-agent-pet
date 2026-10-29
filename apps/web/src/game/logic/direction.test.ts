@@ -26,6 +26,11 @@ describe('sprite spec copy', () => {
     expect(spec.PET_DIRECTIONS).toEqual(source.PET_DIRECTIONS);
     expect(spec.PET_ANIMS).toEqual(source.PET_ANIMS);
     expect(spec.PET_ORIGIN).toEqual(source.PET_ORIGIN);
+    expect(spec.COMPANION_FRAME).toBe(source.COMPANION_FRAME);
+    expect(spec.COMPANION_COLUMNS).toBe(source.COMPANION_COLUMNS);
+    expect(spec.COMPANION_EXPRESSIONS).toEqual(source.COMPANION_EXPRESSIONS);
+    expect(spec.SPRITE_PATHS.companion('cat')).toBe(source.SPRITE_PATHS.companion('cat'));
+    expect(spec.SPRITE_PATHS.petApi('pc-cat-mint')).toBe(source.SPRITE_PATHS.petApi('pc-cat-mint'));
     expect(spec.EFFECT_FRAME).toBe(source.EFFECT_FRAME);
     expect(spec.EFFECT_FRAMES).toEqual(source.EFFECT_FRAMES);
     expect(spec.EFFECT_COLUMNS).toBe(source.EFFECT_COLUMNS);

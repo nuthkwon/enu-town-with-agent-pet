@@ -1,6 +1,7 @@
 /**
  * Writes every generated sprite into the web app's public assets:
  *   apps/web/public/assets/sprites/pets/<species>.png
+ *   apps/web/public/assets/sprites/companions/<species>.png   (base colours; tints are served by the API)
  *   apps/web/public/assets/sprites/effects.png
  *   apps/web/public/assets/sprites/avatars/<avatarSpriteKey>.png   (DEFAULT_AVATAR + seat presets)
  *   apps/web/public/assets/sprites/manifest.json
@@ -23,7 +24,14 @@ import {
   SKIN_TONES,
   avatarSpriteKey,
 } from '@enu/shared';
-import { renderAvatarSheet, renderEffects, renderPetSheet, renderTileset, spriteSpec } from '../src/index';
+import {
+  renderAvatarSheet,
+  renderCompanionSheet,
+  renderEffects,
+  renderPetSheet,
+  renderTileset,
+  spriteSpec,
+} from '../src/index';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../..');
@@ -77,6 +85,13 @@ for (const species of PET_SPECIES) {
   files.push(rel(f));
 }
 
+// companions (base colours only: tinted sheets are rendered by /api/sprites/pet/[key])
+for (const species of PET_SPECIES) {
+  const f = join(spritesDir, 'companions', `${species}.png`);
+  write(f, renderCompanionSheet(species));
+  files.push(rel(f));
+}
+
 // effects + tileset
 write(join(spritesDir, 'effects.png'), renderEffects());
 files.push(rel(join(spritesDir, 'effects.png')));
@@ -105,6 +120,7 @@ const manifest = {
   generator: '@enu/sprites',
   spec: spriteSpec(),
   pets: Object.fromEntries(PET_SPECIES.map((s) => [s, `/assets/sprites/pets/${s}.png`])),
+  companions: Object.fromEntries(PET_SPECIES.map((s) => [s, `/assets/sprites/companions/${s}.png`])),
   effects: '/assets/sprites/effects.png',
   tileset: rel(tilesetPath),
   avatars,
@@ -113,6 +129,6 @@ const manifest = {
 write(join(spritesDir, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 
 console.log(
-  `sprites: ${PET_SPECIES.length} pets, ${presets.size} avatars, effects, tileset -> ${relative(repoRoot, publicDir)} ` +
+  `sprites: ${PET_SPECIES.length} pets and companions, ${presets.size} avatars, effects, tileset -> ${relative(repoRoot, publicDir)} ` +
     `(${Math.round(performance.now() - started)} ms)`,
 );

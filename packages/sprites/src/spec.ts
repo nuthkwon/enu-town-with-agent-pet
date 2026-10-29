@@ -154,11 +154,37 @@ export { TILESET_COLUMNS };
 /* ------------------------------------------------------------------------------------------------
  * Public asset URLs (relative to `apps/web/public`).
  * ---------------------------------------------------------------------------------------------- */
+/* ------------------------------------------------------------------------------------------------
+ * Companions — the big pet of a pet room (messenger-spec §8), one sheet per species
+ * (`companions/<species>.png`, base colours; tints come from `/api/sprites/pet/pc-<species>-<tint>`).
+ *
+ *   one row facing left (3/4 view), 24x24 frames drawn at 3-5x with pixelated scaling:
+ *   0-3 idle, 4-5 blink, 6-7 listen, 8-11 think, 12-15 talk, 16-19 happy, 20-21 sleep   -> 22 columns
+ *   sheet: 528 x 24 px
+ * ---------------------------------------------------------------------------------------------- */
+export const COMPANION_FRAME = 24;
+export const COMPANION_EXPRESSIONS = {
+  idle: { start: 0, frames: 4, frameRate: 6, repeat: -1 },
+  blink: { start: 4, frames: 2, frameRate: 8, repeat: 0 },
+  listen: { start: 6, frames: 2, frameRate: 3, repeat: -1 },
+  think: { start: 8, frames: 4, frameRate: 4, repeat: -1 },
+  talk: { start: 12, frames: 4, frameRate: 8, repeat: -1 },
+  happy: { start: 16, frames: 4, frameRate: 10, repeat: -1 },
+  sleep: { start: 20, frames: 2, frameRate: 2, repeat: -1 },
+} as const satisfies Record<string, AnimDef>;
+export type CompanionExpression = keyof typeof COMPANION_EXPRESSIONS;
+export const COMPANION_COLUMNS = 22;
+export const COMPANION_SHEET_WIDTH = COMPANION_COLUMNS * COMPANION_FRAME;
+export const COMPANION_SHEET_HEIGHT = COMPANION_FRAME;
+
 export const SPRITE_PATHS = {
   manifest: '/assets/sprites/manifest.json',
   effects: '/assets/sprites/effects.png',
   tileset: '/assets/maps/office-606/office-tiles.png',
   pet: (species: string): string => `/assets/sprites/pets/${species}.png`,
+  companion: (species: string): string => `/assets/sprites/companions/${species}.png`,
+  /** Tinted town (`pt-<species>-<tint>`) and companion (`pc-<species>-<tint>`) sheets, rendered on demand. */
+  petApi: (key: string): string => `/api/sprites/pet/${key}`,
   avatar: (key: string): string => `/assets/sprites/avatars/${key}.png`,
 } as const;
 
@@ -200,6 +226,12 @@ export function spriteSpec() {
       anims: PET_ANIMS,
       groundY: PET_GROUND_Y,
       origin: PET_ORIGIN,
+    },
+    companion: {
+      frameWidth: COMPANION_FRAME,
+      frameHeight: COMPANION_FRAME,
+      columns: COMPANION_COLUMNS,
+      expressions: COMPANION_EXPRESSIONS,
     },
     effects: {
       frameWidth: EFFECT_FRAME,

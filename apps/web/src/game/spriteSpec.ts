@@ -43,6 +43,20 @@ export const PET_COLUMNS = 12;
 export const PET_GROUND_Y = 23;
 export const PET_ORIGIN = { x: 0.5, y: PET_GROUND_Y / PET_FRAME } as const;
 
+/* Companions: companions/<species>.png, one row of 22 frames of 24x24 facing left (the pet room header). */
+export const COMPANION_FRAME = 24;
+export const COMPANION_EXPRESSIONS = {
+  idle: { start: 0, frames: 4, frameRate: 6, repeat: -1 },
+  blink: { start: 4, frames: 2, frameRate: 8, repeat: 0 },
+  listen: { start: 6, frames: 2, frameRate: 3, repeat: -1 },
+  think: { start: 8, frames: 4, frameRate: 4, repeat: -1 },
+  talk: { start: 12, frames: 4, frameRate: 8, repeat: -1 },
+  happy: { start: 16, frames: 4, frameRate: 10, repeat: -1 },
+  sleep: { start: 20, frames: 2, frameRate: 2, repeat: -1 },
+} as const satisfies Record<string, AnimDef>;
+export type CompanionExpression = keyof typeof COMPANION_EXPRESSIONS;
+export const COMPANION_COLUMNS = 22;
+
 /* Effects: effects.png, 16x16 frames, 8 columns x 3 rows (row 3: activity icons, fixed indices 16-23). */
 export const EFFECT_FRAME = 16;
 export const EFFECT_COLUMNS = 8;
@@ -87,6 +101,9 @@ export const SPRITE_PATHS = {
   manifest: '/assets/sprites/manifest.json',
   effects: '/assets/sprites/effects.png',
   pet: (species: string): string => `/assets/sprites/pets/${encodeURIComponent(species)}.png`,
+  companion: (species: string): string => `/assets/sprites/companions/${encodeURIComponent(species)}.png`,
+  /** Tinted town (`pt-…`) and companion (`pc-…`) sheets, generated on demand (cached immutable). */
+  petApi: (key: string): string => `/api/sprites/pet/${encodeURIComponent(key)}`,
   avatarStatic: (key: string): string => `/assets/sprites/avatars/${encodeURIComponent(key)}.png`,
   /** Generated on demand for any valid preset key (cached immutable by the web server). */
   avatarApi: (key: string): string => `/api/sprites/avatar/${encodeURIComponent(key)}`,
