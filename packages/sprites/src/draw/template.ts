@@ -23,7 +23,14 @@ export function templateWidth(t: Template): number {
 }
 
 /** Draws `t` with its top-left corner at (x, y). A colour mapped to `null` is skipped. */
-export function stamp(c: Canvas, t: Template, x: number, y: number, colors: ColorMap, opts: StampOptions = {}): void {
+export function stamp(
+  c: Canvas,
+  t: Template,
+  x: number,
+  y: number,
+  colors: ColorMap,
+  opts: StampOptions = {},
+): void {
   const w = templateWidth(t);
   for (let ty = 0; ty < t.length; ty++) {
     const row = t[ty]!;

@@ -27,9 +27,11 @@ export interface AnimDef {
  *   rows:    0 down (front, face visible), 1 left, 2 right (mirror of left), 3 up (back)
  *   sheet:   320 x 128 px
  *
- * The feet always rest on `AVATAR_FEET_Y` when grounded; hops lift the whole body by up to
- * `AVATAR_MAX_HOP` px (see `AVATAR_WALK_LIFT`), so place the drop shadow at the feet line and
- * shrink it slightly on lifted frames. The top rows stay transparent so hops never clip.
+ * The shoes' outline always ends on row `AVATAR_FEET_Y - 1` when grounded (idle, land and take-off
+ * frames); the two air frames of the walk lift the feet by `AVATAR_WALK_LIFT` px, so keep the drop
+ * shadow on the ground line and shrink/fade it on lifted frames. Idle = breathing bounce
+ * (normal, squash 1px, normal, stretch 1px); walk = two little hops (squash on landing, stretch at
+ * take-off, air). The top rows stay transparent so hops never clip. The figure is centred on x 16.
  * ---------------------------------------------------------------------------------------------- */
 export const AVATAR_FRAME = 32;
 export const AVATAR_DIRECTIONS = ['down', 'left', 'right', 'up'] as const;
@@ -94,9 +96,9 @@ export const EFFECT_FRAMES = {
   sparkle3: 3,
   star: 4,
   heart: 5,
-  /** Soft ground shadow for avatars (14 px wide ellipse, centred, on row 8). */
+  /** Soft ground shadow for avatars (14x5 ellipse centred in the frame: origin 0.5/0.5 at the feet). */
   shadow: 6,
-  /** Smaller ground shadow for pets. */
+  /** Smaller ground shadow for pets (10x4 ellipse, centred). */
   shadowSmall: 7,
   zzz: 8,
   /** Stale link-state badge. */

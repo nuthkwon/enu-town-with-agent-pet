@@ -21,7 +21,14 @@ export interface HairPalette {
   eyeLight: RGBA;
 }
 
-const hair = (dark: string, base: string, light: string, shine: string, eye: string, eyeLight: string): HairPalette => ({
+const hair = (
+  dark: string,
+  base: string,
+  light: string,
+  shine: string,
+  eye: string,
+  eyeLight: string,
+): HairPalette => ({
   dark: hex(dark),
   base: hex(base),
   light: hex(light),
@@ -115,3 +122,26 @@ export const SPARKLE = {
 export function inkFor(fill: RGBA): RGBA {
   return mix(INK, [fill[0], fill[1], fill[2], 255], 0.18);
 }
+
+const toHex = (c: RGBA): string =>
+  '#' + [c[0], c[1], c[2]].map((v) => v.toString(16).padStart(2, '0')).join('');
+
+/** CSS colours for avatar-picker swatches (same values the sprites use). */
+export const AVATAR_SWATCHES: {
+  hair: Record<HairColor, string>;
+  outfit: Record<OutfitColor, string>;
+  skin: Record<SkinTone, string>;
+} = {
+  hair: Object.fromEntries(Object.entries(HAIR_PALETTES).map(([k, v]) => [k, toHex(v.base)])) as Record<
+    HairColor,
+    string
+  >,
+  outfit: Object.fromEntries(Object.entries(OUTFIT_PALETTES).map(([k, v]) => [k, toHex(v.base)])) as Record<
+    OutfitColor,
+    string
+  >,
+  skin: Object.fromEntries(Object.entries(SKIN_PALETTES).map(([k, v]) => [k, toHex(v.base)])) as Record<
+    SkinTone,
+    string
+  >,
+};

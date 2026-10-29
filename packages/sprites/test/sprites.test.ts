@@ -121,9 +121,23 @@ describe('content', () => {
 
   it('floors and walls are opaque (no holes under characters)', () => {
     const sheet = decodePng(renderTileset());
-    const opaque = ['floor_carpet', 'floor_runner', 'floor_wood', 'floor_tile', 'floor_meeting', 'floor_server', 'wall', 'window'];
+    const opaque = [
+      'floor_carpet',
+      'floor_runner',
+      'floor_wood',
+      'floor_tile',
+      'floor_meeting',
+      'floor_server',
+      'wall',
+      'window',
+    ];
     for (const name of opaque) {
-      const tile = frame(sheet, TILE, TILESET_COLUMNS, TILE_CATALOG.findIndex((t) => t.name === name));
+      const tile = frame(
+        sheet,
+        TILE,
+        TILESET_COLUMNS,
+        TILE_CATALOG.findIndex((t) => t.name === name),
+      );
       let min = 255;
       for (let i = 3; i < tile.data.length; i += 4) min = Math.min(min, tile.data[i]!);
       expect(min, name).toBe(255);
@@ -146,10 +160,12 @@ describe('content', () => {
   it('every pet frame has pixels; sleeping:false leaves the sleep cells empty', () => {
     for (const species of PET_SPECIES) {
       const sheet = decodePng(renderPetSheet(species));
-      for (let i = 0; i < PET_COLUMNS * 2; i++) expect(frame(sheet, PET_FRAME, PET_COLUMNS, i).hasContent()).toBe(true);
+      for (let i = 0; i < PET_COLUMNS * 2; i++)
+        expect(frame(sheet, PET_FRAME, PET_COLUMNS, i).hasContent()).toBe(true);
       const awake = decodePng(renderPetSheet(species, { sleeping: false }));
       const { start, end } = petAnimFrames('left', 'sleep');
-      for (let i = start; i <= end; i++) expect(frame(awake, PET_FRAME, PET_COLUMNS, i).hasContent()).toBe(false);
+      for (let i = start; i <= end; i++)
+        expect(frame(awake, PET_FRAME, PET_COLUMNS, i).hasContent()).toBe(false);
       expect(frame(awake, PET_FRAME, PET_COLUMNS, 0).hasContent()).toBe(true);
     }
   });
@@ -168,13 +184,17 @@ describe('content', () => {
   it('avatars differ per body, hair style, hair colour, outfit, skin and wings', () => {
     const base = renderAvatarSheet(DEFAULT_AVATAR);
     const differs = (p: AvatarPreset): boolean => !renderAvatarSheet(p).equals(base);
-    for (const body of BODY_TYPES) if (body !== DEFAULT_AVATAR.body) expect(differs(variant({ body }))).toBe(true);
-    for (const hair of HAIR_STYLES) if (hair !== DEFAULT_AVATAR.hair) expect(differs(variant({ hair })), hair).toBe(true);
+    for (const body of BODY_TYPES)
+      if (body !== DEFAULT_AVATAR.body) expect(differs(variant({ body }))).toBe(true);
+    for (const hair of HAIR_STYLES)
+      if (hair !== DEFAULT_AVATAR.hair) expect(differs(variant({ hair })), hair).toBe(true);
     for (const hairColor of HAIR_COLORS)
-      if (hairColor !== DEFAULT_AVATAR.hairColor) expect(differs(variant({ hairColor })), hairColor).toBe(true);
+      if (hairColor !== DEFAULT_AVATAR.hairColor)
+        expect(differs(variant({ hairColor })), hairColor).toBe(true);
     for (const outfit of OUTFIT_COLORS)
       if (outfit !== DEFAULT_AVATAR.outfit) expect(differs(variant({ outfit })), outfit).toBe(true);
-    for (const skin of SKIN_TONES) if (skin !== DEFAULT_AVATAR.skin) expect(differs(variant({ skin })), skin).toBe(true);
+    for (const skin of SKIN_TONES)
+      if (skin !== DEFAULT_AVATAR.skin) expect(differs(variant({ skin })), skin).toBe(true);
     expect(differs(variant({ wings: true }))).toBe(true);
   });
 
@@ -189,7 +209,11 @@ describe('content', () => {
   });
 
   it('feet rest on a constant baseline when grounded and hops never clip the top', () => {
-    const presets = [DEFAULT_AVATAR, variant({ body: 'f', hair: 'bun', wings: true }), variant({ hair: 'long' })];
+    const presets = [
+      DEFAULT_AVATAR,
+      variant({ body: 'f', hair: 'bun', wings: true }),
+      variant({ hair: 'long' }),
+    ];
     for (const p of presets) {
       for (const dir of AVATAR_DIRECTIONS) {
         for (let i = 0; i < AVATAR_ANIMS.idle.frames; i++) {
@@ -220,7 +244,8 @@ describe('performance', () => {
     renderAvatarSheet(p); // warm-up (JIT)
     const runs = 10;
     const t0 = performance.now();
-    for (let i = 0; i < runs; i++) renderAvatarSheet({ ...p, outfit: OUTFIT_COLORS[i % OUTFIT_COLORS.length]! });
+    for (let i = 0; i < runs; i++)
+      renderAvatarSheet({ ...p, outfit: OUTFIT_COLORS[i % OUTFIT_COLORS.length]! });
     expect((performance.now() - t0) / runs).toBeLessThan(50);
   });
 });

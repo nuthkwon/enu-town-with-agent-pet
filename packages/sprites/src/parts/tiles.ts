@@ -186,7 +186,8 @@ function texture(c: Canvas, base: RGBA, dark: RGBA, light: RGBA, seed: number, d
 const floorCarpet: Painter = (c) => {
   texture(c, C.carpet, C.carpetDark, C.carpetLight, 11, 0.05);
   // a faint woven diagonal every 4px
-  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) if ((x + y) % 8 === 0 && tileNoise(x, y, 3) < 0.5) c.set(x, y, C.carpetDark);
+  for (let y = 0; y < S; y++)
+    for (let x = 0; x < S; x++) if ((x + y) % 8 === 0 && tileNoise(x, y, 3) < 0.5) c.set(x, y, C.carpetDark);
 };
 
 const floorRunner: Painter = (c) => {
@@ -405,7 +406,8 @@ const railing: Painter = (c) => {
     fill(o, 0, 11, S, 1, C.frameShade);
   });
   // glass panel hint between balusters
-  for (let y = 12; y < 24; y++) for (let x = 0; x < S; x++) if (c.alpha(x, y) === 0) c.plot(x, y, hex('#dff4ff', 70));
+  for (let y = 12; y < 24; y++)
+    for (let x = 0; x < S; x++) if (c.alpha(x, y) === 0) c.plot(x, y, hex('#dff4ff', 70));
   // shadow on the deck
   fill(c, 0, 28, S, 2, C.shadowSoft);
 };

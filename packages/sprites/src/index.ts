@@ -21,6 +21,7 @@ export { renderPetImage, renderPetFrame } from './pet';
 export { renderTilesetImage } from './tileset';
 export { renderEffectsImage, renderEffectFrame } from './effects';
 export { paintTile } from './parts/tiles';
+export { AVATAR_SWATCHES } from './palette';
 
 /** Avatar sheet PNG: 10 columns (idle 4 + walk 6) x 4 rows (down, left, right, up) of 32x32. */
 export function renderAvatarSheet(preset: AvatarPreset): Buffer {

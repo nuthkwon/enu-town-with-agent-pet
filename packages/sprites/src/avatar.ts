@@ -2,7 +2,16 @@ import type { AvatarPreset } from '@enu/shared';
 import { Canvas } from './draw/canvas';
 import { mix } from './draw/color';
 import { stamp } from './draw/template';
-import { CREAM, CREAM_SHADE, HAIR_PALETTES, INK, OUTFIT_PALETTES, SKIN_PALETTES, WHITE, inkFor } from './palette';
+import {
+  CREAM,
+  CREAM_SHADE,
+  HAIR_PALETTES,
+  INK,
+  OUTFIT_PALETTES,
+  SKIN_PALETTES,
+  WHITE,
+  inkFor,
+} from './palette';
 import {
   type BodyColors,
   type Pose,
@@ -49,7 +58,12 @@ export const WALK_POSES: readonly Pose[] = [
 interface Look {
   body: BodyColors;
   face: FaceColors;
-  hair: { h: ReturnType<typeof mix>; d: ReturnType<typeof mix>; l: ReturnType<typeof mix>; w: ReturnType<typeof mix> };
+  hair: {
+    h: ReturnType<typeof mix>;
+    d: ReturnType<typeof mix>;
+    l: ReturnType<typeof mix>;
+    w: ReturnType<typeof mix>;
+  };
 }
 
 function lookFor(p: AvatarPreset): Look {
@@ -96,7 +110,14 @@ function renderFigure(p: AvatarPreset, view: ViewDir, pose: Pose): Canvas {
   const fig = new Canvas(AVATAR_FRAME, AVATAR_FRAME);
   const up = pose.squash; // upper-body offset relative to the feet
   const hairSet = HAIR_TEMPLATES[p.hair][view];
-  const hairColors = { h: look.hair.h, d: look.hair.d, l: look.hair.l, w: look.hair.w, t: look.body.accent, T: look.body.shade };
+  const hairColors = {
+    h: look.hair.h,
+    d: look.hair.d,
+    l: look.hair.l,
+    w: look.hair.w,
+    t: look.body.accent,
+    T: look.body.shade,
+  };
 
   if (hairSet.back && view !== 'up') stamp(fig, hairSet.back, HAIR_X, HAIR_Y + up, hairColors);
 
@@ -117,7 +138,11 @@ function renderFigure(p: AvatarPreset, view: ViewDir, pose: Pose): Canvas {
     for (let x = 0; x < AVATAR_FRAME; x++) {
       if (hair.alpha(x, y) === 0 && hair.alpha(x, y - 1) > 0 && fig.alpha(x, y) > 0) {
         const under = fig.get(x, y);
-        if (under[0] === look.face.skin[0] && under[1] === look.face.skin[1] && under[2] === look.face.skin[2]) {
+        if (
+          under[0] === look.face.skin[0] &&
+          under[1] === look.face.skin[1] &&
+          under[2] === look.face.skin[2]
+        ) {
           fig.set(x, y, look.face.skinShade);
         }
       }
@@ -156,7 +181,12 @@ function shift(c: Canvas, lift: number): Canvas {
 }
 
 /** One frame of the avatar sheet (pure). */
-export function renderAvatarFrame(p: AvatarPreset, dir: AvatarDirection, anim: 'idle' | 'walk', i: number): Canvas {
+export function renderAvatarFrame(
+  p: AvatarPreset,
+  dir: AvatarDirection,
+  anim: 'idle' | 'walk',
+  i: number,
+): Canvas {
   const poses = anim === 'idle' ? IDLE_POSES : WALK_POSES;
   const pose = poses[i % poses.length]!;
   const fig = renderFigure(p, viewOf(dir), pose);
@@ -167,7 +197,10 @@ export function renderAvatarFrame(p: AvatarPreset, dir: AvatarDirection, anim: '
 export function renderAvatarImage(p: AvatarPreset): Canvas {
   const sheet = new Canvas(AVATAR_COLUMNS * AVATAR_FRAME, AVATAR_DIRECTIONS.length * AVATAR_FRAME);
   AVATAR_DIRECTIONS.forEach((dir, row) => {
-    for (const [anim, def] of Object.entries(AVATAR_ANIMS) as ['idle' | 'walk', { start: number; frames: number }][]) {
+    for (const [anim, def] of Object.entries(AVATAR_ANIMS) as [
+      'idle' | 'walk',
+      { start: number; frames: number },
+    ][]) {
       for (let i = 0; i < def.frames; i++) {
         sheet.blit(renderAvatarFrame(p, dir, anim, i), (def.start + i) * AVATAR_FRAME, row * AVATAR_FRAME);
       }

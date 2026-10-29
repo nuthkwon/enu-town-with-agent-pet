@@ -2,13 +2,20 @@ import { Canvas } from './draw/canvas';
 import { type RGBA, hex } from './draw/color';
 import { type Template, stamp } from './draw/template';
 import { INK } from './palette';
-import { EFFECT_COLUMNS, EFFECT_FRAME, EFFECT_FRAMES, EFFECT_SHEET_HEIGHT, EFFECT_SHEET_WIDTH, type EffectName } from './spec';
+import {
+  EFFECT_COLUMNS,
+  EFFECT_FRAME,
+  EFFECT_FRAMES,
+  EFFECT_SHEET_HEIGHT,
+  EFFECT_SHEET_WIDTH,
+  type EffectName,
+} from './spec';
 
 /**
  * 16x16 effect icons. Keys: o ink outline, w white, y gold, Y gold shade, p pink, P pink shade,
  * b blue, B blue shade, l lilac, L lilac shade, m mint, M mint shade, r red/coral.
  */
-const K: Record<string, RGBA> = {
+const K = {
   o: INK,
   w: hex('#ffffff'),
   y: hex('#ffe170'),
@@ -25,7 +32,7 @@ const K: Record<string, RGBA> = {
   r: hex('#ff8a80'),
   g: hex('#ece8f7'),
   G: hex('#c9c1e2'),
-};
+} satisfies Record<string, RGBA>;
 
 const SPARKLES: Template[] = [
   [
@@ -319,7 +326,11 @@ export function renderEffectFrame(name: EffectName): Canvas {
 export function renderEffectsImage(): Canvas {
   const sheet = new Canvas(EFFECT_SHEET_WIDTH, EFFECT_SHEET_HEIGHT);
   for (const [name, idx] of Object.entries(EFFECT_FRAMES) as [EffectName, number][]) {
-    sheet.blit(renderEffectFrame(name), (idx % EFFECT_COLUMNS) * EFFECT_FRAME, Math.floor(idx / EFFECT_COLUMNS) * EFFECT_FRAME);
+    sheet.blit(
+      renderEffectFrame(name),
+      (idx % EFFECT_COLUMNS) * EFFECT_FRAME,
+      Math.floor(idx / EFFECT_COLUMNS) * EFFECT_FRAME,
+    );
   }
   return sheet;
 }

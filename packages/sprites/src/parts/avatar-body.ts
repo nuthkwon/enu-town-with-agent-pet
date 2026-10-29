@@ -116,7 +116,17 @@ export type ViewDir = 'down' | 'left' | 'up';
 
 export function drawTorso(c: Canvas, body: BodyType, dir: ViewDir, k: BodyColors, dy: number): void {
   const t =
-    dir === 'down' ? (body === 'f' ? F_DOWN : M_DOWN) : dir === 'up' ? (body === 'f' ? F_UP : M_UP) : body === 'f' ? F_SIDE : M_SIDE;
+    dir === 'down'
+      ? body === 'f'
+        ? F_DOWN
+        : M_DOWN
+      : dir === 'up'
+        ? body === 'f'
+          ? F_UP
+          : M_UP
+        : body === 'f'
+          ? F_SIDE
+          : M_SIDE;
   stamp(c, t, 8, TORSO_Y + dy, bodyMap(k));
 }
 

@@ -44,7 +44,8 @@ function bend(c: Canvas, row: number, amount: number): Canvas {
   for (let y = 0; y < c.height; y++) {
     for (let x = 0; x < c.width; x++) {
       let sy: number;
-      if (amount > 0) sy = y > row ? y : y - 1; // rows <= row come from one above (drop by 1)
+      if (amount > 0)
+        sy = y > row ? y : y - 1; // rows <= row come from one above (drop by 1)
       else sy = y >= row ? y : y + 1; // rows < row come from one below (rise by 1)
       out.set(x, y, c.get(x, sy));
     }

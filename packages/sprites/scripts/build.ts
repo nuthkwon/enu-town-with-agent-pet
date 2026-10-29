@@ -56,7 +56,8 @@ function seatPresets(file: string): AvatarPreset[] {
     if (isPreset(preset)) out.push(preset);
     else skipped++;
   }
-  if (skipped) console.warn(`  ${relative(repoRoot, file)}: skipped ${skipped} seat(s) with an invalid avatar preset`);
+  if (skipped)
+    console.warn(`  ${relative(repoRoot, file)}: skipped ${skipped} seat(s) with an invalid avatar preset`);
   return out;
 }
 
