@@ -95,9 +95,10 @@ describe('buildSpots on the 606 map', () => {
         expect(front, `${d.deskId} ${key(t)} faces the seat`).toEqual({ x: d.seatX, y: d.seatY });
       }
     }
-    expect(spots.visitorTiles('R1')).toEqual([at(18, 6, 'left'), at(17, 5, 'down')]);
-    expect(spots.visitorTiles('L1a')).toEqual([at(2, 5, 'right'), at(4, 5, 'left'), at(3, 4, 'down')]);
-    expect(spots.visitorTiles('L2a')).toEqual([at(2, 8, 'right'), at(4, 8, 'left'), at(3, 9, 'up')]);
+    // the desk returns (ㄱ-shaped desks, the CEO's return on his right) take the tiles beside the chairs
+    expect(spots.visitorTiles('R1')).toEqual([at(18, 6, 'left')]);
+    expect(spots.visitorTiles('L1a')).toEqual([at(4, 5, 'left'), at(3, 4, 'down')]);
+    expect(spots.visitorTiles('L2a')).toEqual([at(4, 8, 'left'), at(3, 9, 'up')]);
     expect(spots.visitorTiles('nope')).toEqual([]);
   });
 
@@ -269,7 +270,8 @@ describe('allocateSpots', () => {
       req('d', 'L5a', { kind: 'desk' }),
     ]);
     expect(r.get('a')).toEqual({ ...at(18, 6, 'left'), fallback: false });
-    expect(r.get('b')).toEqual({ ...at(17, 5, 'down'), fallback: false });
+    // R1 has a single visitor tile, so the second visitor stays at their own desk
+    expect(r.get('b')).toEqual({ x: 6, y: 5, facing: 'down', fallback: true });
     expect(r.get('c')).toEqual({ x: 3, y: 8, facing: 'up', fallback: true });
     expect(r.size).toBe(4);
     expectDistinct(r);

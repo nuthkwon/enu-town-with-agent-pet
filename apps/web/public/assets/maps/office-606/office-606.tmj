@@ -82,18 +82,18 @@
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
     0,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,32,0,
-    0,0,0,18,0,0,18,0,0,0,0,0,0,0,21,16,16,0,0,0,32,0,
-    0,0,13,14,15,13,14,15,0,0,0,0,0,0,21,16,16,19,0,0,31,0,
-    0,0,13,14,15,13,14,15,0,0,0,0,0,0,23,22,22,22,22,22,22,0,
-    0,0,0,17,0,0,17,0,0,0,0,0,0,0,13,14,15,13,14,15,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,17,0,0,17,0,0,0,
-    0,0,0,18,0,0,18,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,13,14,15,13,14,15,0,0,0,0,0,0,0,0,0,0,18,0,0,0,
-    0,0,13,14,15,13,14,15,0,0,0,0,0,0,31,31,31,13,14,15,0,0,
-    0,0,0,17,0,0,17,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,41,18,0,0,18,41,0,0,0,0,0,0,21,0,69,79,0,0,32,0,
+    0,0,40,47,45,39,47,46,0,0,0,0,0,0,21,0,64,19,0,0,31,0,
+    0,0,43,55,45,39,59,49,0,0,0,0,0,0,23,22,22,22,22,22,22,0,
+    0,0,38,17,0,0,17,38,0,0,0,0,0,0,43,55,45,39,59,49,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,38,17,0,0,17,38,0,0,
+    0,0,41,18,0,0,18,41,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,40,47,45,39,47,46,0,0,0,0,0,0,0,0,0,0,18,41,0,0,
+    0,0,43,55,45,39,59,49,0,0,0,0,0,0,31,31,31,39,47,46,0,0,
+    0,0,38,17,0,0,17,38,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
     0,0,0,0,0,0,0,0,0,0,0,0,0,32,0,0,0,0,0,0,26,0,
-    0,0,0,18,0,0,18,0,0,0,0,0,0,0,0,0,0,0,0,0,27,0,
-    0,0,13,14,15,13,14,15,0,0,0,0,0,0,0,0,0,0,0,28,28,0,
+    0,0,41,18,0,0,18,41,0,0,0,0,0,0,0,0,0,0,0,0,27,0,
+    0,0,40,47,45,39,47,46,0,0,0,0,0,0,0,0,0,0,0,28,28,0,
     0,0,0,0,0,0,0,0,32,0,0,0,0,0,0,0,0,0,0,0,0,0,
     0,0,0,25,25,25,25,0,0,0,0,0,0,0,0,29,0,29,0,29,0,0,
     0,0,25,24,24,24,24,25,0,0,0,0,0,0,0,29,0,29,0,29,0,0,
@@ -566,8 +566,8 @@
      "rotation": 0,
      "type": "desk",
      "visible": true,
-     "width": 64,
-     "x": 480,
+     "width": 32,
+     "x": 512,
      "y": 160
     },
     {
@@ -878,12 +878,12 @@
    "columns": 8,
    "firstgid": 1,
    "image": "office-tiles.png",
-   "imageheight": 160,
+   "imageheight": 352,
    "imagewidth": 256,
    "margin": 0,
    "name": "office-tiles",
    "spacing": 0,
-   "tilecount": 36,
+   "tilecount": 88,
    "tileheight": 32,
    "tiles": [
     {
@@ -1423,6 +1423,786 @@
        "name": "name",
        "type": "string",
        "value": "monitor_side"
+      }
+     ]
+    },
+    {
+     "id": 36,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_o"
+      }
+     ]
+    },
+    {
+     "id": 37,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_n"
+      }
+     ]
+    },
+    {
+     "id": 38,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_e"
+      }
+     ]
+    },
+    {
+     "id": 39,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_ne"
+      }
+     ]
+    },
+    {
+     "id": 40,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_s"
+      }
+     ]
+    },
+    {
+     "id": 41,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_ns"
+      }
+     ]
+    },
+    {
+     "id": 42,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_es"
+      }
+     ]
+    },
+    {
+     "id": 43,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_nes"
+      }
+     ]
+    },
+    {
+     "id": 44,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_w"
+      }
+     ]
+    },
+    {
+     "id": 45,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_nw"
+      }
+     ]
+    },
+    {
+     "id": 46,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_ew"
+      }
+     ]
+    },
+    {
+     "id": 47,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_new"
+      }
+     ]
+    },
+    {
+     "id": 48,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_sw"
+      }
+     ]
+    },
+    {
+     "id": 49,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_nsw"
+      }
+     ]
+    },
+    {
+     "id": 50,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_esw"
+      }
+     ]
+    },
+    {
+     "id": 51,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_nesw"
+      }
+     ]
+    },
+    {
+     "id": 52,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_w_sw"
+      }
+     ]
+    },
+    {
+     "id": 53,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_nw_sw"
+      }
+     ]
+    },
+    {
+     "id": 54,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_ew_sw"
+      }
+     ]
+    },
+    {
+     "id": 55,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_new_sw"
+      }
+     ]
+    },
+    {
+     "id": 56,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_e_se"
+      }
+     ]
+    },
+    {
+     "id": 57,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_ne_se"
+      }
+     ]
+    },
+    {
+     "id": 58,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_ew_se"
+      }
+     ]
+    },
+    {
+     "id": 59,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_new_se"
+      }
+     ]
+    },
+    {
+     "id": 60,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_ew_sesw"
+      }
+     ]
+    },
+    {
+     "id": 61,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "desk_j_new_sesw"
+      }
+     ]
+    },
+    {
+     "id": 62,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_o"
+      }
+     ]
+    },
+    {
+     "id": 63,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_n"
+      }
+     ]
+    },
+    {
+     "id": 64,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_e"
+      }
+     ]
+    },
+    {
+     "id": 65,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_ne"
+      }
+     ]
+    },
+    {
+     "id": 66,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_s"
+      }
+     ]
+    },
+    {
+     "id": 67,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_ns"
+      }
+     ]
+    },
+    {
+     "id": 68,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_es"
+      }
+     ]
+    },
+    {
+     "id": 69,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_nes"
+      }
+     ]
+    },
+    {
+     "id": 70,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_w"
+      }
+     ]
+    },
+    {
+     "id": 71,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_nw"
+      }
+     ]
+    },
+    {
+     "id": 72,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_ew"
+      }
+     ]
+    },
+    {
+     "id": 73,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_new"
+      }
+     ]
+    },
+    {
+     "id": 74,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_sw"
+      }
+     ]
+    },
+    {
+     "id": 75,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_nsw"
+      }
+     ]
+    },
+    {
+     "id": 76,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_esw"
+      }
+     ]
+    },
+    {
+     "id": 77,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_nesw"
+      }
+     ]
+    },
+    {
+     "id": 78,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_w_sw"
+      }
+     ]
+    },
+    {
+     "id": 79,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_nw_sw"
+      }
+     ]
+    },
+    {
+     "id": 80,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_ew_sw"
+      }
+     ]
+    },
+    {
+     "id": 81,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_new_sw"
+      }
+     ]
+    },
+    {
+     "id": 82,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_e_se"
+      }
+     ]
+    },
+    {
+     "id": 83,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_ne_se"
+      }
+     ]
+    },
+    {
+     "id": 84,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_ew_se"
+      }
+     ]
+    },
+    {
+     "id": 85,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_new_se"
+      }
+     ]
+    },
+    {
+     "id": 86,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_ew_sesw"
+      }
+     ]
+    },
+    {
+     "id": 87,
+     "properties": [
+      {
+       "name": "collides",
+       "type": "bool",
+       "value": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "value": "exec_j_new_sesw"
       }
      ]
     }
