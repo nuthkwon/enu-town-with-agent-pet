@@ -1,5 +1,6 @@
 import { provisionProfile } from '@enu/auth';
 import {
+  defaultPetOf,
   activityReports,
   desks,
   privacyConsents,
@@ -25,7 +26,7 @@ import {
 } from '@enu/shared';
 import { and, eq, isNull } from 'drizzle-orm';
 import { mcpResource } from '../auth';
-import { asLinkState, asTeamId, normalizeAvatar, type ProfileRow } from '../dto';
+import { asLinkState, asTeamId, normalizeAvatar, petOrDefault, type ProfileRow } from '../dto';
 import { getEnv } from '../env';
 import type { Viewer } from '../session';
 
@@ -123,6 +124,8 @@ export interface MeContext {
   officeTimeZone: string;
   activityToday: ActivityTodayDto | null;
   takenPetSpecies: PetSpecies[];
+  /** The default pet's look. */
+  pet: { species: string; name: string } | null;
 }
 
 export function toMeDto(p: ProfileRow, viewer: Viewer, ctx: MeContext, now: Date): MeDto {
@@ -134,7 +137,7 @@ export function toMeDto(p: ProfileRow, viewer: Viewer, ctx: MeContext, now: Date
     displayName: p.displayName,
     avatar,
     avatarKey: avatarSpriteKey(avatar),
-    pet: { species: p.petSpecies, name: p.petName },
+    pet: petOrDefault(ctx.pet),
     deskId: ctx.deskId,
     team,
     teamLabel: teamLabel(team),
@@ -171,16 +174,17 @@ export function toMeDto(p: ProfileRow, viewer: Viewer, ctx: MeContext, now: Date
 export async function buildMeDto(db: Db, viewer: Viewer, now = new Date()): Promise<MeDto> {
   const p = await ensureProfile(db, viewer);
   const officeTimeZone = getEnv().APP_TIMEZONE;
-  const [deskId, noticeAccepted, activityToday, taken] = await Promise.all([
+  const [deskId, noticeAccepted, activityToday, taken, pet] = await Promise.all([
     deskOf(db, viewer.userId),
     hasAcceptedNotice(db, viewer.userId),
     loadActivityToday(db, viewer.userId, now, officeTimeZone),
     takenPetSpecies(db, viewer.userId),
+    defaultPetOf(db, viewer.userId),
   ]);
   return toMeDto(
     p,
     viewer,
-    { deskId, noticeAccepted, officeTimeZone, activityToday, takenPetSpecies: taken },
+    { deskId, noticeAccepted, officeTimeZone, activityToday, takenPetSpecies: taken, pet },
     now,
   );
 }

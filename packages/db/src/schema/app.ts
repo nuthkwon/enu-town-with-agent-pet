@@ -61,8 +61,6 @@ export const profiles = pgTable(
       .references(() => user.id, { onDelete: 'cascade' }),
     displayName: varchar('display_name', { length: 40 }).notNull(),
     avatar: jsonb('avatar').$type<AvatarPreset>().notNull(),
-    petSpecies: text('pet_species').notNull().default('cat'),
-    petName: varchar('pet_name', { length: 20 }).notNull().default('펫'),
     title: varchar('title', { length: 60 }),
     /** Team id from TEAMS (shared constants). */
     team: text('team'),
@@ -82,6 +80,8 @@ export const profiles = pgTable(
     /** null = the owner has not chosen yet -> treated as private. */
     defaultChatSummaryVisibility: visibilityEnum('default_chat_summary_visibility'),
     shareDmsWithMyClaude: boolean('share_dms_with_my_claude').notNull().default(false),
+    /** Default visibility of my pet conversations (ADR 0005): company unless I lower it; a pet may override it. */
+    petChatDefaultVisibility: visibilityEnum('pet_chat_default_visibility').notNull().default('company'),
     nudgesEnabled: boolean('nudges_enabled').notNull().default(true),
     nudgeMinIntervalMin: smallint('nudge_min_interval_min').notNull().default(25),
     maxBubblesPerDay: smallint('max_bubbles_per_day').notNull().default(8),
@@ -124,6 +124,49 @@ export const desks = pgTable('desks', {
   updatedAt: updatedAt(),
 });
 
+/**
+ * A person's pets (ADR 0005): the default pet (created at provisioning; base look, a species no other active member's
+ * default pet has) and up to four more the owner creates. Ids are random UUIDv4 (`newOpaqueId()`): colleagues receive
+ * them, and a v7 id would encode the owner-only creation time.
+ */
+export const pets = pgTable(
+  'pets',
+  {
+    id: uuid('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 20 }).notNull(),
+    /** PET_SPECIES (zod); append-only like the sprite set, so no CHECK. */
+    species: text('species').notNull(),
+    /** PET_TINTS; `base` only for the default pet. */
+    tint: text('tint').notNull().default('base'),
+    /** The owner's own words to their own Claude; owner-only. */
+    roleInstructions: text('role_instructions'),
+    replyRoute: text('reply_route').notNull().default('both'),
+    /** null = follow `profiles.pet_chat_default_visibility`. */
+    defaultVisibility: visibilityEnum('default_visibility'),
+    isDefault: boolean('is_default').notNull().default(false),
+    sortOrder: smallint('sort_order').notNull().default(0),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex('pets_one_default_uidx')
+      .on(t.userId)
+      .where(sql`${t.isDefault}`),
+    uniqueIndex('pets_owner_look_uidx').on(t.userId, t.species, t.tint),
+    index('pets_user_idx').on(t.userId, t.sortOrder),
+    check('pets_reply_route_chk', sql`${t.replyRoute} in ('channel','checkin','both')`),
+    check('pets_default_tint_chk', sql`(${t.tint} = 'base') = ${t.isDefault}`),
+    check(
+      'pets_role_len_chk',
+      sql`${t.roleInstructions} is null or char_length(${t.roleInstructions}) between 1 and 1000`,
+    ),
+    check('pets_sort_chk', sql`${t.sortOrder} between 0 and 99`),
+  ],
+);
+
 export const privacyConsents = pgTable(
   'privacy_consents',
   {
@@ -140,7 +183,7 @@ export const privacyConsents = pgTable(
     uniqueIndex('privacy_consents_user_version_scope_uidx').on(t.userId, t.noticeVersion, t.scope),
     check(
       'privacy_consents_scope_chk',
-      sql`${t.scope} in ('service','claude_chat_summary','activity_sharing')`,
+      sql`${t.scope} in ('service','claude_chat_summary','activity_sharing','pet_chat_sharing')`,
     ),
   ],
 );
@@ -303,6 +346,8 @@ export const petNudges = pgTable(
     text: text('text').notNull(),
     kind: text('kind').notNull().default('reminder'),
     todoId: uuid('todo_id').references(() => todos.id, { onDelete: 'set null' }),
+    /** The pet that says it; null = the owner's default pet. */
+    petId: uuid('pet_id').references(() => pets.id, { onDelete: 'set null' }),
     priority: smallint('priority').notNull().default(2),
     showAfter: tstz('show_after').notNull(),
     expiresAt: tstz('expires_at').notNull(),

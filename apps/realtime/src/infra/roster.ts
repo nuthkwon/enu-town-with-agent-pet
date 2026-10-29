@@ -1,6 +1,7 @@
 import {
   activityReports,
   desks,
+  pets,
   profiles,
   user,
   workLogs,
@@ -11,7 +12,7 @@ import { hasWorkTask, type NowIn, type ScheduleBlockIn } from '@enu/domain';
 import { NOW_KINDS, SCHEDULE_KINDS, localDateKey, type NowKind, type ScheduleKind } from '@enu/shared';
 import { and, eq, inArray, isNotNull, sql, type SQL } from 'drizzle-orm';
 import type { ActorSignals, ActorSnapshot } from '../director/Director';
-import { asLinkState, asManualStatus, avatarKeyOf, personColumns } from './profiles';
+import { asLinkState, asManualStatus, avatarKeyOf, defaultPetOfUser, personColumns } from './profiles';
 
 /**
  * Loads the town roster (every active, onboarded member with a profile) and each member's signals for
@@ -25,6 +26,7 @@ function selectPeople(db: DbOrTx, where: SQL | undefined) {
     .from(user)
     .innerJoin(profiles, eq(profiles.userId, user.id))
     .leftJoin(desks, eq(desks.userId, user.id))
+    .leftJoin(pets, defaultPetOfUser)
     .where(where);
 }
 type PersonRow = Awaited<ReturnType<typeof selectPeople>>[number];
@@ -36,8 +38,8 @@ function toActorSnapshot(r: PersonRow): ActorSnapshot {
     displayName: r.displayName,
     avatarKey: avatarKeyOf(r.avatar),
     deskId: r.deskId ?? null,
-    petSpecies: r.petSpecies,
-    petName: r.petName,
+    petSpecies: r.petSpecies ?? 'cat',
+    petName: r.petName ?? '펫',
     linkState: asLinkState(r.linkState),
     statusText: r.statusText ?? '',
     shareActivity: r.shareActivity,

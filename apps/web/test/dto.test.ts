@@ -126,8 +126,6 @@ describe('people and desks', () => {
     userId: 'u1',
     displayName: '김요정',
     avatar: { body: 'f', hair: 'bob', hairColor: 'pink', outfit: 'rose', skin: 'light', wings: false },
-    petSpecies: 'bunny',
-    petName: '몽실',
     title: '과장',
     team: 'qa',
     roleNote: 'SQA',
@@ -140,6 +138,7 @@ describe('people and desks', () => {
     defaultLogVisibility: 'company',
     defaultChatSummaryVisibility: null,
     shareDmsWithMyClaude: false,
+    petChatDefaultVisibility: 'company',
     nudgesEnabled: true,
     nudgeMinIntervalMin: 25,
     maxBubblesPerDay: 8,
@@ -152,9 +151,10 @@ describe('people and desks', () => {
     createdAt: now,
     updatedAt: now,
   } as ProfileRow;
+  const pet = { species: 'bunny', name: '몽실' };
 
   it('maps avatar key and team label', () => {
-    const p = toPersonDto(profile, 'L4a');
+    const p = toPersonDto(profile, 'L4a', pet);
     expect(p.avatarKey).toBe('av-f-bob-pink-rose-light');
     expect(p.teamLabel).toBe('품질보증팀');
     expect(p.team).toBe('qa');
@@ -162,7 +162,7 @@ describe('people and desks', () => {
   });
 
   it('gives colleagues no status text, status or timestamps (realtime state only, office hours)', () => {
-    const p = toPersonDto(profile, 'L4a');
+    const p = toPersonDto(profile, 'L4a', pet);
     for (const key of [
       'statusText',
       'lastWorkLogAt',
@@ -179,6 +179,7 @@ describe('people and desks', () => {
   it('falls back for unknown teams and malformed avatars', () => {
     const p = toPersonDto(
       { ...profile, team: 'nope', avatar: { body: 'x' } as never, linkState: 'weird' },
+      null,
       null,
     );
     expect(p.team).toBeNull();

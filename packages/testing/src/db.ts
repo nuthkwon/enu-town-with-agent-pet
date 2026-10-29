@@ -1,5 +1,14 @@
 import { DEFAULT_AVATAR, PRIVACY_NOTICE_VERSION, type AvatarPreset } from '@enu/shared';
-import { createDb, newId, privacyConsents, profiles, user, type Db, type DbHandle } from '@enu/db';
+import {
+  createDb,
+  insertDefaultPet,
+  newId,
+  privacyConsents,
+  profiles,
+  user,
+  type Db,
+  type DbHandle,
+} from '@enu/db';
 import { runMigrations } from '@enu/db/migrate';
 import { sql } from 'drizzle-orm';
 
@@ -62,6 +71,8 @@ export interface TestUserInput {
    * realtime ticket requires). Default null: no consent row, like a user who has not finished /welcome.
    */
   noticeVersion?: string | null;
+  /** The default pet every profile has (species uniqueness is the app's rule, not the DB's). */
+  pet?: { species?: string; name?: string };
 }
 
 let counter = 0;
@@ -95,6 +106,11 @@ export async function createTestUser(
     shareActivity: input.shareActivity ?? null,
     showLive: input.showLive ?? true,
     onboardingCompletedAt: input.onboarded === false ? null : new Date(),
+  });
+  await insertDefaultPet(db, {
+    userId: id,
+    name: input.pet?.name ?? '펫',
+    species: input.pet?.species ?? 'cat',
   });
   const consents = [
     ...(input.noticeVersion ? [{ scope: 'service', noticeVersion: input.noticeVersion }] : []),

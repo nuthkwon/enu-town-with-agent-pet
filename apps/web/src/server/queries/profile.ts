@@ -1,18 +1,21 @@
 import {
   activityReports,
   audit,
+  defaultPetOf,
   lockPetSpecies,
   newId,
   notifyTown,
   privacyConsents,
   profiles,
   takenPetSpecies,
+  updateDefaultPet,
   type Db,
   type DbOrTx,
 } from '@enu/db';
 import {
   PRIVACY_NOTICE_VERSION,
   normalizeLine,
+  type ConsentScope,
   type PetSpecies,
   type ProfilePatch,
   type Visibility,
@@ -27,7 +30,7 @@ import { ensureProfile } from './me';
 export async function grantConsent(
   tx: DbOrTx,
   userId: string,
-  scope: 'service' | 'claude_chat_summary' | 'activity_sharing',
+  scope: ConsentScope,
   now: Date,
 ): Promise<void> {
   await tx
@@ -58,7 +61,8 @@ export async function withdrawConsent(
 }
 
 /**
- * Every active member has a different pet: refuses (409 pet_taken) a species another active member has.
+ * Every active member's default pet is different: refuses (409 pet_taken) a species another active member's default
+ * pet has.
  * Call inside the transaction that writes the species; the lock makes check-and-write atomic.
  */
 export async function claimPetSpecies(tx: DbOrTx, userId: string, species: PetSpecies): Promise<void> {
@@ -130,11 +134,13 @@ export async function patchProfile(
   }
   if (patch.status_text !== undefined) set.statusText = optLine(patch.status_text);
   if (patch.avatar !== undefined) set.avatar = patch.avatar;
-  if (patch.pet_species !== undefined) set.petSpecies = patch.pet_species;
+  // pet_species / pet_name edit the default pet (ADR 0005); its other fields live in /me/pets.
+  const petChange: { name?: string; species?: string } = {};
+  if (patch.pet_species !== undefined) petChange.species = patch.pet_species;
   if (patch.pet_name !== undefined) {
     const v = line(patch.pet_name);
     if (!v) problems.push({ field: 'pet_name', reason: 'empty' });
-    else set.petName = v;
+    else petChange.name = v;
   }
   if (patch.default_log_visibility !== undefined) set.defaultLogVisibility = patch.default_log_visibility;
   if (patch.default_chat_summary_visibility !== undefined)
@@ -151,10 +157,13 @@ export async function patchProfile(
 
   await db.transaction(async (tx) => {
     // Only a change is a pick: re-sending my current species (the profile form always does) never conflicts.
-    if (patch.pet_species !== undefined && patch.pet_species !== current.petSpecies) {
+    const pet = await defaultPetOf(tx, viewer.userId);
+    if (patch.pet_species !== undefined && patch.pet_species !== pet?.species) {
       await claimPetSpecies(tx, viewer.userId, patch.pet_species);
     }
-    await tx.update(profiles).set(set).where(eq(profiles.userId, viewer.userId));
+    if (Object.keys(set).length > 0)
+      await tx.update(profiles).set(set).where(eq(profiles.userId, viewer.userId));
+    if (Object.keys(petChange).length > 0) await updateDefaultPet(tx, viewer.userId, petChange);
     if (patch.share_activity !== undefined) {
       await recordShareActivity(tx, viewer.userId, current.shareActivity, patch.share_activity, now);
     }

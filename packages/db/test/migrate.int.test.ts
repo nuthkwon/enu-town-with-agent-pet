@@ -108,7 +108,10 @@ describe('migrations 0002_town_visualization and 0003_no_presence_traces', () =>
     await runMigrations(scratchUrl);
 
     const applied = await q('select count(*)::int as n from drizzle.__drizzle_migrations');
-    expect(applied.rows[0]?.n).toBe(4);
+    const journal = JSON.parse(
+      fs.readFileSync(path.join(defaultMigrationsDir(), 'meta', '_journal.json'), 'utf8'),
+    ) as { entries: unknown[] };
+    expect(applied.rows[0]?.n).toBe(journal.entries.length);
     // 0003: no trigger column any more (rows stay), and work logs are re-keyed with random v4 ids.
     const trigger = await q(
       `select 1 from information_schema.columns where table_name = 'nudge_deliveries' and column_name = 'trigger'`,
@@ -142,6 +145,21 @@ describe('migrations 0002_town_visualization and 0003_no_presence_traces', () =>
       { share_activity: null, show_live: true, manual_status: null, manual_status_until: null },
     ]);
     expect((await q('select scope from privacy_consents')).rows).toEqual([{ scope: 'service' }]);
+    // 0004/0005: every profile got its default pet from the old single-pet columns, which are gone.
+    expect(
+      (await q('select user_id, name, species, tint, is_default, sort_order from pets order by user_id'))
+        .rows,
+    ).toEqual([
+      { user_id: 'u-a', name: '펫', species: 'cat', tint: 'base', is_default: true, sort_order: 0 },
+      { user_id: 'u-b', name: '펫', species: 'cat', tint: 'base', is_default: true, sort_order: 0 },
+    ]);
+    const petColumns = await q(
+      `select column_name from information_schema.columns
+        where table_name = 'profiles' and column_name in ('pet_species', 'pet_name')`,
+    );
+    expect(petColumns.rowCount).toBe(0);
+    const petDefault = await q('select pet_chat_default_visibility as v from profiles order by user_id');
+    expect(petDefault.rows).toEqual([{ v: 'company' }, { v: 'company' }]);
   });
 
   it('enforces the new CHECKs', async () => {
@@ -178,6 +196,43 @@ describe('migrations 0002_town_visualization and 0003_no_presence_traces', () =>
     );
     await q(`insert into privacy_consents (id, user_id, notice_version, scope)
              values ('00000000-0000-7000-8000-0000000000c3', 'u-a', '2026-11', 'activity_sharing')`);
+    await q(`insert into privacy_consents (id, user_id, notice_version, scope)
+             values ('00000000-0000-7000-8000-0000000000c4', 'u-a', '2026-12', 'pet_chat_sharing')`);
+
+    /** A pet of u-a with `extra` columns (name -> SQL expression). */
+    const pet = (id: string, extra: Record<string, string>) => {
+      const base: Record<string, string> = {
+        id: `'${id}'`,
+        user_id: `'u-a'`,
+        name: `'코코'`,
+        species: `'fox'`,
+      };
+      const all = { ...base, ...extra };
+      return `insert into pets (${Object.keys(all).join(', ')}) values (${Object.values(all).join(', ')})`;
+    };
+    // The base look is the default pet's; an extra pet has a tint and the default pet has none.
+    await violation('pets_default_tint_chk', pet('00000000-0000-4000-8000-0000000000a1', {}));
+    await violation(
+      'pets_default_tint_chk',
+      pet('00000000-0000-4000-8000-0000000000a2', { tint: `'mint'`, is_default: 'true' }),
+    );
+    await violation(
+      'pets_reply_route_chk',
+      pet('00000000-0000-4000-8000-0000000000a3', { tint: `'mint'`, reply_route: `'email'` }),
+    );
+    await violation(
+      'pets_role_len_chk',
+      pet('00000000-0000-4000-8000-0000000000a4', { tint: `'mint'`, role_instructions: `''` }),
+    );
+    await q(pet('00000000-0000-4000-8000-0000000000a5', { tint: `'mint'` }));
+    // One default pet per person, and one pet per look.
+    expect(
+      await failure(pet('00000000-0000-4000-8000-0000000000a6', { tint: `'base'`, is_default: 'true' })),
+    ).toMatchObject({ code: '23505', constraint: 'pets_one_default_uidx' });
+    expect(await failure(pet('00000000-0000-4000-8000-0000000000a7', { tint: `'mint'` }))).toMatchObject({
+      code: '23505',
+      constraint: 'pets_owner_look_uidx',
+    });
 
     /** An activity report for u-b with `extra` columns (name -> SQL expression). */
     const report = (extra: Record<string, string>, source = "'cowork_scheduled'") => {

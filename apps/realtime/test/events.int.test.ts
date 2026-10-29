@@ -1,7 +1,7 @@
-import { desks, newId, notifyTown, petNudges, profiles, user } from '@enu/db';
+import { desks, newId, notifyTown, petNudges, pets, profiles, user } from '@enu/db';
 import { Anim, CloseCodes, Indicator, PetLink, type NoticeMsg } from '@enu/protocol';
 import { TOWN_EVENTS_CHANNEL } from '@enu/shared';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   joinAs,
@@ -131,10 +131,11 @@ describe(`LISTEN ${TOWN_EVENTS_CHANNEL}`, () => {
     const room = serverRoom(h, j);
     const player = room.state.players.get(u.id);
     const pet = room.state.pets.get(u.id);
+    await h.db.update(profiles).set({ displayName: '새이름' }).where(eq(profiles.userId, u.id));
     await h.db
-      .update(profiles)
-      .set({ displayName: '새이름', petName: '모찌', petSpecies: 'bunny' })
-      .where(eq(profiles.userId, u.id));
+      .update(pets)
+      .set({ name: '모찌', species: 'bunny' })
+      .where(and(eq(pets.userId, u.id), eq(pets.isDefault, true)));
     await notifyTown(h.db, { v: 1, type: 'profile_changed', user_id: u.id });
     await waitFor(() => j.room.state.players.get(u.id).name === '새이름', { message: 'renamed' });
     expect(j.room.state.pets.get(u.id).name).toBe('모찌');

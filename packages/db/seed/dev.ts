@@ -14,6 +14,7 @@ import {
 import { like, sql } from 'drizzle-orm';
 import { createDb } from '../src/client';
 import { newId, newOpaqueId } from '../src/ids';
+import { insertDefaultPet } from '../src/pets';
 import {
   chatMessages,
   claudeLinks,
@@ -114,8 +115,6 @@ await db.transaction(async (tx) => {
       userId: id,
       displayName: seat.name,
       avatar: seat.avatar,
-      petSpecies: seat.pet.species,
-      petName: seat.pet.name,
       team: seat.team ?? null,
       title: seat.title ?? null,
       roleNote: seat.role ?? null,
@@ -128,6 +127,7 @@ await db.transaction(async (tx) => {
       onboardingCompletedAt: now,
       timezone: TZ,
     });
+    await insertDefaultPet(tx, { userId: id, name: seat.pet.name, species: seat.pet.species });
     await tx.insert(privacyConsents).values([
       { id: newId(), userId: id, noticeVersion: PRIVACY_NOTICE_VERSION, scope: 'service' },
       { id: newId(), userId: id, noticeVersion: PRIVACY_NOTICE_VERSION, scope: 'activity_sharing' },

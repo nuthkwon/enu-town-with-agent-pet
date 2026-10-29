@@ -29,6 +29,20 @@
       "when": 1793266208046,
       "tag": "0003_no_presence_traces",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793282415657,
+      "tag": "0004_pets",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793282421937,
+      "tag": "0005_drop_profile_pet",
+      "breakpoints": true
     }
   ]
 }

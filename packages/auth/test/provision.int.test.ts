@@ -1,7 +1,7 @@
-import { desks, newId, profiles, user, type DbHandle } from '@enu/db';
+import { desks, newId, pets, user, type DbHandle } from '@enu/db';
 import { PET_SPECIES, type PetSpecies } from '@enu/shared';
 import { createTestUser, setupTestDb, truncateAll } from '@enu/testing';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { choosePetSpecies, provisionProfile } from '../src/provision';
 
@@ -19,8 +19,7 @@ beforeEach(async () => {
 
 /** An existing member who already has `species` (status as given). */
 async function holder(species: PetSpecies, status: 'active' | 'deactivated' = 'active') {
-  const u = await createTestUser(h.db, { status });
-  await h.db.update(profiles).set({ petSpecies: species }).where(eq(profiles.userId, u.id));
+  const u = await createTestUser(h.db, { status, pet: { species } });
   return u.id;
 }
 
@@ -34,9 +33,9 @@ async function newcomer(name: string) {
 
 async function speciesOf(userId: string) {
   const [p] = await h.db
-    .select({ species: profiles.petSpecies })
-    .from(profiles)
-    .where(eq(profiles.userId, userId));
+    .select({ species: pets.species })
+    .from(pets)
+    .where(and(eq(pets.userId, userId), eq(pets.isDefault, true)));
   return p?.species;
 }
 

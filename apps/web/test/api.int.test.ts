@@ -5,6 +5,7 @@ import {
   desks,
   newId,
   petNudges,
+  pets,
   privacyConsents,
   profiles,
   todos,
@@ -141,7 +142,18 @@ async function insertReport(userId: string, periodKey = localDateKey(new Date(),
 }
 
 async function setPet(userId: string, species: PetSpecies) {
-  await h.db.update(profiles).set({ petSpecies: species }).where(eq(profiles.userId, userId));
+  await h.db
+    .update(pets)
+    .set({ species })
+    .where(and(eq(pets.userId, userId), eq(pets.isDefault, true)));
+}
+
+async function defaultPetRow(userId: string) {
+  const [p] = await h.db
+    .select()
+    .from(pets)
+    .where(and(eq(pets.userId, userId), eq(pets.isDefault, true)));
+  return p;
 }
 
 describe('authentication and authorization', () => {
@@ -881,8 +893,7 @@ describe('onboarding', () => {
     expect(await h.db.select().from(privacyConsents).where(eq(privacyConsents.userId, me.id))).toHaveLength(
       0,
     );
-    const [p] = await h.db.select().from(profiles).where(eq(profiles.userId, me.id));
-    expect(p?.petSpecies).not.toBe('fox');
+    expect((await defaultPetRow(me.id))?.species).not.toBe('fox');
   });
 });
 
@@ -977,9 +988,9 @@ describe('활동 공유, 접속 표시 and pets', () => {
       error: 'pet_taken',
       fields: [{ field: 'pet_species', reason: 'taken' }],
     });
-    const [unchanged] = await h.db.select().from(profiles).where(eq(profiles.userId, me.id));
-    expect(unchanged?.petSpecies).toBe(third);
-    expect(unchanged?.petName).not.toBe('몽실');
+    const unchanged = await defaultPetRow(me.id);
+    expect(unchanged?.species).toBe(third);
+    expect(unchanged?.name).not.toBe('몽실');
 
     // Re-saving my own species is fine.
     const own = await patchPet(third);
@@ -1014,7 +1025,10 @@ describe('활동 공유, 접속 표시 and pets', () => {
       });
     const statuses = (await Promise.all([pick(a.cookie), pick(b.cookie)])).map((r) => r.status).sort();
     expect(statuses).toEqual([200, 409]);
-    const holders = await h.db.select().from(profiles).where(eq(profiles.petSpecies, species));
+    const holders = await h.db
+      .select()
+      .from(pets)
+      .where(and(eq(pets.species, species), eq(pets.isDefault, true)));
     expect(holders).toHaveLength(1);
   });
 });

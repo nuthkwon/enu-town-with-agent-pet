@@ -134,10 +134,5 @@ export async function markLinkedAfterWorkLog(
   return { changed, previous: profile.linkState as LinkState };
 }
 
-/**
- * Serializes concurrent writes of one owner within a scope (to-do cap, nudge daily cap, dedupe)
- * for the rest of the transaction.
- */
-export async function lockOwnerScope(tx: DbOrTx, scope: string, userId: string): Promise<void> {
-  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`enu-den:${scope}:${userId}`}))`);
-}
+/** Moved to @enu/db (pets use it too); re-exported for the existing callers. */
+export { lockOwnerScope } from '@enu/db';

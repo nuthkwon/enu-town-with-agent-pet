@@ -1,4 +1,4 @@
-import { audit, desks, notifyTown, profiles, type Db } from '@enu/db';
+import { audit, desks, notifyTown, profiles, updateDefaultPet, type Db } from '@enu/db';
 import { PRIVACY_NOTICE_VERSION, normalizeLine, type OnboardingSubmit } from '@enu/shared';
 import { and, eq, isNull } from 'drizzle-orm';
 import { ko } from '@/i18n/ko';
@@ -74,13 +74,12 @@ export async function submitOnboarding(
       .update(profiles)
       .set({
         avatar: body.avatar,
-        petSpecies: body.pet_species,
-        petName,
         defaultChatSummaryVisibility: body.default_chat_summary_visibility,
         shareActivity: body.share_activity,
         onboardingCompletedAt: profile.onboardingCompletedAt ?? now,
       })
       .where(eq(profiles.userId, viewer.userId));
+    await updateDefaultPet(tx, viewer.userId, { name: petName, species: body.pet_species });
     await recordShareActivity(tx, viewer.userId, profile.shareActivity, body.share_activity, now);
     await audit(tx, {
       actorType: 'user',

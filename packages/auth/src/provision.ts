@@ -1,4 +1,14 @@
-import { audit, desks, lockPetSpecies, notifyTown, profiles, takenPetSpecies, user, type Db } from '@enu/db';
+import {
+  audit,
+  desks,
+  insertDefaultPet,
+  lockPetSpecies,
+  notifyTown,
+  profiles,
+  takenPetSpecies,
+  user,
+  type Db,
+} from '@enu/db';
 import { DEFAULT_AVATAR, PET_SPECIES, type AvatarPreset, type PetSpecies } from '@enu/shared';
 import { and, eq, isNull } from 'drizzle-orm';
 
@@ -14,9 +24,9 @@ export function choosePetSpecies(preset: PetSpecies | null, taken: readonly PetS
 }
 
 /**
- * Creates the ENU Den profile for a new user and, when the Google display name matches an
+ * Creates the ENU Den profile and default pet for a new user and, when the Google display name matches an
  * unassigned seat label from the roster, assigns that seat and its avatar/pet presets (the pet
- * species only while no other active member has it, see choosePetSpecies).
+ * species only while no other active member's default pet has it, see choosePetSpecies).
  * Idempotent: an existing profile is left untouched.
  */
 export async function provisionProfile(
@@ -50,12 +60,11 @@ export async function provisionProfile(
       userId: u.id,
       displayName: (name || u.email.split('@')[0] || '새 직원').slice(0, 40),
       avatar,
-      petSpecies: species,
-      petName: (seat?.petName ?? '펫').slice(0, 20),
       team: seat?.team ?? null,
       title: seat?.title ?? null,
       roleNote: seat?.roleNote ?? null,
     });
+    await insertDefaultPet(tx, { userId: u.id, name: (seat?.petName ?? '펫').slice(0, 20), species });
 
     if (seat) {
       const assigned = await tx

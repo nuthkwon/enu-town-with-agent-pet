@@ -20,6 +20,7 @@ import {
   type LinkState,
   type NudgeDto,
   type PersonDto,
+  type PetDto,
   type TeamId,
   type TodoDto,
   type Visibility,
@@ -67,7 +68,16 @@ export function provenanceLabel(authorName: string, editedByUser: boolean): stri
  * A colleague as any member sees them. No 상태 문구 and no timestamps: status and activity reach
  * colleagues only through the realtime state during office hours.
  */
-export function toPersonDto(p: ProfileRow, deskId: string | null): PersonDto {
+/** The default pet's look as shown with a person (every profile has one; the fallback only covers a race). */
+export function petOrDefault(pet: { species: string; name: string } | null | undefined): PetDto {
+  return pet ? { species: pet.species, name: pet.name } : { species: 'cat', name: '펫' };
+}
+
+export function toPersonDto(
+  p: ProfileRow,
+  deskId: string | null,
+  pet: { species: string; name: string } | null,
+): PersonDto {
   const avatar = normalizeAvatar(p.avatar);
   const team = asTeamId(p.team);
   return {
@@ -75,7 +85,7 @@ export function toPersonDto(p: ProfileRow, deskId: string | null): PersonDto {
     displayName: p.displayName,
     avatar,
     avatarKey: avatarSpriteKey(avatar),
-    pet: { species: p.petSpecies, name: p.petName },
+    pet: petOrDefault(pet),
     deskId,
     team,
     teamLabel: teamLabel(team),

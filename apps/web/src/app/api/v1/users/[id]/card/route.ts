@@ -16,7 +16,7 @@ export const GET = route<{ id: string }>(async (req, { id }) => {
   const db = getDb();
   const person = await findPerson(db, id);
   if (!person || (person.status !== 'active' && id !== viewer.userId)) throw notFound();
-  const dto = toPersonDto(person.profile, person.deskId);
+  const dto = toPersonDto(person.profile, person.deskId, person.pet);
   const latestLog = await latestVisibleLog(db, viewer, id, {
     name: dto.displayName,
     active: person.status === 'active',

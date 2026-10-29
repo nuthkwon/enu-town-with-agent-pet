@@ -1,6 +1,7 @@
+import { defaultPetOf } from '@enu/db';
 import type { MyPetDto } from '@enu/shared';
 import { mcpResource } from '@/server/auth';
-import { asLinkState } from '@/server/dto';
+import { asLinkState, petOrDefault } from '@/server/dto';
 import { getDb } from '@/server/db';
 import { json } from '@/server/http';
 import { listClaudeLinks } from '@/server/queries/links';
@@ -19,13 +20,14 @@ export const GET = route(async (req) => {
   const db = getDb();
   const p = await ensureProfile(db, viewer);
   const now = new Date();
-  const [todos, nudges, links] = await Promise.all([
+  const [todos, nudges, links, pet] = await Promise.all([
     listTodos(db, viewer.userId, now, { activeOnly: true }),
     listActiveNudges(db, viewer.userId, now),
     listClaudeLinks(db, viewer.userId, { activeOnly: true }),
+    defaultPetOf(db, viewer.userId),
   ]);
   const body: MyPetDto = {
-    pet: { species: p.petSpecies, name: p.petName },
+    pet: petOrDefault(pet),
     linkState: asLinkState(p.linkState),
     lastWorkLogAt: p.lastWorkLogAt ? p.lastWorkLogAt.toISOString() : null,
     todos,
