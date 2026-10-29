@@ -12,12 +12,12 @@ Record results in a copy of this file per pilot. Plan: ____ (Team / Enterprise)
 ## Connect (each person)
 
 - [ ] Connect shows the consent screen with **their own email** and the redirect host
-- [ ] ENU Town shows the pet awake (linked), no speech yet
+- [ ] ENU Den shows the pet awake (linked), no speech yet
 - [ ] Audit log shows `oauth.consent` and `oauth.client_discovered` (note the CIMD host: ________)
 
 ## Check-in
 
-- [ ] "ENU Town 체크인 해줘" → approval prompts seen: ________ → choose Always allow
+- [ ] "ENU Den 체크인 해줘" → approval prompts seen: ________ → choose Always allow
 - [ ] Within 5 min: work log (badge "OO님의 Claude가 작성"), to-dos, pet nudge appear; with 활동 공유 on, the avatar or
       desk plate shows the reported activity (e.g. `검토 중 · Claude 보고`)
 - [ ] Pet bubble visible only to the owner; colleagues see no "…" or any other sign that a bubble is up
@@ -33,7 +33,7 @@ Record results in a copy of this file per pilot. Plan: ____ (Team / Enterprise)
 ## Tokens
 
 - [ ] Still works after 1 h (access token refresh) and after 2 days
-- [ ] Revoke in ENU Town `/me` → next call 401 → Claude asks to reconnect
+- [ ] Revoke in ENU Den `/me` → next call 401 → Claude asks to reconnect
 - [ ] Revoke in Claude → after a business day the pet shows stale (clock icon)
 
 ## Privacy

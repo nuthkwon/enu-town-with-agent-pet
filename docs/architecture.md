@@ -1,4 +1,4 @@
-# ENU Town architecture
+# ENU Den architecture
 
 ```
  employee browser ──HTTPS──┐                ┌── employee's own Claude (claude.ai / Cowork cloud / Claude Code)
@@ -7,7 +7,7 @@
             /colyseus/* │                           │  /, /api/*, /.well-known/*
                         ▼                           ▼
               realtime :2567  ◄──LISTEN──  Postgres  ◄──►  web :3000
-              Colyseus room office-606     enu_town_events  Next 16: pages, Better Auth (Google + OAuth AS),
+              Colyseus room office-606     enu_den_events   Next 16: pages, Better Auth (Google + OAuth AS),
               director · pets · chat ·                      /api/mcp (MCP tools), /api/v1 REST, realtime ticket
               owner-only pet bubbles               ▲
                                             worker (pg-boss cron: nudge expiry, link state, retention, auth cleanup)
@@ -21,9 +21,9 @@
   - `validateUserInfo`
   - DB hooks
   - per-request session checks
-- **Realtime:** the web app mints a 60-second HS256 ticket (aud `enu-town-realtime`). The Colyseus `onAuth` verifies the ticket on the matchmake request and re-reads the user from the DB; it also reads the client's `PROTOCOL_VERSION`, but a mismatch is refused at the start of `onJoin` with close code 4111, before any state is sent (Colyseus turns an `onAuth` error code into an HTTP status, so 4111 would not reach the client from there). Users who have not finished onboarding or accepted the current privacy notice are refused with `notice_required` and sent to `/welcome`.
+- **Realtime:** the web app mints a 60-second HS256 ticket (aud `enu-den-realtime`). The Colyseus `onAuth` verifies the ticket on the matchmake request and re-reads the user from the DB; it also reads the client's `PROTOCOL_VERSION`, but a mismatch is refused at the start of `onJoin` with close code 4111, before any state is sent (Colyseus turns an `onAuth` error code into an HTTP status, so 4111 would not reach the client from there). Users who have not finished onboarding or accepted the current privacy notice are refused with `notice_required` and sent to `/welcome`.
 - **One room:** realtime creates the persistent `office-606` room itself at boot. Clients may only `join` it (`matchMaker.controller.exposedMethods` leaves out `create` and `joinOrCreate`), and `OfficeRoom.onCreate` refuses a second instance, so nobody can start extra rooms (each would hold its own LISTEN connection and timers forever and split the town).
-- **Claude connector:** ENU Town is the OAuth 2.1 authorization server (Better Auth `mcp()` + `cimd()` + `jwt()`). Access tokens are ES256 JWTs with `aud` = `https://<host>/api/mcp`. `resolveMcpCaller` rejects a token in three cases:
+- **Claude connector:** ENU Den is the OAuth 2.1 authorization server (Better Auth `mcp()` + `cimd()` + `jwt()`). Access tokens are ES256 JWTs with `aud` = `https://<host>/api/mcp`. `resolveMcpCaller` rejects a token in three cases:
   - the user is inactive
   - the user is outside the domain
   - the token was issued before a revocation
@@ -31,13 +31,13 @@
 
 ## Data flow of a check-in
 
-1. Cowork runs the employee's scheduled task, which runs the `enu-town-checkin` skill.
+1. Cowork runs the employee's scheduled task, which runs the `enu-den-checkin` skill.
 2. The skill calls `get_my_context`. Outside work hours this returns `skip` and the skill stops. Its `activity` section tells Claude whether the owner shares activity, what it reported earlier today and any status the owner set by hand.
 3. `post_work_log` upserts the day's log, keyed by `(user, local date)`.
 4. `post_activity` (only when the owner shares activity) → `activity_reports` (one row per user and office day: the `now` kind and until, today's calendar blocks, refs as keyed daily hashes) → `activity_changed` → the realtime director.
 5. `upsert_todos` upserts by `external_ref`.
 6. `post_pet_nudges` queues bubble text, which is shown verbatim.
-7. Each write commits together with `NOTIFY enu_town_events`.
+7. Each write commits together with `NOTIFY enu_den_events`.
 8. The realtime `DbEvents` listener reloads the owner's signals (activity report, log flags) and pet candidates.
 9. `NudgeScheduler` (rules in `packages/domain/src/nudge-policy.ts`) chooses when to show a bubble: on join, when a nudge first becomes eligible, when the owner returns to the tab, or when something is due. It then sets the `.view()` bubble fields on the owner's pet. Only the owner's `StateView` contains their pet; colleagues see no sign of a bubble at all (the shared `indicator` stays 0): bubbles start only while the owner's tab is visible, so a shared "…" would tell colleagues when the owner looks at the town. A delivery row keeps only what the policy reads (no trigger) and survives only until the next 03:17 purge (today's count, the last 12 h of due keys). When the owner's session ends (leave or a replacing tab), any bubble on the long-lived pet is taken down.
 10. When a colleague clicks an avatar or a desk plate, the profile card calls `/api/v1/users/:id/card`, which only returns logs that pass `canViewLog`.
@@ -51,6 +51,24 @@ Nobody steers an avatar ([ADR 0004](adr/0004-town-is-a-visualization.md)). The r
 - **Labels only:** Claude's `now` report and today's log label an avatar or desk plate; they never make anyone appear.
 - **Office hours:** outside business days 08:30–19:30 (`APP_TIMEZONE`) every `Player` is neutral (hidden, offline) and parked at its own seat (or the first guest spot) with `Idle`, so nothing tells who was in a meeting or at the pantry at closing; `logPulse` resets to 0, pets sleep and bubbles stay quiet.
 - **No history:** the director persists nothing. Sessions and positions live in memory only, join/leave log lines carry no user id, the manual status is a current value in `profiles`, and `activity_reports` holds the current office day only (the worker purges older rows at 03:17). `logPulse` moves by a random non-zero step, so its value never counts log writes. Work-log ids are random UUIDv4 (a v7 id would carry the owner-only first-write time). Error logs go through `safeErr` (`packages/db`), which never writes a failed query's bound values (chat bodies, Claude's text, names).
+
+## Names
+
+| What                        | Name                                                                       |
+| --------------------------- | -------------------------------------------------------------------------- |
+| Product                     | ENU Den (`APP_NAME` in `packages/shared/src/constants.ts`)                 |
+| Host                        | `den.enu-tech.co.kr` (dev: `den-dev.<domain>`)                             |
+| MCP server (serverInfo)     | `enu-den` (`MCP_SERVER_NAME`)                                              |
+| Claude plugin and skills    | `enu-den` with `enu-den-checkin`, `enu-den-setup` (marketplace `enu-tech`) |
+| Databases                   | `enu_den` (production), `enu_den_dev`, `enu_den_test`, `enu_den_e2e`       |
+| NOTIFY channel              | `enu_den_events` (`TOWN_EVENTS_CHANNEL`)                                   |
+| Realtime ticket audience    | `enu-den-realtime`                                                         |
+| Advisory lock keys          | `enu_den_pet_species`, `enu-den:<scope>:<userId>`                          |
+| Browser storage, debug hook | `enu-den:*`, `window.__ENU_DEN_DEBUG__`                                    |
+| Docker                      | project `enu-den`, images `enu-den/{web,realtime,worker}`                  |
+
+"town / 타운" is the name of the map view inside ENU Den, not the brand. Identifiers such as `notifyTown`,
+`TOWN_EVENTS_CHANNEL`, the `/town` route and the MCP field `town_messages` keep that meaning.
 
 ## Packages
 

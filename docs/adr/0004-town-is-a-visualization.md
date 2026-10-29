@@ -23,7 +23,7 @@ design, its alternatives and the review that shaped it are in
      no "where" field.
    - **P3** Each person's state comes only from their own sources. Links between people exist only through mutual
      corroboration (item 4).
-   - **P4** Current state only. ENU Town stores no presence or activity timeline: `activity_reports` holds the current
+   - **P4** Current state only. ENU Den stores no presence or activity timeline: `activity_reports` holds the current
      day only, audit rows carry no activity metadata, logs carry no per-user connection lines, and colleague-facing REST
      carries no status or activity timestamps. Admins have no extra view.
    - **P5** Office hours only (business days 08:30–19:30, `kr_holidays`). The office day is `APP_TIMEZONE` (default

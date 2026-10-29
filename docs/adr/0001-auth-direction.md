@@ -1,4 +1,4 @@
-# ADR 0001 — Claude links to ENU Town (not the other way round)
+# ADR 0001 — Claude links to ENU Den (not the other way round)
 
 Status: accepted (2026-10-29)
 
@@ -10,15 +10,15 @@ store or intermediate claude.ai credentials or session tokens. There is no "Sign
 
 ## Decision
 
-ENU Town is a remote MCP server (`/api/mcp`, Streamable HTTP) plus its own OAuth 2.1 authorization server
+ENU Den is a remote MCP server (`/api/mcp`, Streamable HTTP) plus its own OAuth 2.1 authorization server
 (Better Auth `mcp()` + `cimd()` + `jwt()`), whose login is the same Google sign-in restricted to the workspace
 domain. The Claude org Owner registers it once as an org custom connector (Claude's published identity / CIMD);
 each employee clicks Connect. Every tool call then carries that employee's identity (token `sub`).
-Periodic writing is a Cowork cloud scheduled task per employee running the `enu-town-checkin` skill.
+Periodic writing is a Cowork cloud scheduled task per employee running the `enu-den-checkin` skill.
 
 ## Consequences
 
-- ENU Town never sees Claude credentials; tokens are ours (aud = MCP URL, revocable per link).
+- ENU Den never sees Claude credentials; tokens are ours (aud = MCP URL, revocable per link).
 - The token proves which Google user consented, not which Claude account calls. Mitigations: consent screen
   shows the email, Claude org SSO via Google Workspace, per-client link list with revoke, audit log.
 - Unattended runs depend on Claude org approval settings (Always allow / auto-approve) — verified in the pilot.

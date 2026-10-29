@@ -1,9 +1,9 @@
-# ENU Town 관리자 런북 (Claude Team / Enterprise 공통)
+# ENU Den 관리자 런북 (Claude Team / Enterprise 공통)
 
-ENU Town은 각 직원의 **본인 Claude**가 ENU Town 커넥터(원격 MCP 서버)를 통해 업무 로그·활동·할 일·펫 메시지를
+ENU Den은 각 직원의 **본인 Claude**가 ENU Den 커넥터(원격 MCP 서버)를 통해 업무 로그·활동·할 일·펫 메시지를
 쓰는 구조입니다. 타운 화면의 아바타는 아무도 조작하지 않고, 서버가 각자의 상태·접속·일정으로 자리를 정합니다
-([ADR 0004](adr/0004-town-is-a-visualization.md)). ENU Town은 Claude 계정에 로그인하거나 claude.ai 자격증명을 다루지 않습니다.
-Claude가 ENU Town에 로그인합니다(ENU Town이 OAuth 2.1 인가 서버, 로그인은 회사 Google 계정).
+([ADR 0004](adr/0004-town-is-a-visualization.md)). ENU Den은 Claude 계정에 로그인하거나 claude.ai 자격증명을 다루지 않습니다.
+Claude가 ENU Den에 로그인합니다(ENU Den이 OAuth 2.1 인가 서버, 로그인은 회사 Google 계정).
 
 > 2026-10-29 기준 Claude 문서로 확인한 내용입니다. Claude 설정 이름과 기본값은 바뀔 수 있으니 분기마다 다시 확인하세요.
 
@@ -11,7 +11,7 @@ Claude가 ENU Town에 로그인합니다(ENU Town이 OAuth 2.1 인가 서버, �
 
 | 항목         | 내용                                                                                                                                                                                                                                            |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 호스트명     | 예: `town.enu-tech.co.kr`. **커넥터를 등록한 뒤에는 인증 설정을 바꿀 수 없으므로**(삭제 후 재등록, 전원 재연결) 먼저 확정합니다. 개발용은 별도 호스트(`town-dev...`)와 별도 커넥터를 씁니다.                                                    |
+| 호스트명     | 예: `den.enu-tech.co.kr`. **커넥터를 등록한 뒤에는 인증 설정을 바꿀 수 없으므로**(삭제 후 재등록, 전원 재연결) 먼저 확정합니다. 개발용은 별도 호스트(`den-dev...`)와 별도 커넥터를 씁니다.                                                      |
 | 공개 HTTPS   | `/api/mcp`, `/.well-known/*`, `/api/auth/*`는 인터넷(최소 Claude 송신 대역 `160.79.104.0/21`)에서 접근 가능해야 합니다. 브라우저 화면은 Google 로그인으로 보호됩니다.                                                                           |
 | Google Cloud | 회사 조직 아래 프로젝트 생성 → OAuth 동의 화면 **내부(Internal)** → 웹 클라이언트 생성, 승인된 리디렉션 URI `https://<host>/api/auth/callback/google` → Workspace 관리 콘솔 > 보안 > API 제어에서 이 클라이언트를 **신뢰함(Trusted)** 으로 지정 |
 | 서버         | `docker compose` (Postgres, web, realtime, worker, Caddy). `.env.example`(→ `.env`, `PUBLIC_HOST` 등)과 `deploy/env/*.env.example`을 복사해 값 입력 → `docker compose up -d`                                                                    |
@@ -21,21 +21,21 @@ Claude가 ENU Town에 로그인합니다(ENU Town이 OAuth 2.1 인가 서버, �
 
 ## 1. Claude 조직 설정
 
-| 단계                                                                                                                                                                                     | Team                  | Enterprise                                                                                                                                                                       |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **커스텀 커넥터 등록**: 조직 설정 > 커넥터 > 추가 > 사용자 지정(Custom) > 웹. URL `https://<host>/api/mcp`, 인증은 **"Claude의 게시된 ID 사용(Use Claude's published identity)"**(CIMD)  | Owner / Primary Owner | Owner 또는 "Manage access to Libraries" 권한의 커스텀 역할                                                                                                                       |
-| **Cowork 클라우드 실행**("Run Cowork in the cloud")                                                                                                                                      | 기본 켜짐             | **기본 꺼짐** → 켜고 대상 역할(그룹)에 부여                                                                                                                                      |
-| 조직 설정 > Cowork > 권한: **"커넥터 도구에 '항상 허용' 허용"**                                                                                                                          | 기본 꺼짐 → **켜기**  | 기본 꺼짐 → **켜기**                                                                                                                                                             |
-| 역할별 커넥터 정책                                                                                                                                                                       | 해당 없음             | 새 역할은 모든 커넥터가 "승인 필요". 역할마다 ENU Town 도구 다섯 가지(`get_my_context`, `post_work_log`, `post_activity`, `upsert_todos`, `post_pet_nudges`)를 **항상 허용**으로 |
-| 조직 설정 > 기능: **"새 작업을 자동 승인 모드로 시작"**                                                                                                                                  | 기본 켜짐             | 기본 꺼짐 → 켜기(또는 작업별 설정 안내)                                                                                                                                          |
-| 플러그인 마켓플레이스: private GitHub 저장소에 `claude/` 폴더 내용을 올리고 조직 마켓플레이스로 연결 → `enu-town` 플러그인을 **기본 설치(Installed by default)** 또는 **필수(Required)** | 필요                  | 필요                                                                                                                                                                             |
-| 메모리: Owner가 허용(각 직원이 켬). 과거 대화 검색은 기본 켜짐                                                                                                                           | 권장                  | 권장 (CMEK 조직은 대화 검색 없음)                                                                                                                                                |
-| Google Calendar·Gmail 커넥터 활성화 (활동 공유의 회의·집중·부재 일정은 캘린더에서 옴. `iCalUID`·참석자 수가 보이는지 파일럿에서 확인)                                                    | 권장                  | 권장                                                                                                                                                                             |
-| Claude 조직 SSO를 Google Workspace로 (Claude 계정과 ENU Town 로그인 신원을 일치)                                                                                                         | 권장                  | 권장                                                                                                                                                                             |
-| **Compliance API**                                                                                                                                                                       | —                     | ENU Town에는 **사용하지 않음**                                                                                                                                                   |
+| 단계                                                                                                                                                                                    | Team                  | Enterprise                                                                                                                                                                      |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **커스텀 커넥터 등록**: 조직 설정 > 커넥터 > 추가 > 사용자 지정(Custom) > 웹. URL `https://<host>/api/mcp`, 인증은 **"Claude의 게시된 ID 사용(Use Claude's published identity)"**(CIMD) | Owner / Primary Owner | Owner 또는 "Manage access to Libraries" 권한의 커스텀 역할                                                                                                                      |
+| **Cowork 클라우드 실행**("Run Cowork in the cloud")                                                                                                                                     | 기본 켜짐             | **기본 꺼짐** → 켜고 대상 역할(그룹)에 부여                                                                                                                                     |
+| 조직 설정 > Cowork > 권한: **"커넥터 도구에 '항상 허용' 허용"**                                                                                                                         | 기본 꺼짐 → **켜기**  | 기본 꺼짐 → **켜기**                                                                                                                                                            |
+| 역할별 커넥터 정책                                                                                                                                                                      | 해당 없음             | 새 역할은 모든 커넥터가 "승인 필요". 역할마다 ENU Den 도구 다섯 가지(`get_my_context`, `post_work_log`, `post_activity`, `upsert_todos`, `post_pet_nudges`)를 **항상 허용**으로 |
+| 조직 설정 > 기능: **"새 작업을 자동 승인 모드로 시작"**                                                                                                                                 | 기본 켜짐             | 기본 꺼짐 → 켜기(또는 작업별 설정 안내)                                                                                                                                         |
+| 플러그인 마켓플레이스: private GitHub 저장소에 `claude/` 폴더 내용을 올리고 조직 마켓플레이스로 연결 → `enu-den` 플러그인을 **기본 설치(Installed by default)** 또는 **필수(Required)** | 필요                  | 필요                                                                                                                                                                            |
+| 메모리: Owner가 허용(각 직원이 켬). 과거 대화 검색은 기본 켜짐                                                                                                                          | 권장                  | 권장 (CMEK 조직은 대화 검색 없음)                                                                                                                                               |
+| Google Calendar·Gmail 커넥터 활성화 (활동 공유의 회의·집중·부재 일정은 캘린더에서 옴. `iCalUID`·참석자 수가 보이는지 파일럿에서 확인)                                                   | 권장                  | 권장                                                                                                                                                                            |
+| Claude 조직 SSO를 Google Workspace로 (Claude 계정과 ENU Den 로그인 신원을 일치)                                                                                                         | 권장                  | 권장                                                                                                                                                                            |
+| **Compliance API**                                                                                                                                                                      | —                     | ENU Den에는 **사용하지 않음**                                                                                                                                                   |
 
 > 예약 작업은 직원 본인의 seat 사용량을 씁니다. Cowork 예약 프리셋은 매시간/매일/매주/평일/수동이며,
-> 근무 시간(08:30–19:30) 밖과 주말·공휴일 실행은 ENU Town이 `skip`으로 즉시 끝내게 합니다.
+> 근무 시간(08:30–19:30) 밖과 주말·공휴일 실행은 ENU Den이 `skip`으로 즉시 끝내게 합니다.
 
 ## 2. Claude Code (개발자, 선택)
 
@@ -53,12 +53,12 @@ Claude가 ENU Town에 로그인합니다(ENU Town이 OAuth 2.1 인가 서버, �
 
 | 작업           | 방법                                                                                                                                                                                                                                 |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 자리 재배정    | ENU Town `/admin` > 좌석                                                                                                                                                                                                             |
+| 자리 재배정    | ENU Den `/admin` > 좌석                                                                                                                                                                                                              |
 | 퇴사·비활성화  | `/admin` > 사용자 > 비활성화: 로그인 차단, 모든 토큰·커넥터 연결 폐기, 자리 해제. 같은 날 Claude 조직에서도 계정 정리                                                                                                                |
 | 공휴일         | `packages/db/seed/kr-holidays.json` 매년 갱신 후 `pnpm seed:seats`                                                                                                                                                                   |
 | 백업           | `deploy/scripts/backup.sh <age-recipient>`로 Postgres 덤프(`pg_dump -Fc`)를 암호화해 보관(`jwks`, OAuth 토큰 테이블 포함). 정기 백업은 정리 작업(매일 03:17) 뒤, 근무 시작(08:30) 전에 돌려 전날 활동 보고가 백업에 남지 않게 합니다 |
 | 활동·상태 정리 | worker의 보존 기간 정리(매일 03:17)가 전날 이전의 활동 보고(`activity_reports`)와 기한이 지난 '내 상태'를 지웁니다. 따로 할 일 없음                                                                                                  |
-| 커넥터 문제    | 직원: Claude 설정에서 ENU Town 해제 후 다시 연결 / ENU Town `/me`에서 연결 해제 후 재연결                                                                                                                                            |
+| 커넥터 문제    | 직원: Claude 설정에서 ENU Den 해제 후 다시 연결 / ENU Den `/me`에서 연결 해제 후 재연결                                                                                                                                              |
 
 ## 5. 릴리스: 2026-11 타운 시각화 (마이그레이션 `0002`)
 
@@ -69,7 +69,7 @@ Claude가 ENU Town에 로그인합니다(ENU Town이 OAuth 2.1 인가 서버, �
 
 0. 옛 이미지를 되돌리기용 태그로 남기고 새 이미지를 빌드합니다(아직 실행하지 않음).
    ```bash
-   for s in web realtime worker; do docker tag enu-town/$s:latest enu-town/$s:rollback; done
+   for s in web realtime worker; do docker tag enu-den/$s:latest enu-den/$s:rollback; done
    git pull && docker compose build
    ```
 1. `docker compose stop web realtime worker`
@@ -84,9 +84,9 @@ Claude가 ENU Town에 로그인합니다(ENU Town이 OAuth 2.1 인가 서버, �
 
 - 개인정보 고지가 버전 2026-11로 바뀌어 모든 직원이 다음 접속 때 다시 동의하고 **활동 공유**를 직접 고릅니다
   (미리 골라 둔 값 없음, 고르지 않으면 꺼짐). 동의 전에는 타운에 들어올 수 없습니다(`notice_required` → `/welcome`).
-- 조직 플러그인 마켓플레이스의 `enu-town` 플러그인을 이 저장소의 `claude/` 내용으로 갱신합니다(체크인 스킬이
+- 조직 플러그인 마켓플레이스의 `enu-den` 플러그인을 이 저장소의 `claude/` 내용으로 갱신합니다(체크인 스킬이
   `post_activity`를 씀). Enterprise는 역할마다 `post_activity`를 **항상 허용**에 추가합니다.
-- 열려 있던 브라우저에는 "ENU Town이 새 버전으로 바뀌었어요" 안내가 뜨고 새로고침됩니다. 예전 탭이 멈춰 있으면
+- 열려 있던 브라우저에는 "ENU Den이 새 버전으로 바뀌었어요" 안내가 뜨고 새로고침됩니다. 예전 탭이 멈춰 있으면
   직접 새로고침하도록 안내합니다.
 
 **되돌리기 = 2단계 백업 복원 + 옛 이미지.** 3단계 이후에는 이미지만 되돌릴 수 없습니다(`0002`가 테이블을 지워 옛
@@ -96,9 +96,9 @@ Claude가 ENU Town에 로그인합니다(ENU Town이 OAuth 2.1 인가 서버, �
 ```bash
 docker compose stop web realtime worker
 docker compose exec -T postgres sh -c 'dropdb -U "$POSTGRES_USER" --force "$POSTGRES_DB" && createdb -U "$POSTGRES_USER" "$POSTGRES_DB"'
-age -d -i <age-identity-file> ./backups/release-2026-11/enu-town-<stamp>.dump.age \
+age -d -i <age-identity-file> ./backups/release-2026-11/enu-den-<stamp>.dump.age \
   | docker compose exec -T postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
-for s in web realtime worker; do docker tag enu-town/$s:rollback enu-town/$s:latest; done
+for s in web realtime worker; do docker tag enu-den/$s:rollback enu-den/$s:latest; done
 docker compose up -d
 ```
 

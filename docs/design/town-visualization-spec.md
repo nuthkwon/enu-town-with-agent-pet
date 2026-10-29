@@ -1,4 +1,4 @@
-# ENU Town as a visualization of teams at work: final spec
+# ENU Den as a visualization of teams at work: final spec
 
 Status: accepted design (2026-10-29). Written by a design panel (three independent designs plus a lead draft, a judge
 synthesis and a review pass; see "Review resolutions" at the end) against the repo at `84f90e4`.
@@ -61,7 +61,7 @@ architecture. It takes the following from the other candidates:
 - **P2 Position means work state, not physical location.** No random walks, invented breaks or fake typing on absent
   people. There is no "where" field (`zoneId` is deleted).
 - **P3 Each person's state comes only from their own sources.** Links between people exist only through mutual corroboration (D5).
-- **P4 Current state only.** ENU Town stores no presence or activity timeline: `activity_reports` holds the current
+- **P4 Current state only.** ENU Den stores no presence or activity timeline: `activity_reports` holds the current
   day only, audit rows carry no activity metadata, logs carry no per-user connection lines, and colleague-facing
   REST carries no status or activity timestamps. Admins have no extra view.
 - **P5 Office hours only** (business days 08:30–19:30, `kr_holidays`). **The office day is `APP_TIMEZONE`**
@@ -99,11 +99,11 @@ Evaluated by `resolveActivity` (§2). Only these inputs exist:
 | Fresh `now` report (`now < until`)                                                             | owner's Claude → `post_activity.now`: **the kind of work the owner's own Claude judged from recent work traces** (documents, commits, PRs, reviews) | `canShareActivity`                                  | **label only**        |
 | Today's log is colleague-visible and has a task with status `done`, `in_progress` or `blocked` | owner's Claude → `post_work_log`                                                                                                                    | `canShareActivity` ∧ `canViewLog(ANY_COLLEAGUE, …)` | **label only**        |
 
-**Never used by ENU Town:**
+**Never used by ENU Den:**
 
 - tab visibility
 - keyboard or mouse input
-- e-mail, commit or MCP call timestamps (ENU Town never receives them; only the owner's Claude sees the owner's
+- e-mail, commit or MCP call timestamps (ENU Den never receives them; only the owner's Claude sees the owner's
   tools, and it sends a `now` _kind_, which is disclosed as "Claude 보고" in the legend and the notice)
 - link state
 - private logs
@@ -462,7 +462,7 @@ export const WorkRef = z
   .regex(WORK_REF_PATTERN)
   .describe(
     'Stable id copied verbatim from a connected tool, never invented: gcal:<iCalUID>, jira:ENU-123, ' +
-      'github:<owner>/<repo>#<n>, drive:<fileId>. Never shown to anyone; ENU Town stores only a keyed daily value and ' +
+      'github:<owner>/<repo>#<n>, drive:<fileId>. Never shown to anyone; ENU Den stores only a keyed daily value and ' +
       "uses it to draw people together when colleagues' own Claudes report the same id.",
   );
 
@@ -590,7 +590,7 @@ again.', { problems })`, the same pattern as `post_work_log`.
 
 `McpDeps` gains `activityRefKey: Uint8Array` and `officeTimeZone: string` (= `APP_TIMEZONE`).
 `apps/web/src/app/api/mcp/route.ts` derives the key once:
-`new Uint8Array(hkdfSync('sha256', BETTER_AUTH_SECRET, 'enu-town', 'activity-ref/v1', 32))` (`hkdfSync` returns an
+`new Uint8Array(hkdfSync('sha256', BETTER_AUTH_SECRET, 'enu-den', 'activity-ref/v1', 32))` (`hkdfSync` returns an
 `ArrayBuffer`). Test harnesses pass a fixed key and `'Asia/Seoul'`.
 
 ### 4.2 `get_my_context`
@@ -613,7 +613,7 @@ activity: z.object({
 
 **Descriptions** (`packages/mcp-tools/src/descriptions.ts`):
 
-- `SERVER_INSTRUCTIONS` gains: "ENU Town is a live visualization: nobody steers avatars. After get_my_context, if
+- `SERVER_INSTRUCTIONS` gains: "ENU Den is a live visualization: nobody steers avatars. After get_my_context, if
   activity.sharing is true, call post_activity with today's work calendar blocks and what the owner is doing now.
   Never guess presence or attendance, never name colleagues; people are drawn together only when their own Claudes
   report the same ref."
@@ -629,10 +629,10 @@ activity: z.object({
   - `owner_status` wins;
   - the 16-block and 20-per-hour limits.
 
-### 4.3 Check-in skill (`claude/plugins/enu-town/skills/enu-town-checkin/SKILL.md`)
+### 4.3 Check-in skill (`claude/plugins/enu-den/skills/enu-den-checkin/SKILL.md`)
 
 - **Description:** add `활동(post_activity)`.
-- **Intro, new sentence:** `ENU Town 아바타는 사람이 조작하지 않는다. 사용자 본인 상태, 타운 접속, 네가 보낸 일정으로 ENU Town이 자리를 정하고, 네가 보낸 '지금 하는 일'과 업무 로그는 이름표로만 붙는다.`
+- **Intro, new sentence:** `ENU Den 아바타는 사람이 조작하지 않는다. 사용자 본인 상태, 타운 접속, 네가 보낸 일정으로 ENU Den이 자리를 정하고, 네가 보낸 '지금 하는 일'과 업무 로그는 이름표로만 붙는다.`
 - **Call order:** `get_my_context` → `post_work_log` → **`post_activity`** → `upsert_todos` → `post_pet_nudges`.
 - **New section "5. post_activity"** (the old 5–7 become 6–8):
 
@@ -655,17 +655,17 @@ activity: z.object({
   - `ref`: 그 업무의 대표 항목 ID를 **도구가 준 그대로** 하나만(`jira:ENU-123`, `github:enu/hmi#42`, `drive:<fileId>`).
     지어내지 않는다.
   - `until`: 보통 생략(90분).
-- 동료 이름·이메일은 어떤 필드에도 쓰지 않는다. 함께 있는 모습은 ENU Town이 각자의 Claude가 보낸 `ref`로만 만든다.
+- 동료 이름·이메일은 어떤 필드에도 쓰지 않는다. 함께 있는 모습은 ENU Den이 각자의 Claude가 보낸 `ref`로만 만든다.
 - `owner_status`가 있으면 사용자가 직접 정한 상태다. 덮어쓰려 하지 말고 평소처럼 보낸다.
 - 결과가 `skipped_sharing_off`면 다시 시도하지 않는다. 거부되면 `problems`에 맞게 고쳐 **한 번만** 다시 보낸다.
 ```
 
 - **Section 3 (공개 기준), new line:** `아바타 위치는 실제 위치가 아니라 업무 상태다. 출퇴근·근태 기록이 아니며 성과 평가에 쓰이지 않는다.`
 - **Section 2:** the calendar bullet adds `(수락 여부, 참석자 수, Focus time·부재중 여부까지 확인)`.
-- **Final line:** `ENU Town 체크인 완료: 업무 로그 1건, 활동 1건(일정 블록 N개), 할 일 N건, 펫 메시지 N건`.
+- **Final line:** `ENU Den 체크인 완료: 업무 로그 1건, 활동 1건(일정 블록 N개), 할 일 N건, 펫 메시지 N건`.
 - `references/tool-guide.md` gets one `post_activity` example: a 3-person meeting with a ref, a 1:1 without one, an away block and `now: review jira:ENU-301`.
 - `references/redaction-rules.ko.md` gets the 1:1, 면담 and personal-event omission rules.
-- `enu-town-setup` and the plugin `README.md`: "네 가지 도구" becomes "다섯 가지", plus one line about `/me > 설정 > 활동 공유`.
+- `enu-den-setup` and the plugin `README.md`: "네 가지 도구" becomes "다섯 가지", plus one line about `/me > 설정 > 활동 공유`.
 
 ---
 
@@ -753,7 +753,7 @@ when `until > 0`. Times are formatted with `formatLocalHm(…, MeDto.officeTimeZ
 
 **Legend** (`?` button, `ko.townUi.legend`):
 
-- `아바타는 사람이 조작하지 않아요. 본인이 정한 상태, 타운 접속, 본인 Claude가 보낸 캘린더 일정으로 ENU Town이 자리를 정해요.`
+- `아바타는 사람이 조작하지 않아요. 본인이 정한 상태, 타운 접속, 본인 Claude가 보낸 캘린더 일정으로 ENU Den이 자리를 정해요.`
 - `'Claude 보고'는 본인 Claude가 최근 업무 흔적(문서·커밋·PR·리뷰)을 보고 판단한 지금 하는 일의 종류예요. 이름표나 자리 표시판에만 붙고, 이것만으로 아바타가 나타나지는 않아요.`
 - `자리에 보이는 것은 출근·근태를 뜻하지 않아요. 아바타가 없으면 지금 알려진 활동이 없다는 뜻일 뿐이에요.`
 - `타운을 열면 보통 내 아바타도 보여요(서로 보기). 설정 > 접속 표시를 끄면 타운을 열어도 보이지 않아요.`
@@ -942,19 +942,19 @@ export const PROTOCOL_VERSION = 2;
 
 ### 6.4 Messages (`packages/protocol/src/messages.ts`)
 
-|                    | Before                                                                  | After                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| ------------------ | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| C2S `step`, `face` | grid movement                                                           | **deleted** (the `'*'` handler answers `UNKNOWN_MESSAGE`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| S2C `move:correct` | prediction fix-up                                                       | **deleted**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| join options       | `{ mapHash }`                                                           | `{ mapHash, protocol: PROTOCOL_VERSION }`, sent with `join` (clients never create the room). **`onAuth`** reads `protocol` (`protocolOk` in the auth data) and verifies the ticket; a missing or different value is refused at the **start of `onJoin`**, before any state is sent: `throw new ServerError(CloseCodes.ProtocolMismatch, 'protocol_mismatch')`. (Colyseus turns an `onAuth` error code into the HTTP status of the matchmake response, so 4111 would not reach the client from there; an `onJoin` error keeps its code.) New clients map 4111 to a guarded reload with `ko.townUi.protocolMismatch` (`ENU Town이 새 버전으로 바뀌었어요. 새로고침할게요.`). Old cached clients end in their existing `failed` state (manual reload); they never see the map-changed text |
-| C2S `presence`     | `{visible, uiBusy}`                                                     | unchanged (pet gating + `glance` only)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| C2S `status:set`   | `{ status: 0..3, text? }`                                               | `{ status: z.enum(['auto', ...MANUAL_STATUSES]), duration: z.enum(MANUAL_DURATIONS).optional(), text: z.string().max(LIMITS.statusTextMax).optional() }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| C2S `chat:send`    | `{ channel, text, clientMsgId }`                                        | `{ text, clientMsgId }` (an extra `channel` key is stripped; nearby no longer exists)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| C2S `social:wave`  | `{}` → nearby                                                           | `{ toUserId: z.string().min(1).max(64) }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| S2C `emote`        | `{ fromUserId, kind }`                                                  | `{ fromUserId, toUserId, kind: 'wave' }` broadcast to all clients                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| S2C `chat:msg`     | `kind: 'nearby'\|'room'`, `zoneId`                                      | `kind: 'room'`; `zoneId` deleted                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| S2C `error`        | codes                                                                   | adds `'NOT_SHOWN'` (a wave to or from someone hidden, or the office closed). `social:ping` answers only `NOT_ONLINE` or `RATE_LIMITED`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| others             | `dm:*`, `social:ping`/`pinged`, `pet:bubble-seen`, `notice`, `chat:ack` | unchanged                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+|                    | Before                                                                  | After                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------ | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C2S `step`, `face` | grid movement                                                           | **deleted** (the `'*'` handler answers `UNKNOWN_MESSAGE`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| S2C `move:correct` | prediction fix-up                                                       | **deleted**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| join options       | `{ mapHash }`                                                           | `{ mapHash, protocol: PROTOCOL_VERSION }`, sent with `join` (clients never create the room). **`onAuth`** reads `protocol` (`protocolOk` in the auth data) and verifies the ticket; a missing or different value is refused at the **start of `onJoin`**, before any state is sent: `throw new ServerError(CloseCodes.ProtocolMismatch, 'protocol_mismatch')`. (Colyseus turns an `onAuth` error code into the HTTP status of the matchmake response, so 4111 would not reach the client from there; an `onJoin` error keeps its code.) New clients map 4111 to a guarded reload with `ko.townUi.protocolMismatch` (`ENU Den이 새 버전으로 바뀌었어요. 새로고침할게요.`). Old cached clients end in their existing `failed` state (manual reload); they never see the map-changed text |
+| C2S `presence`     | `{visible, uiBusy}`                                                     | unchanged (pet gating + `glance` only)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| C2S `status:set`   | `{ status: 0..3, text? }`                                               | `{ status: z.enum(['auto', ...MANUAL_STATUSES]), duration: z.enum(MANUAL_DURATIONS).optional(), text: z.string().max(LIMITS.statusTextMax).optional() }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| C2S `chat:send`    | `{ channel, text, clientMsgId }`                                        | `{ text, clientMsgId }` (an extra `channel` key is stripped; nearby no longer exists)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| C2S `social:wave`  | `{}` → nearby                                                           | `{ toUserId: z.string().min(1).max(64) }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| S2C `emote`        | `{ fromUserId, kind }`                                                  | `{ fromUserId, toUserId, kind: 'wave' }` broadcast to all clients                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| S2C `chat:msg`     | `kind: 'nearby'\|'room'`, `zoneId`                                      | `kind: 'room'`; `zoneId` deleted                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| S2C `error`        | codes                                                                   | adds `'NOT_SHOWN'` (a wave to or from someone hidden, or the office closed). `social:ping` answers only `NOT_ONLINE` or `RATE_LIMITED`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| others             | `dm:*`, `social:ping`/`pinged`, `pet:bubble-seen`, `notice`, `chat:ack` | unchanged                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 Handlers:
 
@@ -1232,10 +1232,10 @@ The welcome / re-consent wizard adds a step **"활동 공유"**:
 
 **New section "화면이 뜻하는 것과 뜻하지 않는 것":**
 
-- 아바타는 사람이 조작하지 않습니다. 본인이 정한 상태, 타운 접속, 본인 Claude가 보낸 캘린더 일정으로 ENU Town이 자리에 앉히거나 회의 테이블·동료 자리·탕비실로 옮깁니다. 본인 Claude의 '지금 하는 일'과 오늘 업무 기록은 이름표나 자리 표시판에만 붙습니다.
+- 아바타는 사람이 조작하지 않습니다. 본인이 정한 상태, 타운 접속, 본인 Claude가 보낸 캘린더 일정으로 ENU Den이 자리에 앉히거나 회의 테이블·동료 자리·탕비실로 옮깁니다. 본인 Claude의 '지금 하는 일'과 오늘 업무 기록은 이름표나 자리 표시판에만 붙습니다.
 - **아바타의 위치와 움직임은 실제 위치가 아니라 업무 상태를 나타냅니다.** 자리에 보이는 것은 출근·근무 시간을 뜻하지 않으며, 아바타가 없다는 것은 '지금 알려진 활동이 없다'는 뜻일 뿐입니다.
 - 함께 있는 모습은 각자의 Claude가 같은 일정(3명 이상)이나 같은 작업을 **각각** 보고했고 모두 활동 공유를 켠 경우에만 보입니다. 1:1 일정은 묶지 않습니다. 다른 사람의 Claude는 내 아바타를 움직일 수 없습니다.
-- ENU Town은 키보드·마우스 사용이나 화면을 보고 있는지를 측정하지 않고, 메일·커밋 시각을 받지 않습니다. 활동 공유를 켜면 **본인의 Claude가 최근 업무 흔적을 보고 판단한 '지금 하는 일'의 종류**만 받아 'Claude 보고'로 표시합니다.
+- ENU Den은 키보드·마우스 사용이나 화면을 보고 있는지를 측정하지 않고, 메일·커밋 시각을 받지 않습니다. 활동 공유를 켜면 **본인의 Claude가 최근 업무 흔적을 보고 판단한 '지금 하는 일'의 종류**만 받아 'Claude 보고'로 표시합니다.
 - 타운을 열면 보통 내 아바타도 보입니다(서로 보기). 설정 > 접속 표시를 끄면 타운을 열어도 나와 접속 표시가 보이지 않습니다.
 - 근무 시간 외·주말·공휴일에는 누구의 상태도 다른 사람에게 보내지 않습니다.
 - DM·업무 요청·부르기는 누가 누구에게 보냈는지도 다른 사람에게 표시하지 않습니다.
@@ -1261,7 +1261,7 @@ The welcome / re-consent wizard adds a step **"활동 공유"**:
 - **`docs/adr/0003-visibility.md`** addendum: `canShareActivity`, `canShowLive`, `canViewLogTimestamps`,
   `ANY_COLLEAGUE`, and `projectForColleagues` as the single colleague projection (office-hours neutral, `online`
   without grace, `부재` without until/source, 상태 문구 only while shown or away, "grouping requires every member").
-- **`docs/adr/0002-pet-text-source.md`** addendum: the new tool carries no free text; on-map text is ENU Town UI text,
+- **`docs/adr/0002-pet-text-source.md`** addendum: the new tool carries no free text; on-map text is ENU Den UI text,
   human-typed text, or the existing verbatim work log.
 - **`docs/architecture.md`:**
   - realtime box: "director · pets · chat · owner-only pet bubbles";
@@ -1741,7 +1741,7 @@ link 21, clipboard 22, plane 23`) and `sprites:build` succeeds; WP-E mirrors the
 - **Files:** `docs/**` (`privacy-notice.ko.md` — after WP-E, `adr/0002`, `adr/0003`, new
   `adr/0004-town-is-a-visualization.md`, `architecture.md`, `employee-onboarding.ko.md`, `admin-runbook.ko.md`
   (incl. §7.5), `runbooks/dev-connector.md`, `pilot/claude-pilot-checklist.md`), `CLAUDE.md`, `README.md`,
-  `claude/plugins/enu-town/**` (`SKILL.md`s, `references/*`, plugin `README.md`).
+  `claude/plugins/enu-den/**` (`SKILL.md`s, `references/*`, plugin `README.md`).
 - **Acceptance:**
   - the §8 and §4.3 texts are present;
   - `docs/privacy-notice.ko.md` is copied verbatim from `ko.privacy` (same sections, same order), including the
@@ -1750,7 +1750,7 @@ link 21, clipboard 22, plane 23`) and `sprites:build` succeeds; WP-E mirrors the
   - the version strings match `PRIVACY_NOTICE_VERSION` and `INSTRUCTIONS_VERSION`.
 - **Verify:**
   ```bash
-  ! grep -RInE 'four (MCP |ENU Town )?tools|이동|on idle|WASD|근처|네 가지 도구' docs CLAUDE.md README.md claude
+  ! grep -RInE 'four (MCP |ENU Den )?tools|이동|on idle|WASD|근처|네 가지 도구' docs CLAUDE.md README.md claude
   grep -q '버전 2026-11' docs/privacy-notice.ko.md && pnpm check:policy
   ```
 
@@ -1798,7 +1798,7 @@ outright. Where the review offered alternatives, the smaller or more protective 
 | 26  | fixed  | `Player.zoneId`, the 위치 row and `ko.townUi.profile.zone` deleted (P2)                                                                                                                                                                                                                                                                               |
 | 27  | fixed  | `ChatItemDto.kind: 'dm' \| 'room'`, `zoneId` removed from shared/web DTOs, export and `RealtimeSession`                                                                                                                                                                                                                                               |
 | 28  | fixed  | `auth.int`, `helpers/server.ts walk()`, `BubblePresenter.test`, `direction.test`, `events.int`, `api.int` nearby cases listed; `syncRoster(h)` → `resyncAll()` for DB-created users                                                                                                                                                                   |
-| 29  | fixed  | `architecture.md:38`, `README.md:19`, `dev-connector.md`, exact notice row edits, data-flow line; grep widened to `four (MCP \|ENU Town )?tools\|이동\|on idle\|WASD\|근처\|네 가지 도구` (the onboarding replacement avoids "이동")                                                                                                                  |
+| 29  | fixed  | `architecture.md:38`, `README.md:19`, `dev-connector.md`, exact notice row edits, data-flow line; grep widened to `four (MCP \|ENU Den )?tools\|이동\|on idle\|WASD\|근처\|네 가지 도구` (the onboarding replacement avoids "이동")                                                                                                                   |
 | 30  | fixed  | Guest spots derive from `world.spawn`; `chooseSpawn` stays deleted                                                                                                                                                                                                                                                                                    |
 | 31  | fixed  | `packages/testing` → WP-A; `dto.test.ts` → WP-B; WP-A pre-adds `ko.errors` keys (sequenced, never concurrent); `ko.privacy` is the single notice source and WP-F copies it after WP-E; frame indices fixed in §5.4                                                                                                                                    |
 | 32  | fixed  | All listed tests added (§9); ESLint bans `Math.random`, `Date.now`, `performance.now` and argument-less `new Date()`; the e2e spy asserts no `step`/`face` frames                                                                                                                                                                                     |

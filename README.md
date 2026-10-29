@@ -1,6 +1,6 @@
-# ENU Town 🧚 — 사내 메타버스 + Claude 연동 요정 펫
+# ENU Den 🧚 — 사내 메타버스 + Claude 연동 요정 펫
 
-ENU Town은 ENU-Tech 사무실(대덕비즈센터 A동 606호)을 그대로 옮긴 게더타운형 2D 공간으로, 팀들이 일하고 함께 일하는 모습을 실시간으로 보여 주는 **사무실 지도**입니다. 직원의 Claude는 ENU Town 커넥터(MCP 도구 다섯 가지)로 업무 로그·활동·할 일·펫 메시지를 기록합니다.
+ENU Den은 ENU-Tech 사무실(대덕비즈센터 A동 606호)을 그대로 옮긴 게더타운형 2D 공간으로, 팀들이 일하고 함께 일하는 모습을 실시간으로 보여 주는 **사무실 지도**입니다. 직원의 Claude는 ENU Den 커넥터(MCP 도구 다섯 가지)로 업무 로그·활동·할 일·펫 메시지를 기록합니다.
 
 - **로그인:** 회사 Google 계정(@enu-tech.co.kr)만 쓸 수 있습니다.
 - **캐릭터:** 윙스클럽 풍의 오리지널 픽셀 캐릭터입니다. **아무도 키로 조작하지 않습니다.** 본인이 정한 상태, 타운 접속, (활동 공유를 켠 경우) 본인 Claude가 보낸 캘린더 일정으로 서버가 자리(ㄱ자 책상)에 앉히거나 회의 테이블·동료 자리·탕비실로 옮깁니다. 본인 Claude가 보낸 '지금 하는 일'과 업무 로그는 이름표에만 붙습니다.
@@ -11,7 +11,7 @@ ENU Town은 ENU-Tech 사무실(대덕비즈센터 A동 606호)을 그대로 옮�
   - **지난 대화**: 타운 채팅과, 본인이 공개한 Claude 업무 대화 요약
   - **업무 요청**: 팀별 템플릿(예: 품질보증팀에는 검토 요청)
 
-> 회사 서버는 LLM을 호출하지 않고, 직원의 Claude 대화 원문도 보지 않습니다. 직원의 Claude가 ENU Town 커넥터(MCP)에 로그인해서 직접 기록합니다. 자세한 내용은 [docs/architecture.md](docs/architecture.md), [ADR 0001](docs/adr/0001-auth-direction.md), [ADR 0004](docs/adr/0004-town-is-a-visualization.md)를 보세요.
+> 회사 서버는 LLM을 호출하지 않고, 직원의 Claude 대화 원문도 보지 않습니다. 직원의 Claude가 ENU Den 커넥터(MCP)에 로그인해서 직접 기록합니다. 자세한 내용은 [docs/architecture.md](docs/architecture.md), [ADR 0001](docs/adr/0001-auth-direction.md), [ADR 0004](docs/adr/0004-town-is-a-visualization.md)를 보세요.
 
 ## 구성
 
@@ -21,7 +21,7 @@ ENU Town은 ENU-Tech 사무실(대덕비즈센터 A동 606호)을 그대로 옮�
 | `apps/realtime` | Colyseus 0.18: 자리 배치(디렉터), 펫, 채팅·DM, 말풍선 표시                                        |
 | `apps/worker`   | pg-boss: 넛지 만료, 연결 상태, 보존 기간 정리(전날 활동 보고 삭제 포함)                           |
 | `packages/*`    | 공용 계약(shared, protocol), 도메인 규칙, DB, 인증, MCP 도구, 맵, 픽셀 아트                       |
-| `claude/`       | Claude 조직 플러그인 (`enu-town-checkin`, `enu-town-setup` 스킬)                                  |
+| `claude/`       | Claude 조직 플러그인 (`enu-den-checkin`, `enu-den-setup` 스킬)                                    |
 | `docs/`         | 관리자 런북, 직원 안내, 개인정보 고지, ADR, 설계 문서, 파일럿 체크리스트                          |
 
 ## 로컬 개발
@@ -31,8 +31,8 @@ ENU Town은 ENU-Tech 사무실(대덕비즈센터 A동 606호)을 그대로 옮�
 ```bash
 pnpm install
 # DB 준비
-createdb enu_town_dev && createdb enu_town_test        # 또는 docker compose -f compose.dev.yaml up -d postgres
-export DATABASE_URL=postgres://enu:enu@127.0.0.1:5432/enu_town_dev
+createdb enu_den_dev && createdb enu_den_test && createdb enu_den_e2e   # 또는 docker compose -f compose.dev.yaml up -d postgres
+export DATABASE_URL=postgres://enu:enu@127.0.0.1:5432/enu_den_dev
 pnpm db:migrate
 cp config/seats.example.json config/seats.local.json    # 실제 명단으로 수정 (깃에 올리지 않음)
 pnpm seed:seats && pnpm seed:dev                          # 좌석·공휴일 + 데모 사용자
@@ -47,7 +47,7 @@ pnpm dev                                                  # web :3000, realtime 
 
 ```bash
 pnpm check:policy && pnpm lint && pnpm typecheck && pnpm test
-DATABASE_URL_TEST=postgres://enu:enu@127.0.0.1:5432/enu_town_test pnpm test:int
+DATABASE_URL_TEST=postgres://enu:enu@127.0.0.1:5432/enu_den_test pnpm test:int
 pnpm test:e2e
 scripts/check-oauth-discovery.sh http://localhost:3000
 ```
