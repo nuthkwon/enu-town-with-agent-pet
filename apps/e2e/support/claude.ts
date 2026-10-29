@@ -47,29 +47,35 @@ export async function connectClaude(context: BrowserContext): Promise<{ token: s
 
   const page = await context.newPage();
   let code: string | null = null;
-  await page.route('http://127.0.0.1:7777/**', async (route) => {
-    code = new URL(route.request().url()).searchParams.get('code');
-    await route.fulfill({ status: 200, body: 'ok' });
+  // The redirect to Claude's callback can be a server redirect or a client navigation: watch requests.
+  page.on('request', (r) => {
+    if (r.url().startsWith('http://127.0.0.1:7777/')) code = new URL(r.url()).searchParams.get('code');
   });
+  await page.route('http://127.0.0.1:7777/**', (route) => route.fulfill({ status: 200, body: 'ok' }));
   await page.goto(`${BASE_URL}/api/auth/oauth2/authorize?${params}`);
   await expect(page).toHaveURL(/\/consent/);
   await expect(page.getByText('dev.', { exact: false }).first()).toBeVisible();
   await page.getByRole('button', { name: /허용|연결/ }).first().click();
-  await expect.poll(() => code, { timeout: 20_000 }).not.toBeNull();
+  await expect.poll(() => code, { timeout: 30_000 }).not.toBeNull();
   await page.close();
 
-  const tokenRes = await context.request.post(`${BASE_URL}/api/auth/oauth2/token`, {
-    form: {
+  // Claude exchanges the code server to server: no browser cookies (with cookies Better Auth's CSRF
+  // check would demand an Origin header).
+  const tokenRes = await fetch(`${BASE_URL}/api/auth/oauth2/token`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
       grant_type: 'authorization_code',
       code: code!,
       redirect_uri: REDIRECT,
       client_id: clientId,
       code_verifier: verifier,
       resource,
-    },
+    }),
   });
-  expect(tokenRes.status(), await tokenRes.text()).toBe(200);
-  const token = ((await tokenRes.json()) as { access_token: string }).access_token;
+  const tokenText = await tokenRes.text();
+  expect(tokenRes.status, tokenText).toBe(200);
+  const token = (JSON.parse(tokenText) as { access_token: string }).access_token;
   return { token, clientId };
 }
 

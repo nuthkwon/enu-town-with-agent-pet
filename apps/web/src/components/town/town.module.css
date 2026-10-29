@@ -243,7 +243,8 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  width: min(560px, calc(100% - 20px));
+  /* Wide enough for the after-hours banner on one line (a two-line pill covered the top desk plates). */
+  width: min(760px, calc(100% - 20px));
   pointer-events: none;
 }
 
@@ -253,7 +254,7 @@
 
 .bannersDocked {
   left: calc((100% - 320px) / 2);
-  width: min(560px, calc(100% - 340px));
+  width: min(760px, calc(100% - 340px));
 }
 
 /* After hours: the shared state is neutral for everyone (spec §1.4). */
@@ -1257,7 +1258,8 @@
 
 .legend {
   max-width: 300px;
-  max-height: min(70vh, 560px);
+  /* The popover opens under the top bar: use the height below it, so the whole legend fits on a laptop. */
+  max-height: min(calc(100vh - 92px), 820px);
   overflow-y: auto;
 }
 

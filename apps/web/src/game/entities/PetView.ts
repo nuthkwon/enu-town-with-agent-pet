@@ -15,6 +15,12 @@ export const PET_STEP_MS = Math.round(STEP_MS * 1.1);
 const HOVER_FEET_IN_TILE = 24;
 const SLEEP_FEET_IN_TILE = 28;
 const NOT_LINKED_TINT = 0xc9c3d6;
+/**
+ * Depth lift over the feet line: furniture-top tiles (monitors) sort at their row's ground line minus 2
+ * (WorldScene), i.e. 6 px under a hovering pet's feet; +8 keeps the pet in front of its own row's monitor
+ * and still behind anyone standing on the row below.
+ */
+export const PET_DEPTH_LIFT = 8;
 
 export function bubbleDisplayFallbackMs(text: string): number {
   return Math.min(15_000, Math.max(6_000, 5_000 + 70 * [...text].length));
@@ -206,8 +212,9 @@ export class PetView {
     this.feetX = Math.round(tileCenterX(s.x));
     this.feetY = Math.round(s.y * TILE_PX + (sleeping ? SLEEP_FEET_IN_TILE : HOVER_FEET_IN_TILE));
     this.root.setPosition(this.feetX, this.feetY + 4);
-    // depth: pets sit just in front of things on their row (their shadow is ~4px lower)
-    this.root.setDepth(DEPTH.entities + this.feetY + 4);
+    // depth: pets fly, so they sit in front of everything on their own row, monitors included (a pet
+    // perched on its hidden owner's desk is drawn in front of the monitor, not behind it)
+    this.root.setDepth(DEPTH.entities + this.feetY + PET_DEPTH_LIFT);
     this.sprite.y = -4 + bob;
     this.shadow.y = 0;
     this.shadow.setScale(1 + (bob < 0 ? 0.08 * bob : 0), 1);

@@ -3,6 +3,7 @@ import { STEP_MS, type Dir } from '@enu/protocol';
 import { TEX } from '../assets';
 import { avatarAnimKey, avatarFrames, toDir, walkFrameIndex, walkLift } from '../logic/direction';
 import { TileInterpolator, hopOffset } from '../logic/interpolation';
+import type { TagPlacement } from '../logic/tags';
 import { AVATAR_ORIGIN, EFFECT_FRAMES } from '../spriteSpec';
 import { COLORS, DEPTH, avatarFeetY, tileCenterX, type Stage } from '../stage';
 import { ChatBubble } from './ChatBubble';
@@ -47,6 +48,11 @@ export interface ScreenRect {
   h: number;
 }
 
+/** Gap (screen px) between the feet and a tag moved under them. */
+const TAG_BELOW_GAP = 3;
+/** The 16 px activity icon plus a 2 px gap, drawn inline on the left of a floating tag. */
+const ICON_LEAD = 18;
+
 /**
  * One roster member: a team-colour ground ring, drop shadow and hopping sprite (world), plus the
  * activity icon, floating name tag and chat bubble in screen space. The server director places the
@@ -77,6 +83,7 @@ export class AvatarView {
   private pulseUntil = 0;
   private headX = 0;
   private headY = 0;
+  private feetSY = 0;
   private onScreen = false;
 
   constructor(
@@ -325,6 +332,7 @@ export class AvatarView {
     const head = this.stage.toScreen(this.feetX, this.feetY - HEAD_ABOVE_FEET - air);
     this.headX = head.x;
     this.headY = head.y;
+    this.feetSY = this.stage.toScreen(this.feetX, this.feetY).y;
     this.onScreen =
       this.shown &&
       head.x > -120 &&
@@ -338,36 +346,61 @@ export class AvatarView {
     return this.onScreen && !this.presence.atDesk;
   }
 
-  /** Where the floating tag would sit before decluttering (screen px). */
+  /** Width (screen px) the inline activity icon adds on the left of a floating tag above the head. */
+  private get iconLead(): number {
+    return this.icon && this.presence.iconFrame !== null ? ICON_LEAD : 0;
+  }
+
+  /** Where the floating tag (with its inline activity icon) would sit before decluttering (screen px). */
   tagRect(): ScreenRect {
     const w = this.tag.width;
-    return { x: this.headX - w / 2, y: this.headY - this.tag.height, w, h: this.tag.height };
+    const lead = this.iconLead;
+    return { x: this.headX - (w + lead) / 2, y: this.headY - this.tag.height, w: w + lead, h: this.tag.height };
+  }
+
+  /** The decluttering alternative: the tag just under the feet (clear of the pet hovering above). */
+  tagRectBelow(): ScreenRect {
+    const w = this.tag.width;
+    return { x: this.headX - w / 2, y: this.feetSY + TAG_BELOW_GAP, w, h: this.tag.height };
   }
 
   /**
-   * Positions the screen-space overlays above the head: the tag (moved up by `tagShift` px when the
-   * scene decluttered it), the activity icon above that, then the chat bubble.
+   * Positions the screen-space overlays: the tag above the head (moved up by `tag.shift` px, or put under
+   * the feet with `tag.below`, when the scene decluttered it) with the activity icon inline on its left,
+   * or the icon alone over the head when no tag is above it (at the own desk, the plate carries the
+   * name); then the chat bubble. Keeping the icon beside the tag keeps the stack low, clear of the pet
+   * hovering behind its owner.
    */
-  placeOverlays(now: number, tagShift: number, chatAllowed: boolean): void {
+  placeOverlays(now: number, tag: TagPlacement, chatAllowed: boolean): void {
     if (!this.onScreen) {
       this.hideOverlays();
       if (!this.shown) this.chat.hide();
       return;
     }
     let top = this.headY;
+    let tagBottom: number | null = null;
     if (this.wantsTag) {
-      const bottom = this.headY - tagShift;
-      this.tag.setPosition(this.headX, bottom);
+      if (tag.below) {
+        this.tag.setPosition(this.headX, this.feetSY + TAG_BELOW_GAP + this.tag.height);
+      } else {
+        tagBottom = this.headY - tag.shift;
+        this.tag.setPosition(this.headX + this.iconLead / 2, tagBottom);
+        top = tagBottom - this.tag.height;
+      }
       this.tag.setVisible(true);
-      top = bottom - this.tag.height;
     } else {
       this.tag.setVisible(false);
     }
     if (this.icon) {
       if (this.presence.iconFrame !== null) {
         const bob = Math.round(Math.sin(now / 520 + this.feetX) * 1);
-        this.icon.setPosition(this.headX, top - 9 + bob).setVisible(true);
-        top -= 18;
+        if (tagBottom !== null) {
+          const left = this.headX + this.iconLead / 2 - this.tag.width / 2;
+          this.icon.setPosition(left - ICON_LEAD / 2, tagBottom - this.tag.height / 2 + bob).setVisible(true);
+        } else {
+          this.icon.setPosition(this.headX, top - 9 + bob).setVisible(true);
+          top -= 18;
+        }
       } else {
         this.icon.setVisible(false);
       }

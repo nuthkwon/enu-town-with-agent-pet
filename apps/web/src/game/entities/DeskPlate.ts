@@ -105,6 +105,24 @@ export class DeskPlate {
     return this.container.visible;
   }
 
+  /** The plate's text lines as drawn (name, then the label and detail of a card); [] while invisible. */
+  get textLines(): string[] {
+    if (!this.container.visible) return [];
+    const lines = [this.name.text];
+    if (this.label.visible && this.label.text) lines.push(this.label.text);
+    if (this.detail.visible && this.detail.text) lines.push(this.detail.text);
+    return lines;
+  }
+
+  /** What the plate shows: `seated`, `elsewhere`, `hidden` or `vacant` (and whether the owner's dot is on). */
+  get kind(): PlateModel['kind'] {
+    return this.model.kind;
+  }
+
+  get online(): boolean {
+    return this.model.kind !== 'vacant' && this.model.online;
+  }
+
   /** Screen rectangle of the plate (null while invisible). */
   get rect(): Box | null {
     return this.container.visible ? this.box : null;
@@ -112,7 +130,10 @@ export class DeskPlate {
 
   /** World point at the plate's middle: arcs, planes and group links start here for hidden people. */
   get worldAnchor(): { x: number; y: number } {
-    return this.model.kind === 'hidden' ? { ...this.layout.card } : { x: this.layout.pill.x, y: this.layout.pill.y };
+    const { card, pill } = this.layout;
+    if (this.model.kind !== 'hidden') return { x: pill.x, y: pill.y };
+    // A bottom-anchored card stands on its anchor: aim at about its middle.
+    return { x: card.x, y: card.alignY === 'bottom' ? card.y - 14 : card.y };
   }
 
   setHighlight(on: boolean): void {
@@ -233,7 +254,7 @@ export class DeskPlate {
       const c = this.stage.toScreen(l.card.x, l.card.y);
       const minSx = l.minX === null ? null : this.stage.toScreen(l.minX, 0).x;
       const maxSx = l.maxX === null ? null : this.stage.toScreen(l.maxX, 0).x;
-      box = cardBox(c.x, c.y, this.w, this.h, minSx, maxSx);
+      box = cardBox(c.x, c.y, l.card.alignY, this.w, this.h, minSx, maxSx);
     } else {
       const a = this.stage.toScreen(l.pill.x, l.pill.y);
       box = pillBox(a.x, a.y, l.pill.align, this.w, this.h);

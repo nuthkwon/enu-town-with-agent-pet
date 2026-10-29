@@ -19,7 +19,10 @@ export function createGame(parent: HTMLElement, bridge: GameBridge): Phaser.Game
     banner: false,
     disableContextMenu: false,
     audio: { noAudio: true },
-    input: { keyboard: false, gamepad: false },
+    // windowEvents: Phaser would otherwise feed every mousedown/touchstart anywhere on the page (a
+    // popover, the team rail, the top bar) to the scene, so a click inside a menu that lies over a desk
+    // or an avatar also "clicked" that desk or avatar. Only presses on the canvas itself reach the map.
+    input: { keyboard: false, gamepad: false, windowEvents: false },
     scale: {
       mode: Phaser.Scale.RESIZE,
       width: Math.max(1, parent.clientWidth),

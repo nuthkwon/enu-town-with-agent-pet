@@ -5,7 +5,7 @@ import type { PetSnap, PlayerSnap } from '../../realtime/types';
 import { AvatarSheetLoader, TEX, ensurePetAnims } from '../assets';
 import { BRIDGE_REGISTRY_KEY, FONT_REGISTRY_KEY, type GameBridge } from '../bridge';
 import { teamColorNumber } from '../directory';
-import { AvatarView, type ScreenRect } from '../entities/AvatarView';
+import { AvatarView } from '../entities/AvatarView';
 import { DeskPlate, type PlateModel } from '../entities/DeskPlate';
 import { Fx, type WorldPoint } from '../entities/Fx';
 import { GroupLayer, type GroupDraw } from '../entities/GroupLayer';
@@ -30,6 +30,7 @@ import {
 } from '../logic/camera';
 import { plateLayout } from '../logic/plates';
 import { activityIcon, groupChipText, groupsOf, hiddenPlate, type GroupView } from '../logic/presence';
+import { TAG_DEFAULT, declutterTags } from '../logic/tags';
 import type { Measure } from '../logic/textLayout';
 import { canvasMeasure } from '../measure';
 import { EFFECT_FRAMES } from '../spriteSpec';
@@ -82,6 +83,8 @@ export class WorldScene extends Phaser.Scene {
   private readonly offs: Array<() => void> = [];
   private dirty = true;
   private officeOpen: boolean | null = null;
+  /** How many waves and paper planes this screen has drawn (read by the dev/e2e debug hook only). */
+  private readonly fxDrawn = { wave: 0, plane: 0 };
 
   private font = 'Galmuri11, sans-serif';
   private measure: Measure = (t) => t.length * PIXEL_FONT_SIZE;
@@ -496,6 +499,7 @@ export class WorldScene extends Phaser.Scene {
     const to = this.avatars.get(m.toUserId);
     if (!from?.isShown || !to?.isShown) return;
     this.fx.wave(from.chest, to.chest);
+    this.fxDrawn.wave++;
   }
 
   /** DMs reach only their two participants, so the paper plane is drawn only on their screens. */
@@ -503,7 +507,10 @@ export class WorldScene extends Phaser.Scene {
     if (this.officeOpen !== true || m.fromUserId === m.toUserId) return;
     const from = this.anchorOf(m.fromUserId);
     const to = this.anchorOf(m.toUserId);
-    if (from && to) this.fx.plane(from, to);
+    if (from && to) {
+      this.fx.plane(from, to);
+      this.fxDrawn.plane++;
+    }
   }
 
   /** Where someone is on the map: their avatar while shown, else their desk plate, else nowhere. */
@@ -670,7 +677,13 @@ export class WorldScene extends Phaser.Scene {
       if (click && !d.moved) this.onFloorClick(pointer);
     };
     this.input.on(Phaser.Input.Events.POINTER_UP, (pointer: Phaser.Input.Pointer) => endDrag(pointer, true));
-    this.input.on(Phaser.Input.Events.POINTER_UP_OUTSIDE, (pointer: Phaser.Input.Pointer) => endDrag(pointer, false));
+    // The game ignores window input events (createGame), so a drag released outside the canvas (over a
+    // panel or outside the window) is ended here instead of by POINTER_UP_OUTSIDE.
+    const onWindowUp = (e: PointerEvent) => {
+      if (e.target !== canvas && this.drag) endDrag(this.input.activePointer, false);
+    };
+    window.addEventListener('pointerup', onWindowUp);
+    this.offs.push(() => window.removeEventListener('pointerup', onWindowUp));
     this.input.on(
       Phaser.Input.Events.POINTER_WHEEL,
       (pointer: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number) => {
@@ -789,26 +802,22 @@ export class WorldScene extends Phaser.Scene {
     this.groups.update(this.officeOpen === false ? [] : this.groupDraws());
   }
 
-  /** Floating tags never stack on top of each other: a covered tag moves up (me first, then front to back). */
+  /** Floating tags never stack on top of each other (logic/tags.ts: alternate under the feet, then up). */
   private layoutOverlays(now: number): void {
-    const tagged = [...this.avatars.values()].filter((v) => v.wantsTag);
-    tagged.sort((a, b) => (a.isMe !== b.isMe ? (a.isMe ? -1 : 1) : b.feet.y - a.feet.y));
-    const placed: ScreenRect[] = [];
-    const shifts = new Map<string, number>();
-    for (const v of tagged) {
-      const r = v.tagRect();
-      let shift = 0;
-      for (let tries = 0; tries < 3; tries++) {
-        const y = r.y - shift;
-        const hit = placed.some((p) => r.x < p.x + p.w && p.x < r.x + r.w && y < p.y + p.h && p.y < y + r.h);
-        if (!hit) break;
-        shift += r.h + 2;
-      }
-      placed.push({ ...r, y: r.y - shift });
-      shifts.set(v.userId, shift);
-    }
+    const placements = declutterTags(
+      [...this.avatars.values()]
+        .filter((v) => v.wantsTag)
+        .map((v) => ({
+          id: v.userId,
+          isMe: v.isMe,
+          feetX: v.feet.x,
+          feetY: v.feet.y,
+          above: v.tagRect(),
+          below: v.tagRectBelow(),
+        })),
+    );
     const chatAllowed = this.officeOpen === true;
-    for (const v of this.avatars.values()) v.placeOverlays(now, shifts.get(v.userId) ?? 0, chatAllowed);
+    for (const v of this.avatars.values()) v.placeOverlays(now, placements.get(v.userId) ?? TAG_DEFAULT, chatAllowed);
   }
 
   /**
@@ -832,6 +841,20 @@ export class WorldScene extends Phaser.Scene {
         const p = this.bridge.session.getPlayer(userId);
         return p?.shown ? { x: p.x, y: p.y } : null;
       },
+      /** The projected Player fields this screen received (null for someone not on the roster). */
+      playerState: (userId: string) => {
+        const p = this.bridge.session.getPlayer(userId);
+        if (!p) return null;
+        const { shown, online, activity, source, until, note, groupId, statusText, deskId } = p;
+        return { shown, online, activity, source, until, note, groupId, statusText, deskId };
+      },
+      /** A desk plate as drawn: its kind, its text lines and whether the owner's online dot is on. */
+      plate: (deskId: string) => {
+        const plate = this.plateByDesk.get(deskId);
+        return plate ? { kind: plate.kind, lines: plate.textLines, online: plate.online } : null;
+      },
+      /** Waves and paper planes drawn on this screen so far. */
+      fxDrawn: () => ({ ...this.fxDrawn }),
       /** Screen rectangles of the visible desk plates (CSS px inside the canvas). */
       plateRects: () =>
         this.plates.flatMap((p) => {

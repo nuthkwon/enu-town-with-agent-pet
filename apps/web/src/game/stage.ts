@@ -70,5 +70,7 @@ export const COLORS = {
   groupHull: 0xa98bf5,
   groupLink: 0x8a6ee0,
   pulse: 0xffd166,
+  /** The participant-only DM paper plane's dotted trail. */
+  planeTrail: 0x6fa8ef,
   night: 0x221a48,
 } as const;

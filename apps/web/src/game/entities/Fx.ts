@@ -8,6 +8,11 @@ export interface WorldPoint {
   y: number;
 }
 
+/** The paper plane flies at full icon size (16 px), swelling a little mid-flight. */
+const PLANE_SCALE = 1;
+/** World px between the dots of the plane's trail. */
+const PLANE_TRAIL_GAP = 7;
+
 /** Quadratic Bézier point for t in [0, 1]. */
 export function bezier(a: WorldPoint, c: WorldPoint, b: WorldPoint, t: number): WorldPoint {
   const u = 1 - t;
@@ -103,19 +108,28 @@ export class Fx {
     }
   }
 
-  /** A DM or work request between the two participants (drawn only on their own screens). */
+  /**
+   * A DM or work request between the two participants (drawn only on their own screens): a paper plane
+   * at full icon size leaving a fading dotted trail, so it reads as a flight (a small pale plane alone
+   * looked like a mouse pointer).
+   */
   plane(from: WorldPoint, to: WorldPoint): void {
     if (!this.ready) return;
     const c = arcControl(from, to);
     const plane = this.stage.world(this.scene.add.image(from.x, from.y, TEX.effects, EFFECT_FRAMES.plane));
-    plane.setDepth(DEPTH.night - 1).setScale(0.6);
+    plane.setDepth(DEPTH.night - 1).setScale(PLANE_SCALE);
+    const trail = this.stage.world(this.scene.add.graphics());
+    trail.setDepth(DEPTH.night - 2);
     const dist = Math.hypot(to.x - from.x, to.y - from.y);
     const state = { t: 0 };
     let last = from;
+    // Trail dots at fixed spots along the arc, laid down as the plane passes them (even on slow frames).
+    const dots = Math.max(6, Math.round(dist / PLANE_TRAIL_GAP));
+    let dotsDrawn = 0;
     this.scene.tweens.add({
       targets: state,
       t: 1,
-      duration: Math.min(1600, 700 + dist * 1.6),
+      duration: Math.min(1700, 800 + dist * 1.6),
       ease: 'Sine.easeInOut',
       onUpdate: () => {
         const p = bezier(from, c, to, state.t);
@@ -124,11 +138,18 @@ export class Fx {
           plane.setRotation(Math.atan2(p.y - last.y, p.x - last.x) + Math.PI / 4);
         }
         last = p;
-        plane.setPosition(p.x, p.y).setScale(0.6 + 0.3 * Math.sin(state.t * Math.PI));
+        trail.fillStyle(COLORS.planeTrail, 0.8);
+        while (dotsDrawn < dots && (dotsDrawn + 1) / dots < state.t) {
+          dotsDrawn++;
+          const d = bezier(from, c, to, dotsDrawn / dots);
+          trail.fillCircle(d.x, d.y, 1.6);
+        }
+        plane.setPosition(p.x, p.y).setScale(PLANE_SCALE + 0.3 * Math.sin(state.t * Math.PI));
       },
       onComplete: () => {
         plane.destroy();
         this.sparkle({ x: to.x, y: to.y });
+        this.scene.tweens.add({ targets: trail, alpha: 0, duration: 500, onComplete: () => trail.destroy() });
       },
     });
   }

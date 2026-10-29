@@ -11,7 +11,7 @@
     "build": "turbo run build",
     "lint": "eslint .",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test",
+    "test": "turbo run test --filter=!@enu/e2e",
     "test:int": "turbo run test:int --concurrency=1",
     "test:e2e": "pnpm --filter @enu/e2e test",
     "format": "prettier --write .",
