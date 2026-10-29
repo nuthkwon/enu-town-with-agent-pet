@@ -1,0 +1,27 @@
+# Local full-stack entry point on http://localhost:8080 (same paths as production).
+{
+	auto_https off
+}
+
+:8080 {
+	log {
+		output stdout
+		format filter {
+			wrap console
+			fields {
+				request>uri query {
+					delete _authToken
+				}
+			}
+		}
+	}
+	route {
+		request_body /api/mcp {
+			max_size 64KB
+		}
+		handle_path /colyseus/* {
+			reverse_proxy {$REALTIME_UPSTREAM:realtime:2567}
+		}
+		reverse_proxy {$WEB_UPSTREAM:web:3000}
+	}
+}

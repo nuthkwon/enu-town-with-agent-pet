@@ -1,0 +1,40 @@
+{
+  "name": "enu-town",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "lint": "eslint .",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test --filter=!@enu/e2e",
+    "test:int": "turbo run test:int --concurrency=1",
+    "test:e2e": "pnpm --filter @enu/e2e test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check:policy": "bash scripts/verify-policy.sh",
+    "db:generate": "pnpm --filter @enu/db generate",
+    "db:migrate": "pnpm --filter @enu/db migrate",
+    "seed:seats": "pnpm --filter @enu/db seed:seats",
+    "seed:dev": "pnpm --filter @enu/db seed:dev",
+    "sprites:build": "pnpm --filter @enu/sprites build",
+    "map:gen": "pnpm --filter @enu/map gen",
+    "map:check": "pnpm --filter @enu/map check"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@next/eslint-plugin-next": "catalog:",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "eslint-plugin-react-hooks": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
+  }
+}

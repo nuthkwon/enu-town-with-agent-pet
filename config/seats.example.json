@@ -1,0 +1,271 @@
+{
+  "$comment": "Copy to config/seats.local.json and replace names with real Google display names. Real names must never be committed (public repo).",
+  "seats": [
+    {
+      "deskId": "L1a",
+      "name": "직원01",
+      "avatar": {
+        "body": "m",
+        "hair": "short",
+        "hairColor": "black",
+        "outfit": "sky",
+        "skin": "warm",
+        "wings": false
+      },
+      "pet": {
+        "species": "cat",
+        "name": "나비"
+      },
+      "team": "dev",
+      "title": "과장",
+      "role": "개발팀장"
+    },
+    {
+      "deskId": "L1b",
+      "name": "직원02",
+      "avatar": {
+        "body": "m",
+        "hair": "swept",
+        "hairColor": "brown",
+        "outfit": "navy",
+        "skin": "warm",
+        "wings": false
+      },
+      "pet": {
+        "species": "fox",
+        "name": "여름"
+      },
+      "team": "design",
+      "title": "과장",
+      "role": "APM · HMI 요건 분석·설계팀장"
+    },
+    {
+      "deskId": "R1",
+      "name": "직원03",
+      "avatar": {
+        "body": "m",
+        "hair": "swept",
+        "hairColor": "black",
+        "outfit": "navy",
+        "skin": "light",
+        "wings": false
+      },
+      "pet": {
+        "species": "dragon",
+        "name": "미르"
+      },
+      "team": "mgmt",
+      "title": "대표이사",
+      "role": "사업관리책임자(PM)"
+    },
+    {
+      "deskId": "L2a",
+      "name": "직원04",
+      "avatar": {
+        "body": "m",
+        "hair": "curly",
+        "hairColor": "chestnut",
+        "outfit": "mint",
+        "skin": "warm",
+        "wings": false
+      },
+      "pet": {
+        "species": "hamster",
+        "name": "콩이"
+      },
+      "team": "qa",
+      "title": "과장",
+      "role": "품질보증팀장 · SQA·V&V 총괄"
+    },
+    {
+      "deskId": "L2b",
+      "name": "직원05",
+      "avatar": {
+        "body": "m",
+        "hair": "buzz",
+        "hairColor": "black",
+        "outfit": "lemon",
+        "skin": "tan",
+        "wings": false
+      },
+      "pet": {
+        "species": "chick",
+        "name": "삐약"
+      },
+      "team": "qa",
+      "title": "사원",
+      "role": "문서·기록관리"
+    },
+    {
+      "deskId": "R2a",
+      "name": "직원06",
+      "avatar": {
+        "body": "m",
+        "hair": "short",
+        "hairColor": "brown",
+        "outfit": "coral",
+        "skin": "light",
+        "wings": false
+      },
+      "pet": {
+        "species": "bunny",
+        "name": "토리"
+      },
+      "team": "design",
+      "title": "사원",
+      "role": "HMI 요건 분석·설계"
+    },
+    {
+      "deskId": "R2b",
+      "name": "직원07",
+      "avatar": {
+        "body": "f",
+        "hair": "ponytail",
+        "hairColor": "chestnut",
+        "outfit": "rose",
+        "skin": "light",
+        "wings": false
+      },
+      "pet": {
+        "species": "puppy",
+        "name": "모모"
+      },
+      "team": "dev",
+      "title": "사원",
+      "role": "HMI 개발"
+    },
+    {
+      "deskId": "L3a",
+      "name": "직원08",
+      "avatar": {
+        "body": "f",
+        "hair": "long",
+        "hairColor": "black",
+        "outfit": "lilac",
+        "skin": "light",
+        "wings": false
+      },
+      "pet": {
+        "species": "lamb",
+        "name": "솜이"
+      },
+      "team": "dev",
+      "title": "사원",
+      "role": "HMI 개발"
+    },
+    {
+      "deskId": "L3b",
+      "name": "직원09",
+      "avatar": {
+        "body": "m",
+        "hair": "short",
+        "hairColor": "black",
+        "outfit": "peach",
+        "skin": "warm",
+        "wings": false
+      },
+      "pet": {
+        "species": "koala",
+        "name": "단풍"
+      },
+      "team": "dev",
+      "title": "과장",
+      "role": "HMI 개발"
+    },
+    {
+      "deskId": "R3b",
+      "name": "직원10",
+      "avatar": {
+        "body": "m",
+        "hair": "buzz",
+        "hairColor": "brown",
+        "outfit": "sky",
+        "skin": "tan",
+        "wings": false
+      },
+      "pet": {
+        "species": "unicorn",
+        "name": "용용"
+      },
+      "team": "qa",
+      "title": "대리",
+      "role": "SQA·V&V·형상 감사"
+    },
+    {
+      "deskId": "L4a",
+      "name": "직원11",
+      "avatar": {
+        "body": "f",
+        "hair": "bun",
+        "hairColor": "brown",
+        "outfit": "lemon",
+        "skin": "warm",
+        "wings": false
+      },
+      "pet": {
+        "species": "penguin",
+        "name": "병아"
+      },
+      "team": "dev",
+      "title": "대리",
+      "role": "HMI 디자이너"
+    },
+    {
+      "deskId": "L4b",
+      "name": "직원12",
+      "avatar": {
+        "body": "m",
+        "hair": "swept",
+        "hairColor": "black",
+        "outfit": "mint",
+        "skin": "warm",
+        "wings": false
+      },
+      "pet": {
+        "species": "hedgehog",
+        "name": "도토리"
+      },
+      "team": "design",
+      "title": "사원",
+      "role": "HMI 요건 분석·설계"
+    },
+    {
+      "deskId": "L5a",
+      "name": "직원13",
+      "avatar": {
+        "body": "m",
+        "hair": "curly",
+        "hairColor": "black",
+        "outfit": "coral",
+        "skin": "tan",
+        "wings": false
+      },
+      "pet": {
+        "species": "panda",
+        "name": "까망"
+      },
+      "team": "qa",
+      "title": "사원",
+      "role": "SQA 지원"
+    },
+    {
+      "deskId": "L5b",
+      "name": "직원14",
+      "avatar": {
+        "body": "m",
+        "hair": "short",
+        "hairColor": "chestnut",
+        "outfit": "lilac",
+        "skin": "warm",
+        "wings": false
+      },
+      "pet": {
+        "species": "owl",
+        "name": "노을"
+      },
+      "team": "design",
+      "title": "대리",
+      "role": "형상관리 담당"
+    }
+  ]
+}

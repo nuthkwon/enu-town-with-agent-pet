@@ -1,0 +1,33 @@
+{
+  "name": "@enu/auth",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run --passWithNoTests",
+    "test:int": "vitest run --config vitest.int.config.ts --passWithNoTests"
+  },
+  "dependencies": {
+    "@better-auth/cimd": "catalog:",
+    "@better-auth/mcp": "catalog:",
+    "@better-auth/oauth-provider": "catalog:",
+    "@enu/db": "workspace:*",
+    "@enu/domain": "workspace:*",
+    "@enu/shared": "workspace:*",
+    "better-auth": "catalog:",
+    "drizzle-orm": "catalog:",
+    "jose": "catalog:"
+  },
+  "devDependencies": {
+    "@enu/config": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "@enu/testing": "workspace:*"
+  }
+}

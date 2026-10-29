@@ -1,0 +1,17 @@
+{
+  "name": "@enu/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "typecheck": "tsc -p ."
+  },
+  "devDependencies": {
+    "@enu/config": "workspace:*",
+    "@modelcontextprotocol/client": "catalog:",
+    "@playwright/test": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}

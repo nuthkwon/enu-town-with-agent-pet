@@ -1,0 +1,132 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.page h1 {
+  margin: 0;
+}
+
+.adoption {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--c-card-soft);
+  border: 1px solid var(--c-line);
+}
+
+.statNum {
+  font-family: var(--font-pixel);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.bar {
+  height: 8px;
+  border-radius: 999px;
+  background: #eee8f6;
+  overflow: hidden;
+}
+
+.bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.fill_linked {
+  background: linear-gradient(90deg, var(--c-mint), #4fc99c);
+}
+
+.fill_stale {
+  background: linear-gradient(90deg, var(--c-lemon), #f4b860);
+}
+
+.fill_not_linked {
+  background: linear-gradient(90deg, #d8d0e6, #b9aecd);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+}
+
+.table th {
+  text-align: left;
+  font-size: 12.5px;
+  color: var(--c-muted);
+  font-weight: 700;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--c-line);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--c-line);
+  vertical-align: middle;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover td {
+  background: #fcfaff;
+}
+
+.table select {
+  min-width: 170px;
+  padding: 6px 10px;
+}
+
+.deskCell {
+  font-family: var(--font-pixel);
+  font-weight: 700;
+  color: var(--c-lavender-deep);
+}
+
+.labelHint {
+  display: block;
+  font-size: 11.5px;
+  color: var(--c-muted);
+}
+
+.nameCell {
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--c-ink-soft);
+}
+
+.inactive td {
+  opacity: 0.55;
+}
+
+@media (max-width: 640px) {
+  .adoption {
+    grid-template-columns: 1fr;
+  }
+}

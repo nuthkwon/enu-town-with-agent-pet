@@ -1,0 +1,25 @@
+{
+  "name": "@enu/map",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run --passWithNoTests",
+    "gen": "tsx scripts/gen-office-606.ts",
+    "check": "tsx bin/map-check.ts"
+  },
+  "dependencies": {
+    "@enu/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@enu/config": "workspace:*",
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

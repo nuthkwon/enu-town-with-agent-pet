@@ -1,0 +1,14 @@
+# Local overrides: plain HTTP on http://localhost:8080 through Caddy, Postgres published on 5432.
+#   docker compose -f compose.yaml -f compose.dev.yaml up -d --build
+# For day-to-day development run only Postgres here and use `pnpm dev`:
+#   docker compose -f compose.yaml -f compose.dev.yaml up -d postgres
+services:
+  postgres:
+    ports: ['127.0.0.1:5432:5432']
+  caddy:
+    environment:
+      PUBLIC_HOST: localhost
+    ports: !override
+      - '8080:8080'
+    volumes: !override
+      - ./deploy/caddy/Caddyfile.dev:/etc/caddy/Caddyfile:ro

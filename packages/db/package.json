@@ -1,0 +1,37 @@
+{
+  "name": "@enu/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts",
+    "./notify": "./src/notify.ts",
+    "./migrate": "./src/migrate.ts",
+    "./seed-seats": "./src/seed-seats.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run --passWithNoTests",
+    "test:int": "vitest run --config vitest.int.config.ts --passWithNoTests",
+    "generate": "drizzle-kit generate",
+    "migrate": "tsx src/migrate-cli.ts",
+    "seed:seats": "tsx seed/seats.ts",
+    "seed:dev": "tsx seed/dev.ts"
+  },
+  "dependencies": {
+    "@enu/shared": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "pg": "catalog:",
+    "uuid": "catalog:"
+  },
+  "devDependencies": {
+    "@enu/config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "drizzle-kit": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

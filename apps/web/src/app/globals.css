@@ -1,0 +1,206 @@
+/*
+ * ENU Town global styles: soft pastel "fairy" palette (lavender / pink / mint on white cards).
+ * Galmuri11 (OFL-1.1, from the `galmuri` package) is the pixel font for headings and game-ish
+ * accents; body text uses the system sans-serif stack.
+ */
+
+@font-face {
+  font-family: 'Galmuri11';
+  src: url('../../node_modules/galmuri/dist/Galmuri11.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Galmuri11';
+  src: url('../../node_modules/galmuri/dist/Galmuri11-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --font-pixel: 'Galmuri11', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --font-body:
+    system-ui, -apple-system, 'Apple SD Gothic Neo', 'Pretendard', 'Noto Sans KR', 'Malgun Gothic',
+    'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+
+  --c-bg: #f5f0ff;
+  --c-bg-2: #fdf1f8;
+  --c-card: #ffffff;
+  --c-card-soft: #fbf9ff;
+  --c-ink: #3b2a52;
+  --c-ink-soft: #6a5a84;
+  --c-muted: #978bab;
+  --c-line: #ebe3f6;
+  --c-line-strong: #d9cdee;
+
+  --c-lavender: #a78bfa;
+  --c-lavender-soft: #efe9ff;
+  --c-lavender-deep: #7457d6;
+  --c-pink: #f6a5cf;
+  --c-pink-soft: #fde8f3;
+  --c-pink-deep: #d94f93;
+  --c-mint: #7fdcb8;
+  --c-mint-soft: #defaee;
+  --c-mint-deep: #1d8f68;
+  --c-lemon: #fde68a;
+  --c-lemon-soft: #fff7d6;
+  --c-amber-deep: #a86a12;
+  --c-sky-soft: #e3f1ff;
+  --c-sky-deep: #3f74c4;
+  --c-danger: #e0506d;
+  --c-danger-soft: #ffe5eb;
+
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius: 16px;
+  --radius-lg: 24px;
+  --shadow-sm: 0 1px 3px rgba(80, 58, 110, 0.08), 0 2px 8px rgba(80, 58, 110, 0.05);
+  --shadow: 0 6px 22px rgba(80, 58, 110, 0.11);
+  --shadow-lg: 0 18px 44px rgba(80, 58, 110, 0.16);
+  --focus-ring: 0 0 0 3px rgba(167, 139, 250, 0.45);
+  --content-width: 1040px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--c-ink);
+  background-color: var(--c-bg);
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.9) 0 2px, transparent 3px),
+    radial-gradient(circle at 78% 12%, rgba(255, 255, 255, 0.85) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 64% 72%, rgba(255, 255, 255, 0.8) 0 2px, transparent 3px),
+    radial-gradient(circle at 28% 84%, rgba(255, 255, 255, 0.75) 0 1.5px, transparent 2.5px),
+    radial-gradient(1200px 600px at 0% 0%, #efe6ff 0%, transparent 60%),
+    radial-gradient(1000px 700px at 100% 100%, #ffe6f3 0%, transparent 60%),
+    linear-gradient(160deg, var(--c-bg) 0%, var(--c-bg-2) 100%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  /* Korean: wrap between words, not inside them. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-pixel);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+  margin: 0 0 0.5em;
+  color: var(--c-ink);
+}
+
+h1 {
+  font-size: 26px;
+}
+
+h2 {
+  font-size: 19px;
+}
+
+h3 {
+  font-size: 16px;
+}
+
+p {
+  margin: 0 0 0.75em;
+}
+
+a {
+  color: var(--c-lavender-deep);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  color: var(--c-pink-deep);
+}
+
+code,
+kbd {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-xs);
+}
+
+::selection {
+  background: var(--c-pink-soft);
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.pixel {
+  font-family: var(--font-pixel);
+}
+
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -120px;
+  padding: 6px 12px;
+  background: var(--c-card);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  z-index: 100;
+}
+
+.skip-link:focus {
+  top: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
