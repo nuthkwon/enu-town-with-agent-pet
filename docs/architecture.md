@@ -32,15 +32,16 @@
 ## Data flow of a check-in
 
 1. Cowork runs the employee's scheduled task, which runs the `enu-den-checkin` skill.
-2. The skill calls `get_my_context`. Outside work hours this returns `skip` and the skill stops. Its `activity` section tells Claude whether the owner shares activity, what it reported earlier today and any status the owner set by hand.
-3. `post_work_log` upserts the day's log, keyed by `(user, local date)`.
-4. `post_activity` (only when the owner shares activity) → `activity_reports` (one row per user and office day: the `now` kind and until, today's calendar blocks, refs as keyed daily hashes) → `activity_changed` → the realtime director.
-5. `upsert_todos` upserts by `external_ref`.
-6. `post_pet_nudges` queues bubble text, which is shown verbatim.
-7. Each write commits together with `NOTIFY enu_den_events`.
-8. The realtime `DbEvents` listener reloads the owner's signals (activity report, log flags) and pet candidates.
-9. `NudgeScheduler` (rules in `packages/domain/src/nudge-policy.ts`) chooses when to show a bubble: on join, when a nudge first becomes eligible, when the owner returns to the tab, or when something is due. It then sets the `.view()` bubble fields on the owner's pet. Only the owner's `StateView` contains their pet; colleagues see no sign of a bubble at all (the shared `indicator` stays 0): bubbles start only while the owner's tab is visible, so a shared "…" would tell colleagues when the owner looks at the town. A delivery row keeps only what the policy reads (no trigger) and survives only until the next 03:17 purge (today's count, the last 12 h of due keys). When the owner's session ends (leave or a replacing tab), any bubble on the long-lived pet is taken down.
-10. When a colleague clicks an avatar or a desk plate, the profile card calls `/api/v1/users/:id/card`, which only returns logs that pass `canViewLog`.
+2. The skill calls `get_my_context`. Outside work hours this returns `skip` and the skill stops. Its `activity` section tells Claude whether the owner shares activity, what it reported earlier today and any status the owner set by hand. Its `pet_inbox` lists the owner's messages to their pets that the connector may answer (never while `skip`).
+3. `post_pet_reply` answers them through `postPetReplies` (`packages/mcp-tools/src/services/pet-replies.ts`), the same core the Claude Code pet channel uses: the first lane to answer wins (`decideReplyAdmission`), replies are verbatim or rejected, never above the question's visibility, and are not audited.
+4. `post_work_log` upserts the day's log, keyed by `(user, local date)`.
+5. `post_activity` (only when the owner shares activity) → `activity_reports` (one row per user and office day: the `now` kind and until, today's calendar blocks, refs as keyed daily hashes) → `activity_changed` → the realtime director.
+6. `upsert_todos` upserts by `external_ref`.
+7. `post_pet_nudges` queues bubble text, which is shown verbatim.
+8. Each write commits together with `NOTIFY enu_den_events`.
+9. The realtime `DbEvents` listener reloads the owner's signals (activity report, log flags) and pet candidates.
+10. `NudgeScheduler` (rules in `packages/domain/src/nudge-policy.ts`) chooses when to show a bubble: on join, when a nudge first becomes eligible, when the owner returns to the tab, or when something is due. It then sets the `.view()` bubble fields on the owner's pet. Only the owner's `StateView` contains their pet; colleagues see no sign of a bubble at all (the shared `indicator` stays 0): bubbles start only while the owner's tab is visible, so a shared "…" would tell colleagues when the owner looks at the town. A delivery row keeps only what the policy reads (no trigger) and survives only until the next 03:17 purge (today's count, the last 12 h of due keys). When the owner's session ends (leave or a replacing tab), any bubble on the long-lived pet is taken down.
+11. When a colleague clicks an avatar or a desk plate, the profile card calls `/api/v1/users/:id/card`, which only returns logs that pass `canViewLog`.
 
 ## Town director
 

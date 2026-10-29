@@ -32,7 +32,14 @@ test('Claude writes; the owner sees the pet bubble, colleagues see the work log'
   const claude = await mcpClient(token);
   const tools = await claude.listTools();
   expect(tools.tools.map((t) => t.name).sort()).toEqual(
-    ['get_my_context', 'post_activity', 'post_pet_nudges', 'post_work_log', 'upsert_todos'].sort(),
+    [
+      'get_my_context',
+      'post_activity',
+      'post_pet_nudges',
+      'post_pet_reply',
+      'post_work_log',
+      'upsert_todos',
+    ].sort(),
   );
   expect(JSON.stringify(tools)).not.toContain('requiresUserInteraction');
 

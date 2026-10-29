@@ -158,7 +158,7 @@ describe('OAuth discovery for the connector', () => {
 });
 
 describe('authorize -> consent -> token -> MCP', () => {
-  it('connects an employee’s Claude and serves the five tools until revoked', async () => {
+  it('connects an employee’s Claude and serves the six tools until revoked', async () => {
     const clientId = await createLoopbackClient();
     const member = await createTestUser(h.db, { name: '연결러', shareActivity: true });
     const { cookie } = await devLogin(member.email);
@@ -236,7 +236,7 @@ describe('authorize -> consent -> token -> MCP', () => {
       });
       await client.connect(transport);
       const { tools } = await client.listTools();
-      expect(tools).toHaveLength(5);
+      expect(tools).toHaveLength(6);
       expect(tools.map((t) => t.name).sort()).toEqual(Object.values(MCP_TOOL_NAMES).sort());
       const ctx = await client.callTool({ name: MCP_TOOL_NAMES.getMyContext, arguments: {} });
       expect(ctx.isError).toBeFalsy();

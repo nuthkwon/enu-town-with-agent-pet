@@ -145,10 +145,11 @@ export function decideReplyAdmission(
       detail: 'connector replies only during office hours',
     };
   }
-  if (attempt.part <= q.replyCount) return { ok: true, kind: 'duplicate' };
+  // The other lane's answer is never this caller's duplicate: it was not this caller's text.
   if (q.answerState === 'answered' && q.answeredLane !== null && q.answeredLane !== attempt.lane) {
     return { ok: false, reason: 'already_answered' };
   }
+  if (attempt.part <= q.replyCount) return { ok: true, kind: 'duplicate' };
   if (isClaimLive(q, now) && (attempt.lane === 'connector' || q.claimedBy !== attempt.tokenId)) {
     return { ok: false, reason: 'already_answered', detail: 'held by a Claude Code channel' };
   }

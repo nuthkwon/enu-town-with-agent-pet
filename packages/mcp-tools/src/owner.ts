@@ -25,6 +25,8 @@ export interface OwnerContext {
   defaultLogVisibility: Visibility;
   defaultChatSummaryVisibility: Visibility | null;
   shareDmsWithMyClaude: boolean;
+  /** The owner's default for pet conversations (a pet's own default wins). */
+  petChatDefaultVisibility: Visibility;
   /** 활동 공유: null = not chosen yet (off). Decide with canShareActivity(). */
   shareActivity: boolean | null;
   /** The status the owner set by hand, as stored (it may have expired; see `activeOwnerStatus`). */
@@ -61,6 +63,7 @@ export async function findOwnerContext(db: DbOrTx, userId: string): Promise<Owne
       defaultLogVisibility: profiles.defaultLogVisibility,
       defaultChatSummaryVisibility: profiles.defaultChatSummaryVisibility,
       shareDmsWithMyClaude: profiles.shareDmsWithMyClaude,
+      petChatDefaultVisibility: profiles.petChatDefaultVisibility,
       shareActivity: profiles.shareActivity,
       manualStatus: profiles.manualStatus,
       manualStatusUntil: profiles.manualStatusUntil,
@@ -93,6 +96,7 @@ export async function findOwnerContext(db: DbOrTx, userId: string): Promise<Owne
     defaultLogVisibility: row.defaultLogVisibility,
     defaultChatSummaryVisibility: row.defaultChatSummaryVisibility,
     shareDmsWithMyClaude: row.shareDmsWithMyClaude,
+    petChatDefaultVisibility: row.petChatDefaultVisibility,
     shareActivity: row.shareActivity,
     manualStatus:
       row.manualStatus &&

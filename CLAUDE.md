@@ -46,7 +46,7 @@ what the town shows.
   (ㄱ-shaped team desks, R1 executive desk).
 - `packages/sprites` — code-defined pixel art → PNG sprite sheets (avatars, pets, office tiles).
 - `packages/db` — Drizzle schema, migrations, client, NOTIFY helper, seeds.
-- `packages/auth` — Better Auth configuration factory. `packages/mcp-tools` — the five MCP tools.
+- `packages/auth` — Better Auth configuration factory. `packages/mcp-tools` — the six MCP tools (+ `postPetReplies`, the reply core shared with the pet channel).
 - `claude/` — Claude org plugin (skills `enu-den-checkin`, `enu-den-setup`). `docs/` — runbooks (Korean).
 
 ## Conventions

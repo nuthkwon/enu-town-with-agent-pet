@@ -20,4 +20,4 @@ then `/mcp` → authenticate. Claude Code uses a loopback redirect (`http://loca
 
 - `scripts/check-oauth-discovery.sh http://localhost:3000` — 401 challenge, PRM, AS metadata (CIMD, none, S256, offline_access), JWKS.
 - `pnpm --filter @enu/auth test:int` — authorize → consent → token → MCP auth → revocation.
-- `pnpm --filter @enu/mcp-tools test:int` — all five tools through the MCP client.
+- `pnpm --filter @enu/mcp-tools test:int` — all six tools through the MCP client.

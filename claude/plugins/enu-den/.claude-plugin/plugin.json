@@ -1,7 +1,7 @@
 {
   "name": "enu-den",
-  "version": "0.3.0",
-  "description": "ENU Den(사내 메타버스) 체크인 스킬. ENU Den 커넥터(조직 커스텀 커넥터)와 함께 사용합니다.",
+  "version": "1.0.0",
+  "description": "ENU Den(사내 메신저·메타버스) 체크인 스킬. ENU Den 커넥터(조직 커스텀 커넥터)와 함께 사용합니다.",
   "author": { "name": "ENU-Tech" },
   "keywords": ["enu-den", "work-log", "check-in"]
 }

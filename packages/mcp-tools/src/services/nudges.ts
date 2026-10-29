@@ -1,4 +1,4 @@
-import { audit, newId, notifyTown, petNudges, todos, type Db } from '@enu/db';
+import { audit, newId, notifyTown, petNudges, pets, todos, type Db } from '@enu/db';
 import { isQuietTime, prepareNudgeText, resolveNudgeTimes, type NudgePrefs } from '@enu/domain';
 import {
   LIMITS,
@@ -25,6 +25,8 @@ interface Candidate {
   expiresAt: Date;
   todoRef: string | undefined;
   dedupeKey: string | undefined;
+  /** One of the owner's pets; undefined = the default pet. */
+  petId: string | undefined;
 }
 
 interface Action {
@@ -104,6 +106,7 @@ export async function postPetNudges(
       expiresAt: times.expiresAt,
       todoRef: n.todo_external_ref,
       dedupeKey: n.dedupe_key,
+      petId: n.pet_id?.toLowerCase(),
     });
   });
 
@@ -118,6 +121,13 @@ export async function postPetNudges(
           .where(and(eq(todos.userId, caller.userId), inArray(todos.externalRef, todoRefs)))
       : [];
     const todoIdByRef = new Map(todoRows.map((r) => [r.externalRef, r.id]));
+    const myPets = candidates.some((c) => c.petId)
+      ? new Set(
+          (await tx.select({ id: pets.id }).from(pets).where(eq(pets.userId, caller.userId))).map(
+            (p) => p.id,
+          ),
+        )
+      : new Set<string>();
 
     const dedupeKeys = [...new Set(candidates.flatMap((c) => (c.dedupeKey ? [c.dedupeKey] : [])))];
     const dedupeRows = dedupeKeys.length
@@ -146,6 +156,14 @@ export async function postPetNudges(
     const actions: Action[] = [];
     const blockedByOwner: number[] = [];
     for (const cand of candidates) {
+      if (cand.petId && !myPets.has(cand.petId)) {
+        rejected.push({
+          index: cand.index,
+          reason: 'unknown_pet',
+          detail: "not one of the owner's pets; use pet_inbox.pets[].pet_id or omit pet_id",
+        });
+        continue;
+      }
       let todoId: string | null = null;
       if (cand.todoRef) {
         todoId = todoIdByRef.get(cand.todoRef) ?? null;
@@ -211,6 +229,7 @@ export async function postPetNudges(
         showCount: 0,
         snoozedUntil: null,
         oauthClientId: caller.clientId,
+        petId: a.cand.petId ?? null,
       };
       if (a.type === 'insert') {
         await tx.insert(petNudges).values({

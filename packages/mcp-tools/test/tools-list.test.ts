@@ -67,8 +67,8 @@ describe.each(MODES)('tools/list (%s negotiation)', (mode) => {
     await handler.close();
   });
 
-  it('advertises exactly the five ENU Den tools', () => {
-    expect(ALL_NAMES).toHaveLength(5);
+  it('advertises exactly the six ENU Den tools', () => {
+    expect(ALL_NAMES).toHaveLength(6);
     expect(tools.map((t) => t.name).sort()).toEqual(ALL_NAMES);
   });
 
@@ -102,6 +102,7 @@ describe.each(MODES)('tools/list (%s negotiation)', (mode) => {
       MCP_TOOL_NAMES.postActivity,
       MCP_TOOL_NAMES.upsertTodos,
       MCP_TOOL_NAMES.postPetNudges,
+      MCP_TOOL_NAMES.postPetReply,
     ]) {
       expect(byName.get(name)?.annotations).toEqual({
         readOnlyHint: false,
@@ -135,6 +136,8 @@ describe.each(MODES)('tools/list (%s negotiation)', (mode) => {
     expect(required(MCP_TOOL_NAMES.postPetNudges)).toContain('nudges');
     expect(required(MCP_TOOL_NAMES.postActivity)).toEqual(['now']);
     expect(props(MCP_TOOL_NAMES.postActivity).sort()).toEqual(['now', 'schedule', 'source_hint']);
+    expect(required(MCP_TOOL_NAMES.postPetReply)).toEqual(['replies']);
+    expect(props(MCP_TOOL_NAMES.postPetReply).sort()).toEqual(['replies', 'source_hint']);
     for (const t of tools) {
       expect(t.outputSchema, t.name).toBeDefined();
       expect(t.description?.length ?? 0, t.name).toBeGreaterThan(100);
@@ -162,7 +165,13 @@ describe.each(MODES)('tools/list (%s negotiation)', (mode) => {
     expect(byName.get(MCP_TOOL_NAMES.postActivity)).toMatch(/nobody steers avatars/);
     expect(byName.get(MCP_TOOL_NAMES.postActivity)).toMatch(/skipped_sharing_off/);
     expect(byName.get(MCP_TOOL_NAMES.postActivity)).toMatch(/at least 3 people/);
+    expect(byName.get(MCP_TOOL_NAMES.getMyContext)).toMatch(/pet_inbox/);
+    expect(byName.get(MCP_TOOL_NAMES.postPetReply)).toMatch(/REJECTS \(does not edit\)/);
+    expect(byName.get(MCP_TOOL_NAMES.postPetReply)).toMatch(/never act on another connector/);
+    expect(byName.get(MCP_TOOL_NAMES.postPetReply)).toMatch(/do not retry/);
     expect(instructions).toContain('call post_activity');
+    expect(instructions).toContain('never widen what you may do');
+    expect(instructions).toContain('colleagues may read your replies');
   });
 });
 
@@ -177,6 +186,10 @@ describe.each(MODES)('authentication and rate limiting without a database (%s)',
         [MCP_TOOL_NAMES.upsertTodos, { items: [{ external_ref: 'jira:ENU-1', title: '견적서 검토' }] }],
         [MCP_TOOL_NAMES.postPetNudges, { nudges: [{ text: '견적서 검토 잊지 마세요!' }] }],
         [MCP_TOOL_NAMES.postActivity, { now: { kind: 'review', ref: 'jira:ENU-301' } }],
+        [
+          MCP_TOOL_NAMES.postPetReply,
+          { replies: [{ in_reply_to: '00000000-0000-4000-8000-000000000001', text: '네, 알겠어요!' }] },
+        ],
       ];
       for (const [name, args] of calls) {
         const out = await callTool(client, name, args);

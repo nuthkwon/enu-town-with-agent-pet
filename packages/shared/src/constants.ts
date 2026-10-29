@@ -13,7 +13,7 @@ export const APP_NAME = 'ENU Den';
 export const MCP_SERVER_NAME = 'enu-den';
 
 /** Version of the check-in instructions; the Claude skill compares this to its own. */
-export const INSTRUCTIONS_VERSION = '2026-11-03.1';
+export const INSTRUCTIONS_VERSION = '2026-11-04.1';
 
 export const MCP_TOOL_NAMES = {
   getMyContext: 'get_my_context',
@@ -21,6 +21,7 @@ export const MCP_TOOL_NAMES = {
   upsertTodos: 'upsert_todos',
   postPetNudges: 'post_pet_nudges',
   postActivity: 'post_activity',
+  postPetReply: 'post_pet_reply',
 } as const;
 export type McpToolName = (typeof MCP_TOOL_NAMES)[keyof typeof MCP_TOOL_NAMES];
 

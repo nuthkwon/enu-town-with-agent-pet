@@ -1,7 +1,8 @@
 /**
- * @enu/mcp-tools — the five ENU Den MCP tools (get_my_context, post_work_log, post_activity,
- * upsert_todos, post_pet_nudges) on @modelcontextprotocol/server. Mounted by apps/web at /api/mcp
- * behind token verification; see buildEnuDenMcpServer.
+ * @enu/mcp-tools — the six ENU Den MCP tools (get_my_context, post_work_log, post_activity,
+ * upsert_todos, post_pet_nudges, post_pet_reply) on @modelcontextprotocol/server. Mounted by apps/web at
+ * /api/mcp behind token verification; see buildEnuDenMcpServer. `postPetReplies` is also the reply core of the
+ * Claude Code pet channel.
  */
 export {
   activitySummaryKo,
@@ -9,6 +10,7 @@ export {
   callerFromAuthInfo,
   contextSummaryKo,
   nudgesSummaryKo,
+  petReplySummaryKo,
   todosSummaryKo,
   workLogSummaryKo,
   type CallerInfo,
@@ -52,3 +54,10 @@ export {
 export { postWorkLog, workLogViewUrl, type PostWorkLogOptions } from './services/work-log';
 export { isRealCalendarDate, prepareTodoItems, upsertTodos } from './services/todos';
 export { firstVisibleTime, postPetNudges } from './services/nudges';
+export {
+  postPetReplies,
+  postPetReply,
+  type PetReplyAuthor,
+  type PetReplyOutcome,
+  type PetReplyRequest,
+} from './services/pet-replies';

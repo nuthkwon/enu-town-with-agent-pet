@@ -6,7 +6,7 @@ Record results in a copy of this file per pilot. Plan: ____ (Team / Enterprise)
 
 - [ ] `scripts/check-oauth-discovery.sh https://<host>` passes
 - [ ] Google OAuth client is Internal + Trusted; a personal gmail account is rejected at sign-in
-- [ ] Owner settings from `docs/admin-runbook.ko.md` applied (connector, cloud Cowork, Always allow for all five tools, roles, auto-approve, plugin)
+- [ ] Owner settings from `docs/admin-runbook.ko.md` applied (connector, cloud Cowork, Always allow for all six tools, roles, auto-approve, plugin)
 - [ ] Review items in [ADR 0004](../adr/0004-town-is-a-visualization.md) done (근로자 감시 설비 check, all-hands briefing, management's written "근태·평가 미사용" confirmation)
 
 ## Connect (each person)

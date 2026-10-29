@@ -30,8 +30,8 @@ description: ENU Den 처음 설정 도우미. ENU Den 커넥터 연결 상태를
 ## 2. 첫 체크인 실행
 
 "ENU Den 체크인 해줘"라고 요청해 `enu-den-checkin` 스킬을 한 번 실행한다.
-도구 사용 승인 창이 뜨면 ENU Den 도구 다섯 가지(`get_my_context`, `post_work_log`, `post_activity`,
-`upsert_todos`, `post_pet_nudges`) 모두에 **항상 허용(Always allow)** 을 선택하도록 안내한다.
+도구 사용 승인 창이 뜨면 ENU Den 도구 여섯 가지(`get_my_context`, `post_pet_reply`, `post_work_log`,
+`post_activity`, `upsert_todos`, `post_pet_nudges`) 모두에 **항상 허용(Always allow)** 을 선택하도록 안내한다.
 (예약 작업은 사람이 없을 때 실행되므로, 승인이 필요하면 멈출 수 있다.)
 
 ## 3. 예약 작업 만들기 (Cowork)
@@ -58,6 +58,10 @@ description: ENU Den 처음 설정 도우미. ENU Den 커넥터 연결 상태를
 ## 자주 묻는 질문
 
 - **회사가 내 Claude 대화를 보나요?** 아니요. 내 Claude가 요약해서 보낸 내용만, 내가 정한 공개 범위에서 보입니다.
+- **펫과 나눈 대화는 누가 보나요?** 기본은 전사 공개이고 동료는 날짜만 봅니다(시간은 안 보임). 펫별·메시지별로
+  '나만 보기'로 바꿀 수 있고, 지난 대화를 한 번에 숨길 수도 있습니다.
+- **펫에게 보낸 메시지에는 언제 답하나요?** 근무 시간에는 다음 체크인 때 답합니다. Claude Code 펫 채널을 연결하면
+  언제든 바로 답합니다.
 - **로그를 고치거나 지울 수 있나요?** 네. ENU Den의 /me 페이지에서 수정·삭제·공개 범위 변경이 가능합니다.
   직접 고치거나 지운 로그는 Claude가 다시 덮어쓰지 않습니다.
 - **연결을 끊고 싶어요.** ENU Den /me > 내 Claude 연결에서 해제하거나, Claude 설정에서 커넥터를 해제하세요.

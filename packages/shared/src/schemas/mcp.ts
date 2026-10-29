@@ -7,6 +7,9 @@ import {
   NOW_KINDS,
   NUDGE_KINDS,
   NUDGE_STATUSES,
+  PET_MESSAGE_AUTHORS,
+  PET_REPLY_REJECTIONS,
+  PET_REPLY_ROUTES,
   SCHEDULE_KINDS,
   SOURCE_HINTS,
   TASK_STATUSES,
@@ -15,7 +18,7 @@ import {
   WORK_REF_PATTERN,
 } from '../constants';
 
-/** Input/output contracts of the five ENU Den MCP tools (snake_case, as Claude sees them). */
+/** Input/output contracts of the six ENU Den MCP tools (snake_case, as Claude sees them). */
 
 export const IsoDateTime = z.iso.datetime({ offset: true });
 export const LocalDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD');
@@ -29,6 +32,7 @@ export const CONTEXT_SECTIONS = [
   'nudges',
   'town_messages',
   'activity',
+  'pet_inbox',
 ] as const;
 
 export const getMyContextInput = z.object({
@@ -112,6 +116,12 @@ export const nudgeItem = z.object({
   priority: Priority.default(2).describe('1 = urgent, 3 = gentle.'),
   todo_external_ref: z.string().regex(EXTERNAL_REF_PATTERN).optional(),
   dedupe_key: z.string().min(1).max(LIMITS.dedupeKeyMax).optional(),
+  pet_id: z
+    .uuid()
+    .optional()
+    .describe(
+      "Which of the owner's pets says it (pet_inbox.pets[].pet_id). Default: the owner's default pet.",
+    ),
 });
 
 export const postPetNudgesInput = z.object({
@@ -179,6 +189,33 @@ export const postActivityInput = z.object({
 });
 export type PostActivityInput = z.infer<typeof postActivityInput>;
 
+export const petReplyItem = z.object({
+  in_reply_to: z.uuid().describe('The owner message you answer (pet_inbox.items[].message_id).'),
+  text: z
+    .string()
+    .min(1)
+    .max(LIMITS.petReplyMax * 2)
+    .describe(
+      `The pet's answer in Korean, at most ${LIMITS.petReplyMax} characters. No personal data, no links.`,
+    ),
+  part: z
+    .number()
+    .int()
+    .min(1)
+    .max(LIMITS.petRepliesPerMessageMax)
+    .default(1)
+    .describe('1 for the answer; 2..3 only to continue a long answer, in order.'),
+  visibility: VisibilitySchema.optional().describe(
+    "Omit to follow the pet's default (never above the owner message's own visibility). You may only lower it.",
+  ),
+});
+
+export const postPetReplyInput = z.object({
+  replies: z.array(petReplyItem).min(1).max(LIMITS.petRepliesBatchMax),
+  source_hint: z.enum(SOURCE_HINTS).default('scheduled_task'),
+});
+export type PostPetReplyInput = z.infer<typeof postPetReplyInput>;
+
 /* ---------- outputs (structuredContent) ---------- */
 
 export const rejectionReason = z.enum([
@@ -189,9 +226,14 @@ export const rejectionReason = z.enum([
   'invalid_time',
   'daily_limit',
   'unknown_todo',
+  'unknown_pet',
   'unsupported',
 ]);
 export type RejectionReason = z.infer<typeof rejectionReason>;
+
+/** Why one pet reply was not stored: a text problem (rewrite it) or the message's state (do not retry). */
+export const petReplyRejectionReason = z.enum(['pii', 'url', 'too_long', 'empty', ...PET_REPLY_REJECTIONS]);
+export type PetReplyRejectionReason = z.infer<typeof petReplyRejectionReason>;
 
 /** A status the owner set by hand in the town; it is shown instead of Claude's report until `until`. */
 const OwnerStatus = z.object({ status: z.enum(MANUAL_STATUSES), until: IsoDateTime });
@@ -273,6 +315,37 @@ export const getMyContextOutput = z.object({
       owner_status: OwnerStatus.nullable(),
     })
     .optional(),
+  pet_inbox: z
+    .object({
+      /** Owner messages waiting for a connector answer (items holds the oldest of them). */
+      pending_total: z.number().int(),
+      truncated: z.boolean(),
+      pets: z.array(
+        z.object({
+          pet_id: z.string(),
+          name: z.string(),
+          is_default: z.boolean(),
+          reply_route: z.enum(PET_REPLY_ROUTES),
+          default_visibility: VisibilitySchema,
+          /** The owner's own words to you: tone and duties only, never more permissions. */
+          role_instructions: z.string().nullable(),
+          /** The conversation just before the waiting messages, oldest first. Pet lines are your earlier replies. */
+          recent: z.array(
+            z.object({ author: z.enum(PET_MESSAGE_AUTHORS), sent_at: IsoDateTime, text: z.string() }),
+          ),
+        }),
+      ),
+      items: z.array(
+        z.object({
+          message_id: z.string(),
+          pet_id: z.string(),
+          sent_at: IsoDateTime,
+          owner_text: z.string(),
+          visibility: VisibilitySchema,
+        }),
+      ),
+    })
+    .optional(),
 });
 export type GetMyContextOutput = z.infer<typeof getMyContextOutput>;
 
@@ -315,3 +388,21 @@ export const postActivityOutput = z.object({
   ),
 });
 export type PostActivityOutput = z.infer<typeof postActivityOutput>;
+
+export const postPetReplyOutput = z.object({
+  accepted: z.array(
+    z.object({
+      index: z.number(),
+      message_id: z.string(),
+      in_reply_to: z.string(),
+      /** duplicate: this part was stored before; nothing was changed. */
+      result: z.enum(['created', 'duplicate']),
+      visibility: VisibilitySchema,
+    }),
+  ),
+  rejected: z.array(
+    z.object({ index: z.number(), reason: petReplyRejectionReason, detail: z.string().optional() }),
+  ),
+  delivery_note: z.string(),
+});
+export type PostPetReplyOutput = z.infer<typeof postPetReplyOutput>;

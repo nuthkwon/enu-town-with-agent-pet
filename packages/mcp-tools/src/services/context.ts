@@ -2,18 +2,23 @@ import {
   activityReports,
   chatMessages,
   dmReadState,
+  petMessages,
   petNudges,
+  pets,
   profiles,
   todos,
   workLogs,
   type DbOrTx,
 } from '@enu/db';
-import { canShareActivity, checkinSkipReason } from '@enu/domain';
+import { canShareActivity, checkinSkipReason, isConnectorListable, petDefaultVisibility } from '@enu/domain';
 import {
   APP_TIMEZONE_DEFAULT,
   CONTEXT_SECTIONS,
   INSTRUCTIONS_VERSION,
+  LIMITS,
   NUDGE_STATUSES,
+  PET_ANSWER_STATES,
+  PET_REPLY_ROUTES,
   SCHEDULE_KINDS,
   TASK_STATUSES,
   TODO_STATUSES,
@@ -23,6 +28,8 @@ import {
   type GetMyContextInput,
   type GetMyContextOutput,
   type NudgeStatus,
+  type PetAnswerState,
+  type PetReplyRoute,
   type TaskStatus,
   type TodoStatus,
 } from '@enu/shared';
@@ -45,6 +52,7 @@ type TodayLog = NonNullable<GetMyContextOutput['today_log']>;
 type OpenTodo = NonNullable<GetMyContextOutput['open_todos']>[number];
 type PendingNudge = NonNullable<GetMyContextOutput['pending_nudges']>[number];
 type Activity = NonNullable<GetMyContextOutput['activity']>;
+type PetInbox = NonNullable<GetMyContextOutput['pet_inbox']>;
 
 export interface GetMyContextOptions {
   /** APP_TIMEZONE: the office day that keys `activity_reports` (default Asia/Seoul). */
@@ -111,7 +119,99 @@ export async function getMyContext(
   if (include.has('activity')) {
     out.activity = await loadActivity(db, owner, now, opts.officeTimeZone ?? APP_TIMEZONE_DEFAULT);
   }
+  // Only inside office hours (skip returned above): the connector answers pets then and only then (D8).
+  if (include.has('pet_inbox')) out.pet_inbox = await loadPetInbox(db, owner, now);
   return out;
+}
+
+/** At most this many waiting owner messages are considered (pending_total counts within them). */
+const PET_INBOX_SCAN = 200;
+
+/**
+ * Owner messages the connector may answer (route `checkin` or `both`, not held by a live Claude Code channel),
+ * oldest first, with each pet's settings and the conversation just before them.
+ */
+async function loadPetInbox(db: DbOrTx, owner: OwnerContext, now: Date): Promise<PetInbox> {
+  const tz = owner.timezone;
+  const waiting = await db
+    .select({ m: petMessages, route: pets.replyRoute })
+    .from(petMessages)
+    .innerJoin(pets, eq(pets.id, petMessages.petId))
+    .where(
+      and(
+        eq(petMessages.userId, owner.userId),
+        eq(petMessages.author, 'owner'),
+        inArray(petMessages.answerState, ['pending', 'claimed']),
+        // SQL pre-filter only (never wider than isConnectorListable, which still decides every row).
+        inArray(pets.replyRoute, ['checkin', 'both']),
+        sql`(${petMessages.claimUntil} is null or ${petMessages.claimUntil} <= ${now.toISOString()}::timestamptz)`,
+      ),
+    )
+    .orderBy(asc(petMessages.createdAt), asc(petMessages.id))
+    .limit(PET_INBOX_SCAN);
+  const listable = waiting.filter((r) =>
+    isConnectorListable(
+      {
+        answerState: (PET_ANSWER_STATES as readonly string[]).includes(r.m.answerState ?? '')
+          ? (r.m.answerState as PetAnswerState)
+          : 'pending',
+        answeredLane: null,
+        replyCount: r.m.replyCount,
+        claimedBy: r.m.claimedBy,
+        claimUntil: r.m.claimUntil,
+        createdAt: r.m.createdAt,
+      },
+      (PET_REPLY_ROUTES as readonly string[]).includes(r.route) ? (r.route as PetReplyRoute) : 'both',
+      now,
+    ),
+  );
+  const items = listable.slice(0, LIMITS.petInboxMax).map((r) => r.m);
+  if (items.length === 0) return { pending_total: listable.length, truncated: false, pets: [], items: [] };
+
+  const petIds = [...new Set(items.map((m) => m.petId))];
+  const petRows = await db.select().from(pets).where(inArray(pets.id, petIds));
+  const petsOut: PetInbox['pets'] = [];
+  for (const pet of petRows.sort((a, b) => petIds.indexOf(a.id) - petIds.indexOf(b.id))) {
+    const first = items.find((m) => m.petId === pet.id)!;
+    const recent = await db
+      .select({ author: petMessages.author, body: petMessages.body, createdAt: petMessages.createdAt })
+      .from(petMessages)
+      .where(
+        and(
+          eq(petMessages.petId, pet.id),
+          sql`(${petMessages.createdAt}, ${petMessages.id}) < (${first.createdAt.toISOString()}::timestamptz, ${first.id}::uuid)`,
+        ),
+      )
+      .orderBy(desc(petMessages.createdAt), desc(petMessages.id))
+      .limit(LIMITS.petInboxRecentMax);
+    petsOut.push({
+      pet_id: pet.id,
+      name: pet.name,
+      is_default: pet.isDefault,
+      reply_route: (PET_REPLY_ROUTES as readonly string[]).includes(pet.replyRoute)
+        ? (pet.replyRoute as PetReplyRoute)
+        : 'both',
+      default_visibility: petDefaultVisibility(pet.defaultVisibility, owner.petChatDefaultVisibility),
+      role_instructions: pet.roleInstructions,
+      recent: recent.reverse().map((r) => ({
+        author: r.author === 'pet' ? 'pet' : 'owner',
+        sent_at: formatLocalIso(r.createdAt, tz),
+        text: truncateGraphemes(r.body, LIMITS.petInboxRecentTextMax),
+      })),
+    });
+  }
+  return {
+    pending_total: listable.length,
+    truncated: listable.length > items.length,
+    pets: petsOut,
+    items: items.map((m) => ({
+      message_id: m.id,
+      pet_id: m.petId,
+      sent_at: formatLocalIso(m.createdAt, tz),
+      owner_text: m.body,
+      visibility: m.visibility,
+    })),
+  };
 }
 
 /**

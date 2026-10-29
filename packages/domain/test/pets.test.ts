@@ -266,6 +266,11 @@ describe('pets: who answers an owner message', () => {
     const answered = q({ answerState: 'answered', answeredLane: 'connector', replyCount: 1 });
     expect(decideReplyAdmission(answered, 'both', connector(), NOW)).toEqual({ ok: true, kind: 'duplicate' });
     expect(decideReplyAdmission(null, 'both', connector(), NOW)).toMatchObject({ reason: 'unknown_message' });
+    // The same part from the other lane was never stored for that caller: it is refused, not a duplicate.
+    expect(decideReplyAdmission(answered, 'both', channel(), NOW)).toMatchObject({
+      ok: false,
+      reason: 'already_answered',
+    });
   });
 
   it('delivers to a channel only what nobody else holds, while it is recent', () => {

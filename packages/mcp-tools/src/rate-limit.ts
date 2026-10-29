@@ -21,6 +21,7 @@ export const TOOL_RATE_LIMITS: Record<McpToolName, RateLimitRule> = {
   [MCP_TOOL_NAMES.upsertTodos]: { max: 20, windowMs: HOUR_MS },
   [MCP_TOOL_NAMES.postPetNudges]: { max: 12, windowMs: HOUR_MS },
   [MCP_TOOL_NAMES.postActivity]: { max: 20, windowMs: HOUR_MS },
+  [MCP_TOOL_NAMES.postPetReply]: { max: 30, windowMs: HOUR_MS },
 };
 
 /**
