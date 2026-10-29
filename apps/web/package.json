@@ -1,0 +1,45 @@
+{
+  "name": "@enu/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000",
+    "typecheck": "tsc -p . --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:int": "vitest run --config vitest.int.config.ts --passWithNoTests"
+  },
+  "dependencies": {
+    "@colyseus/sdk": "catalog:",
+    "@colyseus/schema": "catalog:",
+    "@enu/auth": "workspace:*",
+    "@enu/db": "workspace:*",
+    "@enu/domain": "workspace:*",
+    "@enu/map": "workspace:*",
+    "@enu/mcp-tools": "workspace:*",
+    "@enu/protocol": "workspace:*",
+    "@enu/shared": "workspace:*",
+    "@modelcontextprotocol/server": "catalog:",
+    "better-auth": "catalog:",
+    "drizzle-orm": "catalog:",
+    "jose": "catalog:",
+    "next": "catalog:",
+    "phaser": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@enu/config": "workspace:*",
+    "@enu/testing": "workspace:*",
+    "@modelcontextprotocol/client": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "msw": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@enu/testing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@enu/db": "workspace:*",
+    "@enu/shared": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "pg": "catalog:"
+  },
+  "devDependencies": {
+    "@enu/config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -1,0 +1,5 @@
+pnpm-lock.yaml
+**/migrations/**
+**/public/assets/**
+.next
+dist

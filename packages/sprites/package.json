@@ -1,0 +1,26 @@
+{
+  "name": "@enu/sprites",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run --passWithNoTests",
+    "build": "tsx scripts/build.ts"
+  },
+  "dependencies": {
+    "@enu/shared": "workspace:*",
+    "pngjs": "catalog:"
+  },
+  "devDependencies": {
+    "@enu/config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/pngjs": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

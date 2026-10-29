@@ -1,0 +1,17 @@
+node_modules/
+.turbo/
+.next/
+dist/
+coverage/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+deploy/env/*.env
+!deploy/env/*.env.example
+config/seats.local.json
+playwright-report/
+test-results/
+apps/e2e/screenshots/
+*.log
+.DS_Store

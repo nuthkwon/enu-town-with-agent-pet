@@ -1,0 +1,42 @@
+{
+  "name": "@enu/realtime",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsdown",
+    "start": "node dist/index.mjs",
+    "typecheck": "tsc -p .",
+    "test": "vitest run --passWithNoTests",
+    "test:int": "vitest run --config vitest.int.config.ts --passWithNoTests"
+  },
+  "dependencies": {
+    "@colyseus/core": "catalog:",
+    "@colyseus/schema": "catalog:",
+    "@colyseus/ws-transport": "catalog:",
+    "@enu/db": "workspace:*",
+    "@enu/domain": "workspace:*",
+    "@enu/map": "workspace:*",
+    "@enu/protocol": "workspace:*",
+    "@enu/shared": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "jose": "catalog:",
+    "pg": "catalog:",
+    "pino": "catalog:",
+    "@colyseus/tools": "catalog:",
+    "express": "catalog:"
+  },
+  "devDependencies": {
+    "@colyseus/sdk": "catalog:",
+    "@colyseus/testing": "catalog:",
+    "@enu/config": "workspace:*",
+    "@enu/testing": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "tsdown": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

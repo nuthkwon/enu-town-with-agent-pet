@@ -1,0 +1,24 @@
+{
+  "name": "@enu/protocol",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@colyseus/schema": "catalog:",
+    "@enu/shared": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@enu/config": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

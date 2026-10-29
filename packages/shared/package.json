@@ -1,0 +1,26 @@
+{
+  "name": "@enu/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./env": "./src/env/index.ts",
+    "./time": "./src/time.ts",
+    "./text": "./src/text/index.ts",
+    "./schemas/*": "./src/schemas/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@enu/config": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "stream",
+  "globalEnv": ["NODE_ENV", "SKIP_ENV_VALIDATION"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"]
+    },
+    "test": {
+      "outputs": []
+    },
+    "test:int": {
+      "cache": false,
+      "env": ["DATABASE_URL_TEST"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}
