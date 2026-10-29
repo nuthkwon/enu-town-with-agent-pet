@@ -221,7 +221,17 @@
     "fox": "/assets/sprites/pets/fox.png",
     "chick": "/assets/sprites/pets/chick.png",
     "hamster": "/assets/sprites/pets/hamster.png",
-    "dragon": "/assets/sprites/pets/dragon.png"
+    "dragon": "/assets/sprites/pets/dragon.png",
+    "puppy": "/assets/sprites/pets/puppy.png",
+    "panda": "/assets/sprites/pets/panda.png",
+    "penguin": "/assets/sprites/pets/penguin.png",
+    "owl": "/assets/sprites/pets/owl.png",
+    "hedgehog": "/assets/sprites/pets/hedgehog.png",
+    "koala": "/assets/sprites/pets/koala.png",
+    "frog": "/assets/sprites/pets/frog.png",
+    "unicorn": "/assets/sprites/pets/unicorn.png",
+    "whale": "/assets/sprites/pets/whale.png",
+    "lamb": "/assets/sprites/pets/lamb.png"
   },
   "effects": "/assets/sprites/effects.png",
   "tileset": "/assets/maps/office-606/office-tiles.png",
@@ -263,6 +273,16 @@
     "/assets/sprites/pets/chick.png",
     "/assets/sprites/pets/dragon.png",
     "/assets/sprites/pets/fox.png",
-    "/assets/sprites/pets/hamster.png"
+    "/assets/sprites/pets/frog.png",
+    "/assets/sprites/pets/hamster.png",
+    "/assets/sprites/pets/hedgehog.png",
+    "/assets/sprites/pets/koala.png",
+    "/assets/sprites/pets/lamb.png",
+    "/assets/sprites/pets/owl.png",
+    "/assets/sprites/pets/panda.png",
+    "/assets/sprites/pets/penguin.png",
+    "/assets/sprites/pets/puppy.png",
+    "/assets/sprites/pets/unicorn.png",
+    "/assets/sprites/pets/whale.png"
   ]
 }

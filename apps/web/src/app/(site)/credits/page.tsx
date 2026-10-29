@@ -1,3 +1,4 @@
+import { PET_SPECIES } from '@enu/shared';
 import type { Metadata } from 'next';
 import { PetSprite } from '@/components/sprites';
 import { ko } from '@/i18n/ko';
@@ -17,7 +18,7 @@ export default function CreditsPage() {
     <article className={s.doc}>
       <header className={s.head}>
         <div className={s.petParade} aria-hidden="true">
-          {(['cat', 'bunny', 'fox', 'chick', 'hamster', 'dragon'] as const).map((sp) => (
+          {PET_SPECIES.map((sp) => (
             <PetSprite key={sp} species={sp} scale={2} animate />
           ))}
         </div>
