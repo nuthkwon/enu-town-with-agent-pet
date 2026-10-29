@@ -52,7 +52,8 @@ services:
     image: caddy:2.11-alpine
     environment:
       PUBLIC_HOST: ${PUBLIC_HOST:?set PUBLIC_HOST in .env}
-      ACME_EMAIL: ${ACME_EMAIL:-}
+      # Caddy's `email` option needs a value: Let's Encrypt sends certificate expiry notices there
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
       M2M_ALLOWED_CIDRS: ${M2M_ALLOWED_CIDRS:-0.0.0.0/0 ::/0}
     ports:
       - '80:80'
