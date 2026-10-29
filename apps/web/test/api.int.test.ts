@@ -558,14 +558,7 @@ describe('work logs and visibility', () => {
 });
 
 describe('chat history', () => {
-  async function msg(input: {
-    kind: 'dm' | 'room' | 'nearby';
-    sender: string;
-    body: string;
-    dm?: [string, string];
-    recipients?: string[];
-    at: number;
-  }) {
+  async function msg(input: { kind: 'dm' | 'room'; sender: string; body: string; dm?: [string, string]; at: number }) {
     const id = newId();
     const pair = input.dm ? ([...input.dm].sort() as [string, string]) : null;
     await h.db.insert(chatMessages).values({
@@ -578,15 +571,10 @@ describe('chat history', () => {
       clientMsgId: `t-${id}`,
       createdAt: new Date(Date.UTC(2026, 9, 29, 1, 0, input.at)),
     });
-    if (input.recipients?.length) {
-      await h.db
-        .insert(chatMessageRecipients)
-        .values(input.recipients.map((u) => ({ messageId: id, userId: u })));
-    }
     return id;
   }
 
-  it('implements dm / nearby / room kinds exactly', async () => {
+  it('implements dm / room kinds exactly; nearby no longer exists', async () => {
     const a = await userWithSession({ name: '에이' });
     const b = await createTestUser(h.db, { name: '비' });
     const c = await createTestUser(h.db, { name: '씨' });
@@ -597,50 +585,31 @@ describe('chat history', () => {
     const deleted = await msg({ kind: 'dm', sender: b.id, body: 'deleted', dm: [b.id, a.id], at: 4 });
     await h.db.update(chatMessages).set({ deletedAt: new Date() }).where(eq(chatMessages.id, deleted));
 
-    const nearA = await msg({
-      kind: 'nearby',
-      sender: a.id,
-      body: 'A near, B heard',
-      recipients: [a.id, b.id],
-      at: 5,
-    });
-    const nearB = await msg({
-      kind: 'nearby',
-      sender: b.id,
-      body: 'B near, A heard',
-      recipients: [b.id, a.id],
-      at: 6,
-    });
-    await msg({ kind: 'nearby', sender: b.id, body: 'B near, A not there', recipients: [b.id, c.id], at: 7 });
-    await msg({
-      kind: 'nearby',
-      sender: c.id,
-      body: 'C near, both heard',
-      recipients: [a.id, b.id, c.id],
-      at: 8,
-    });
-
     const roomB = await msg({ kind: 'room', sender: b.id, body: 'B room', at: 9 });
     await msg({ kind: 'room', sender: c.id, body: 'C room', at: 10 });
 
     const get = async (kind: string) =>
-      jsonOf<Paginated<ChatItemDto>>(
-        await call(historyRoute.GET, `/api/v1/users/${b.id}/chat-history?kind=${kind}`, {
-          cookie: a.cookie,
-          params: { id: b.id },
-        }),
-      );
-    const dm = await get('dm');
+      call(historyRoute.GET, `/api/v1/users/${b.id}/chat-history?kind=${kind}`, {
+        cookie: a.cookie,
+        params: { id: b.id },
+      });
+    const dm = await jsonOf<Paginated<ChatItemDto>>(await get('dm'));
     expect(dm.items.map((m) => m.id)).toEqual([dm1, dm2]);
-    expect(dm.items[1]).toMatchObject({ senderId: b.id, senderName: '비', text: 'B->A', kind: 'dm' });
-    expect((await get('nearby')).items.map((m) => m.id)).toEqual([nearA, nearB]);
-    expect((await get('room')).items.map((m) => m.id)).toEqual([roomB]);
-
-    const bad = await call(historyRoute.GET, `/api/v1/users/${b.id}/chat-history?kind=all`, {
-      cookie: a.cookie,
-      params: { id: b.id },
+    expect(dm.items[1]).toEqual({
+      id: dm2,
+      kind: 'dm',
+      senderId: b.id,
+      senderName: '비',
+      text: 'B->A',
+      createdAt: '2026-10-29T01:00:02.000Z',
     });
-    expect(bad.status).toBe(400);
+    expect((await jsonOf<Paginated<ChatItemDto>>(await get('room'))).items.map((m) => m.id)).toEqual([roomB]);
+
+    for (const kind of ['nearby', 'all']) {
+      const bad = await get(kind);
+      expect(bad.status, kind).toBe(400);
+      expect(await bad.json()).toMatchObject({ error: 'invalid_query', fields: [{ field: 'kind', reason: 'invalid_value' }] });
+    }
 
     const room = await jsonOf<Paginated<ChatItemDto>>(
       await call(roomRoute.GET, '/api/v1/chat/room?limit=1', { cookie: a.cookie }),
