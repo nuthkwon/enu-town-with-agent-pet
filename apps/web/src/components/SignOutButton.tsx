@@ -1,11 +1,12 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { createAuthClient } from '@enu/auth/client';
 import { ko } from '@/i18n/ko';
 import { Button } from './ui';
 
 export function SignOutButton() {
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
   return (
     <Button
@@ -15,9 +16,15 @@ export function SignOutButton() {
       onClick={async () => {
         setBusy(true);
         try {
-          await createAuthClient().signOut();
+          await fetch('/api/auth/sign-out', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'content-type': 'application/json' },
+            body: '{}',
+          });
         } finally {
-          window.location.assign('/sign-in?signed_out=1');
+          router.replace('/sign-in?signed_out=1');
+          router.refresh();
         }
       }}
     >

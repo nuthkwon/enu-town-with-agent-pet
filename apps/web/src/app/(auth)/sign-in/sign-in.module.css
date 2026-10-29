@@ -1,0 +1,255 @@
+.wrap {
+  width: 100%;
+  max-width: 460px;
+}
+
+.card {
+  background: var(--c-card);
+  border: 1px solid var(--c-line);
+  border-radius: 28px;
+  box-shadow: var(--shadow-lg);
+  padding: 30px 28px 26px;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 230px;
+  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
+  background:
+    radial-gradient(circle at 18% 30%, rgba(255, 255, 255, 0.9) 0 2px, transparent 3px),
+    radial-gradient(circle at 82% 22%, rgba(255, 255, 255, 0.9) 0 2px, transparent 3px),
+    radial-gradient(circle at 70% 70%, rgba(255, 255, 255, 0.8) 0 1.5px, transparent 2.5px),
+    linear-gradient(135deg, #ede4ff 0%, #fde3f1 60%, #dff7ee 100%);
+  z-index: 0;
+}
+
+.hero {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.pets {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 10px;
+  height: 84px;
+  margin-bottom: 4px;
+}
+
+.petA,
+.petB,
+.petC {
+  display: inline-flex;
+  animation: float 3.2s ease-in-out infinite;
+}
+
+.petB {
+  animation-delay: 0.6s;
+}
+
+.petC {
+  animation-delay: 1.2s;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.title {
+  font-size: 30px;
+  margin: 6px 0 2px;
+  background: linear-gradient(135deg, var(--c-lavender-deep), var(--c-pink-deep));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.subtitle {
+  color: var(--c-ink-soft);
+  margin: 0;
+}
+
+.stack {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--c-line-strong);
+  background: #fff;
+  color: var(--c-ink);
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.google:hover:not(:disabled) {
+  border-color: var(--c-lavender);
+  box-shadow: 0 8px 22px rgba(124, 87, 214, 0.18);
+  transform: translateY(-1px);
+}
+
+.google:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.domain {
+  text-align: center;
+  font-size: 13px;
+  color: var(--c-ink-soft);
+  margin: 0;
+}
+
+.muted {
+  font-size: 12.5px;
+  color: var(--c-muted);
+  margin: 0;
+}
+
+.dev {
+  position: relative;
+  z-index: 1;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--c-line-strong);
+}
+
+.devHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.devHead h2 {
+  font-size: 15px;
+  margin: 0;
+}
+
+.devTag {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--c-lemon-soft);
+  color: var(--c-amber-deep);
+  border: 1px solid #f8e4a6;
+}
+
+.devList {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.devUser {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 6px 6px;
+  border-radius: 14px;
+  border: 1px solid var(--c-line);
+  background: var(--c-card-soft);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 0.12s ease,
+    background-color 0.12s ease;
+}
+
+.devUser:hover:not(:disabled) {
+  border-color: var(--c-lavender);
+  background: var(--c-lavender-soft);
+}
+
+.devUser:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.devAvatar {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(160deg, #fff, #f1eaff);
+  display: inline-flex;
+  justify-content: center;
+}
+
+.devAvatar > span {
+  margin-top: -6px;
+}
+
+.devText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.devName {
+  font-weight: 700;
+  font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.devAdmin {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--c-pink-soft);
+  color: var(--c-pink-deep);
+}
+
+.devMeta {
+  font-size: 11.5px;
+  color: var(--c-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .devList {
+    grid-template-columns: 1fr;
+  }
+}

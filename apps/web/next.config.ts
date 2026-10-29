@@ -36,6 +36,8 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   typedRoutes: false,
   reactStrictMode: true,
+  // The repository's CLAUDE.md is the agent guide; do not let `next dev` write apps/web/AGENTS.md.
+  agentRules: false,
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

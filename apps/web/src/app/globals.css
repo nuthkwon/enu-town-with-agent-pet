@@ -97,6 +97,9 @@ body {
     linear-gradient(160deg, var(--c-bg) 0%, var(--c-bg-2) 100%);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
+  /* Korean: wrap between words, not inside them. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 h1,
@@ -179,7 +182,7 @@ textarea {
 .skip-link {
   position: absolute;
   left: 12px;
-  top: -40px;
+  top: -120px;
   padding: 6px 12px;
   background: var(--c-card);
   border-radius: var(--radius-sm);
