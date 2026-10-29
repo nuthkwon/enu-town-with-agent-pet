@@ -15,7 +15,10 @@
       "pet": {
         "species": "cat",
         "name": "나비"
-      }
+      },
+      "team": "dev",
+      "title": "과장",
+      "role": "개발팀장"
     },
     {
       "deskId": "L1b",
@@ -31,7 +34,10 @@
       "pet": {
         "species": "fox",
         "name": "여름"
-      }
+      },
+      "team": "design",
+      "title": "과장",
+      "role": "APM · HMI 요건 분석·설계팀장"
     },
     {
       "deskId": "R1",
@@ -47,7 +53,10 @@
       "pet": {
         "species": "dragon",
         "name": "미르"
-      }
+      },
+      "team": "mgmt",
+      "title": "대표이사",
+      "role": "사업관리책임자(PM)"
     },
     {
       "deskId": "L2a",
@@ -63,7 +72,10 @@
       "pet": {
         "species": "hamster",
         "name": "콩이"
-      }
+      },
+      "team": "qa",
+      "title": "과장",
+      "role": "품질보증팀장 · SQA·V&V 총괄"
     },
     {
       "deskId": "L2b",
@@ -79,7 +91,10 @@
       "pet": {
         "species": "chick",
         "name": "삐약"
-      }
+      },
+      "team": "qa",
+      "title": "사원",
+      "role": "문서·기록관리"
     },
     {
       "deskId": "R2a",
@@ -95,7 +110,10 @@
       "pet": {
         "species": "bunny",
         "name": "토리"
-      }
+      },
+      "team": "design",
+      "title": "사원",
+      "role": "HMI 요건 분석·설계"
     },
     {
       "deskId": "R2b",
@@ -111,7 +129,10 @@
       "pet": {
         "species": "cat",
         "name": "모모"
-      }
+      },
+      "team": "dev",
+      "title": "사원",
+      "role": "HMI 개발"
     },
     {
       "deskId": "L3a",
@@ -127,7 +148,10 @@
       "pet": {
         "species": "bunny",
         "name": "솜이"
-      }
+      },
+      "team": "dev",
+      "title": "사원",
+      "role": "HMI 개발"
     },
     {
       "deskId": "L3b",
@@ -143,7 +167,10 @@
       "pet": {
         "species": "fox",
         "name": "단풍"
-      }
+      },
+      "team": "dev",
+      "title": "과장",
+      "role": "HMI 개발"
     },
     {
       "deskId": "R3b",
@@ -159,7 +186,10 @@
       "pet": {
         "species": "dragon",
         "name": "용용"
-      }
+      },
+      "team": "qa",
+      "title": "대리",
+      "role": "SQA·V&V·형상 감사"
     },
     {
       "deskId": "L4a",
@@ -175,7 +205,10 @@
       "pet": {
         "species": "chick",
         "name": "병아"
-      }
+      },
+      "team": "dev",
+      "title": "대리",
+      "role": "HMI 디자이너"
     },
     {
       "deskId": "L4b",
@@ -191,7 +224,10 @@
       "pet": {
         "species": "hamster",
         "name": "도토리"
-      }
+      },
+      "team": "design",
+      "title": "사원",
+      "role": "HMI 요건 분석·설계"
     },
     {
       "deskId": "L5a",
@@ -207,7 +243,10 @@
       "pet": {
         "species": "cat",
         "name": "까망"
-      }
+      },
+      "team": "qa",
+      "title": "사원",
+      "role": "SQA 지원"
     },
     {
       "deskId": "L5b",
@@ -223,7 +262,10 @@
       "pet": {
         "species": "fox",
         "name": "노을"
-      }
+      },
+      "team": "design",
+      "title": "대리",
+      "role": "형상관리 담당"
     }
   ]
 }

@@ -119,6 +119,10 @@ export const getMyContextOutput = z.object({
       timezone: z.string(),
       desk_id: z.string().nullable(),
       default_log_visibility: VisibilitySchema,
+      /** Team label, 직위 and role so Claude can write role-appropriate logs (e.g. SQA reviews). */
+      team: z.string().nullable().optional(),
+      title: z.string().nullable().optional(),
+      role: z.string().nullable().optional(),
     })
     .optional(),
   link: z.object({ state: z.enum(LINK_STATES), last_work_log_at: IsoDateTime.nullable() }),

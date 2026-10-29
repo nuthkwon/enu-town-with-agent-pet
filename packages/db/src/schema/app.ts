@@ -54,6 +54,10 @@ export const profiles = pgTable(
     petSpecies: text('pet_species').notNull().default('cat'),
     petName: varchar('pet_name', { length: 20 }).notNull().default('펫'),
     title: varchar('title', { length: 60 }),
+    /** Team id from TEAMS (shared constants). */
+    team: text('team'),
+    /** Short role description shown on the profile card, e.g. 'SQA·V&V·형상 감사'. */
+    roleNote: varchar('role_note', { length: 80 }),
     statusText: varchar('status_text', { length: 80 }),
     timezone: text('timezone').notNull().default('Asia/Seoul'),
     defaultLogVisibility: visibilityEnum('default_log_visibility').notNull().default('company'),
@@ -85,6 +89,9 @@ export const desks = pgTable('desks', {
   avatar: jsonb('avatar').$type<AvatarPreset>(),
   petSpecies: text('pet_species'),
   petName: text('pet_name'),
+  team: text('team'),
+  title: text('title'),
+  roleNote: text('role_note'),
   userId: text('user_id')
     .unique()
     .references(() => user.id, { onDelete: 'set null' }),

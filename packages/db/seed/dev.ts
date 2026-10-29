@@ -109,6 +109,9 @@ await db.transaction(async (tx) => {
       avatar: seat.avatar,
       petSpecies: seat.pet.species,
       petName: seat.pet.name,
+      team: seat.team ?? null,
+      title: seat.title ?? null,
+      roleNote: seat.role ?? null,
       defaultChatSummaryVisibility: i % 2 === 0 ? 'company' : 'private',
       linkState: linked ? (stale ? 'stale' : 'linked') : 'not_linked',
       lastWorkLogAt: linked ? (stale ? atLocalTime(addLocalDays(now, TZ, -6), TZ, '17:00') : now) : null,
@@ -118,7 +121,17 @@ await db.transaction(async (tx) => {
     await tx.insert(privacyConsents).values({ id: newId(), userId: id, noticeVersion: '2026-10', scope: 'service' });
     await tx
       .insert(desks)
-      .values({ deskId: seat.deskId, labelName: seat.name, avatar: seat.avatar, petSpecies: seat.pet.species, petName: seat.pet.name, userId: id })
+      .values({
+        deskId: seat.deskId,
+        labelName: seat.name,
+        avatar: seat.avatar,
+        petSpecies: seat.pet.species,
+        petName: seat.pet.name,
+        team: seat.team ?? null,
+        title: seat.title ?? null,
+        roleNote: seat.role ?? null,
+        userId: id,
+      })
       .onConflictDoUpdate({ target: desks.deskId, set: { userId: id, updatedAt: sql`now()` } });
 
     if (!linked) continue;

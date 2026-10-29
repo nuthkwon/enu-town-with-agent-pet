@@ -9,6 +9,7 @@ import {
   PET_SPECIES,
   SKIN_TONES,
   TASK_STATUSES,
+  TEAM_IDS,
   VISIBILITIES,
 } from '../constants';
 
@@ -27,6 +28,8 @@ export const profilePatch = z
   .object({
     display_name: z.string().min(1).max(LIMITS.displayNameMax),
     title: z.string().max(60).nullable(),
+    team: z.enum(TEAM_IDS).nullable(),
+    role_note: z.string().max(80).nullable(),
     status_text: z.string().max(LIMITS.statusTextMax).nullable(),
     avatar: avatarPresetSchema,
     pet_species: z.enum(PET_SPECIES),
@@ -97,7 +100,18 @@ export const rosterSchema = z.object({
       name: z.string().min(1).max(LIMITS.displayNameMax),
       avatar: avatarPresetSchema,
       pet: z.object({ species: z.enum(PET_SPECIES), name: z.string().min(1).max(LIMITS.petNameMax) }),
+      team: z.enum(TEAM_IDS).optional(),
+      /** 직위, e.g. 과장 / 대리 / 사원 / 대표이사. */
+      title: z.string().max(60).optional(),
+      /** Short role description, e.g. 'SQA·V&V·형상 감사'. */
+      role: z.string().max(80).optional(),
     }),
   ),
 });
 export type Roster = z.infer<typeof rosterSchema>;
+
+/** Body of the development-only sign-in endpoint (`/api/auth/dev/login`, never enabled in production). */
+export const devLoginBody = z.object({
+  email: z.email(),
+  oauth_query: z.string().optional(),
+});

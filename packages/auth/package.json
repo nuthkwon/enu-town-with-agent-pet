@@ -9,7 +9,8 @@
   },
   "scripts": {
     "typecheck": "tsc -p .",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "test:int": "vitest run --config vitest.int.config.ts --passWithNoTests"
   },
   "dependencies": {
     "@better-auth/cimd": "catalog:",
@@ -26,6 +27,7 @@
     "@enu/config": "workspace:*",
     "@types/node": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@enu/testing": "workspace:*"
   }
 }

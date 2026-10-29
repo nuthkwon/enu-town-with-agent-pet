@@ -155,6 +155,37 @@ export function avatarSpriteKey(a: AvatarPreset): string {
   return `av-${a.body}-${a.hair}-${a.hairColor}-${a.outfit}-${a.skin}${a.wings ? '-w' : ''}`;
 }
 
+/**
+ * Teams of ENU-Tech (generic labels only; who belongs where lives in the gitignored roster).
+ * Name tags and the people directory use these colors.
+ */
+export const TEAMS = [
+  { id: 'mgmt', label: '경영', color: '#b48ead' },
+  { id: 'design', label: 'HMI 요건·설계팀', color: '#5e81ac' },
+  { id: 'dev', label: '개발팀', color: '#a3be8c' },
+  { id: 'qa', label: '품질보증팀', color: '#d08770' },
+  { id: 'support', label: '사업지원', color: '#88c0d0' },
+] as const;
+export type TeamId = (typeof TEAMS)[number]['id'];
+export const TEAM_IDS = TEAMS.map((t) => t.id) as unknown as readonly [TeamId, ...TeamId[]];
+
+export function teamLabel(id: string | null | undefined): string {
+  return TEAMS.find((t) => t.id === id)?.label ?? '';
+}
+
+/**
+ * Role-aware work requests offered when clicking a colleague. They open a DM draft with a
+ * template; nothing is sent automatically.
+ */
+export const WORK_REQUEST_KINDS = [
+  { id: 'question', label: '질문하기', template: '[질문] ', teams: null },
+  { id: 'meeting', label: '회의 요청', template: '[회의 요청] 일시: \n안건: ', teams: null },
+  { id: 'review', label: '검토 요청 (SQA)', template: '[검토 요청] 대상 산출물: \n요청 내용: ', teams: ['qa'] },
+  { id: 'config', label: '형상 변경 요청', template: '[형상 변경 요청] 대상: \n변경 사유: ', teams: ['design'] },
+  { id: 'build', label: '구현·디자인 요청', template: '[구현 요청] 화면/기능: \n요청 사항: ', teams: ['dev'] },
+  { id: 'report', label: '진행 보고', template: '[진행 보고] ', teams: ['mgmt'] },
+] as const;
+
 /** Room / map identifiers. */
 export const OFFICE_ROOM_NAME = 'office-606';
 export const OFFICE_MAP_ID = 'office-606';

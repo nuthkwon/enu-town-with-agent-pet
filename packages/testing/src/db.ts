@@ -24,12 +24,19 @@ export async function setupTestDb(): Promise<DbHandle> {
   return createDb(TEST_DB_URL, { max: 4, applicationName: 'enu-town-test' });
 }
 
-/** Empties every table (auth + app) between tests. */
-export async function truncateAll(db: Db): Promise<void> {
+/**
+ * Empties every table (auth + app) between tests. Pass `keep` for rows seeded once at startup,
+ * e.g. ['oauth_resource', 'jwks'] when a Better Auth instance outlives the test.
+ */
+export async function truncateAll(db: Db, opts: { keep?: readonly string[] } = {}): Promise<void> {
   const rows = await db.execute<{ tablename: string }>(
     sql`select tablename from pg_tables where schemaname = 'public'`,
   );
-  const names = rows.rows.map((r) => `"${r.tablename}"`).join(', ');
+  const keep = new Set(opts.keep ?? []);
+  const names = rows.rows
+    .filter((r) => !keep.has(r.tablename))
+    .map((r) => `"${r.tablename}"`)
+    .join(', ');
   if (names) await db.execute(sql.raw(`truncate table ${names} restart identity cascade`));
 }
 
