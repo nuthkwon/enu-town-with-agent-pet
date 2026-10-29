@@ -74,6 +74,8 @@ export function createAuth(cfg: AuthConfig) {
   const { db, policy } = cfg;
   const resource = mcpResourceUrl(cfg.publicUrl);
   const isAdminEmail = (email: string) => cfg.adminEmails.map((e) => e.toLowerCase()).includes(email.toLowerCase());
+  const isAdminUser = (u: { role?: unknown; email?: unknown } | undefined) =>
+    !!u && (u.role === 'admin' || (typeof u.email === 'string' && isAdminEmail(u.email)));
 
   return betterAuth({
     appName: 'ENU Town',
@@ -189,6 +191,10 @@ export function createAuth(cfg: AuthConfig) {
         allowDynamicClientRegistration: cfg.allowDcr,
         allowUnauthenticatedClientRegistration: cfg.allowDcr,
         clientRegistrationDefaultApplicationType: 'infer',
+        // Claude registers itself through CIMD (which never reaches these hooks). Manually managed
+        // clients and resources (create-client, admin endpoints, update, delete, ...) are admin-only.
+        clientPrivileges: ({ user }) => isAdminUser(user),
+        resourcePrivileges: ({ user }) => isAdminUser(user),
       }),
       cimd({
         fetchClientMetadataResource,

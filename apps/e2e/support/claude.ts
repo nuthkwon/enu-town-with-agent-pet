@@ -1,7 +1,8 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { expect, type BrowserContext } from '@playwright/test';
-import { BASE_URL } from '../env';
+import { BASE_URL, devEmail } from '../env';
+import { devLogin } from './auth';
 
 /**
  * Plays the role of an employee's Claude: registers a public OAuth client (stand-in for Claude's
@@ -12,7 +13,12 @@ const REDIRECT = 'http://127.0.0.1:7777/callback';
 const b64url = (b: Buffer) => b.toString('base64url');
 
 export async function connectClaude(context: BrowserContext): Promise<{ token: string; clientId: string }> {
-  const created = await context.request.post(`${BASE_URL}/api/auth/oauth2/create-client`, {
+  // Manually managed clients are admin-only (the real Claude registers itself through CIMD).
+  const browser = context.browser();
+  if (!browser) throw new Error('connectClaude needs a browser-backed context');
+  const admin = await browser.newContext();
+  await devLogin(admin, devEmail('R1'));
+  const created = await admin.request.post(`${BASE_URL}/api/auth/oauth2/create-client`, {
     headers: { origin: BASE_URL },
     data: {
       client_name: 'Claude (e2e)',
@@ -23,6 +29,7 @@ export async function connectClaude(context: BrowserContext): Promise<{ token: s
   });
   expect(created.status(), await created.text()).toBeLessThan(300);
   const clientId = ((await created.json()) as { client_id: string }).client_id;
+  await admin.close();
 
   const verifier = b64url(randomBytes(32));
   const challenge = b64url(createHash('sha256').update(verifier).digest());

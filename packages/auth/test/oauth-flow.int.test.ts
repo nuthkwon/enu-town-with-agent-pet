@@ -38,7 +38,17 @@ async function devLogin(email: string, oauthQuery?: string): Promise<{ cookie: s
   return { cookie, body: await res.json() };
 }
 
-async function createPublicClient(cookie: string): Promise<string> {
+function toHeaders(h: http.IncomingHttpHeaders): Headers {
+  const out = new Headers();
+  for (const [k, v] of Object.entries(h)) if (v !== undefined) out.set(k, Array.isArray(v) ? v.join(', ') : v);
+  return out;
+}
+
+const ADMIN_EMAIL = 'oauth-admin@enu-tech.co.kr';
+
+/** Manually managed OAuth clients are admin-only (Claude itself registers through CIMD). */
+async function createPublicClient(): Promise<string> {
+  const { cookie } = await devLogin(ADMIN_EMAIL);
   const created = await auth.api.adminCreateOAuthClient({
     headers: new Headers({ cookie }),
     body: {
@@ -61,7 +71,7 @@ beforeAll(async () => {
         const chunks: Buffer[] = [];
         for await (const c of req) chunks.push(c as Buffer);
         const r = await mcpRoute(
-          new Request(url, { method: req.method, headers: req.headers as HeadersInit, body: chunks.length ? Buffer.concat(chunks) : undefined }),
+          new Request(url, { method: req.method, headers: toHeaders(req.headers), body: chunks.length ? Buffer.concat(chunks) : undefined }),
         );
         res.writeHead(r.status, Object.fromEntries(r.headers));
         res.end(Buffer.from(await r.arrayBuffer()));
@@ -78,7 +88,7 @@ beforeAll(async () => {
     secret: 'test-secret-test-secret-test-secret-0123',
     google: null,
     policy,
-    adminEmails: [],
+    adminEmails: [ADMIN_EMAIL],
     cimdAllowedHosts: ['claude.ai'],
     allowDcr: false,
     accessTokenTtlSeconds: 3600,
@@ -135,12 +145,41 @@ describe('dev login', () => {
 });
 
 describe('OAuth authorization server for the MCP connector', () => {
+  it('lets only admins register OAuth clients manually', async () => {
+    const body = JSON.stringify({
+      client_name: 'Manual client',
+      redirect_uris: [REDIRECT],
+      token_endpoint_auth_method: 'none',
+      application_type: 'native',
+    });
+    const member = await devLogin('member@enu-tech.co.kr');
+    const denied = await fetch(`${base}/api/auth/oauth2/create-client`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: base, cookie: member.cookie },
+      body,
+    });
+    expect(denied.status).toBe(401);
+    const admin = await devLogin(ADMIN_EMAIL);
+    const allowed = await fetch(`${base}/api/auth/oauth2/create-client`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: base, cookie: admin.cookie },
+      body,
+    });
+    expect(allowed.status).toBe(201);
+  });
+
   it('serves discovery metadata that points at our resource', async () => {
     const resource = mcpResourceUrl(base);
-    const prm = await fetch(protectedResourceMetadataUrl(resource)).then((r) => r.json());
+    const prm = (await fetch(protectedResourceMetadataUrl(resource)).then((r) => r.json())) as {
+      resource: string;
+      authorization_servers: string[];
+    };
     expect(prm.resource).toBe(resource);
     expect(prm.authorization_servers[0]).toBe(`${base}/api/auth`);
-    const as = await fetch(`${base}/.well-known/oauth-authorization-server/api/auth`).then((r) => r.json());
+    const as = (await fetch(`${base}/.well-known/oauth-authorization-server/api/auth`).then((r) => r.json())) as Record<
+      string,
+      string[]
+    >;
     expect(as.code_challenge_methods_supported).toContain('S256');
     expect(as.token_endpoint_auth_methods_supported).toContain('none');
     expect(as.scopes_supported).toEqual(expect.arrayContaining(['offline_access']));
@@ -151,7 +190,7 @@ describe('OAuth authorization server for the MCP connector', () => {
 
   it('runs authorize -> consent -> token -> MCP auth -> revocation', async () => {
     const { cookie } = await devLogin('lee@enu-tech.co.kr');
-    const clientId = await createPublicClient(cookie);
+    const clientId = await createPublicClient();
     const resource = mcpResourceUrl(base);
     const verifier = b64url(randomBytes(32));
     const challenge = b64url(createHash('sha256').update(verifier).digest());
