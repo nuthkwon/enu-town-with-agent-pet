@@ -1,6 +1,7 @@
 import type { AvatarPreset, NowKind, ScheduleKind } from '@enu/shared';
 import { sql } from 'drizzle-orm';
 import {
+  type AnyPgColumn,
   bigserial,
   boolean,
   char,
@@ -164,6 +165,92 @@ export const pets = pgTable(
       sql`${t.roleInstructions} is null or char_length(${t.roleInstructions}) between 1 and 1000`,
     ),
     check('pets_sort_chk', sql`${t.sortOrder} between 0 and 99`),
+  ],
+);
+
+/**
+ * Pet conversations (ADR 0005): what the owner types to a pet and the replies their own Claude sends back (never a
+ * claude.ai transcript). Ids are random UUIDv4: colleagues receive them, and they must not carry the time. The
+ * owner-only answer bookkeeping lets the Claude Code channel and the connector never both answer.
+ */
+export const petMessages = pgTable(
+  'pet_messages',
+  {
+    id: uuid('id').primaryKey(),
+    petId: uuid('pet_id')
+      .notNull()
+      .references(() => pets.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    author: text('author').notNull(),
+    body: text('body').notNull(),
+    /** The owner's local date (`localDateKey`), what colleagues see instead of a time. */
+    dayKey: date('day_key', { mode: 'string' }).notNull(),
+    visibility: visibilityEnum('visibility').notNull(),
+    visibilitySetBy: text('visibility_set_by').notNull(),
+    /** Pet replies: how Claude answered (PET_REPLY_SOURCES). Null for owner messages. */
+    source: text('source'),
+    clientMsgId: varchar('client_msg_id', { length: 64 }),
+    inReplyTo: uuid('in_reply_to').references((): AnyPgColumn => petMessages.id, { onDelete: 'cascade' }),
+    replyPart: smallint('reply_part'),
+    answerState: text('answer_state'),
+    answeredLane: text('answered_lane'),
+    replyCount: smallint('reply_count').notNull().default(0),
+    /** The pet channel token holding the message (no FK: a revoked token's claim simply expires). */
+    claimedBy: uuid('claimed_by'),
+    claimUntil: tstz('claim_until'),
+    /** A pet reply the owner has not read yet. */
+    unread: boolean('unread').notNull().default(false),
+    oauthClientId: text('oauth_client_id'),
+    createdAt: tstz('created_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('pet_messages_owner_client_uidx')
+      .on(t.userId, t.clientMsgId)
+      .where(sql`${t.clientMsgId} is not null`),
+    uniqueIndex('pet_messages_reply_part_uidx')
+      .on(t.inReplyTo, t.replyPart)
+      .where(sql`${t.inReplyTo} is not null`),
+    index('pet_messages_thread_idx').on(t.petId, t.createdAt, t.id),
+    index('pet_messages_colleague_idx')
+      .on(t.petId, t.createdAt, t.id)
+      .where(sql`${t.visibility} = 'company'`),
+    index('pet_messages_inbox_idx')
+      .on(t.userId, t.createdAt)
+      .where(sql`${t.answerState} in ('pending','claimed')`),
+    index('pet_messages_unread_idx')
+      .on(t.userId, t.petId)
+      .where(sql`${t.unread}`),
+    index('pet_messages_day_idx').on(t.dayKey),
+    check('pet_messages_author_chk', sql`${t.author} in ('owner','pet')`),
+    check('pet_messages_body_len_chk', sql`char_length(${t.body}) between 1 and 1000`),
+    check('pet_messages_set_by_chk', sql`${t.visibilitySetBy} in ('owner','claude')`),
+    check(
+      'pet_messages_source_chk',
+      sql`(${t.author} = 'pet') = (${t.source} is not null) and (${t.source} is null or ${t.source} in ('claude_code_channel','cowork_scheduled','claude_interactive','claude_code'))`,
+    ),
+    check(
+      'pet_messages_owner_fields_chk',
+      sql`(${t.author} = 'owner') = (${t.clientMsgId} is not null) and (${t.author} = 'owner') = (${t.answerState} is not null)`,
+    ),
+    check(
+      'pet_messages_pet_fields_chk',
+      sql`(${t.author} = 'pet') = (${t.inReplyTo} is not null) and (${t.author} = 'pet') = (${t.replyPart} is not null) and (${t.replyPart} is null or ${t.replyPart} between 1 and 3)`,
+    ),
+    check(
+      'pet_messages_answer_chk',
+      sql`${t.answerState} is null or ${t.answerState} in ('pending','claimed','answered')`,
+    ),
+    check(
+      'pet_messages_lane_chk',
+      sql`${t.answeredLane} is null or ${t.answeredLane} in ('channel','connector')`,
+    ),
+    check(
+      'pet_messages_claim_chk',
+      sql`(${t.claimedBy} is null) = (${t.claimUntil} is null) and (${t.claimUntil} is null or ${t.answerState} = 'claimed')`,
+    ),
+    check('pet_messages_unread_chk', sql`not (${t.author} = 'owner' and ${t.unread})`),
   ],
 );
 

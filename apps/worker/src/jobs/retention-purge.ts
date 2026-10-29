@@ -4,6 +4,7 @@ import {
   auditEvents,
   chatMessages,
   nudgeDeliveries,
+  petMessages,
   petNudges,
   profiles,
   todos,
@@ -40,6 +41,8 @@ export interface RetentionSummary {
   activityReports: number;
   /** Expired hand-set statuses cleared (상태 문구 is never touched). */
   clearedManual: number;
+  /** Pet conversation messages of days past the retention window (replies go with their questions). */
+  petMessages: number;
 }
 
 export interface RetentionOptions {
@@ -105,6 +108,7 @@ export async function purgeRetention(
   const batch = opts.batchSize ?? RETENTION_BATCH_SIZE;
   const cut = retentionCutoffs(now, retentionDaysFromEnv(env));
   const workLogKeyCutoff = localDateKey(cut.workLog, env.APP_TIMEZONE);
+  const petMessageKeyCutoff = localDateKey(cut.petMessage, env.APP_TIMEZONE);
   const softDeletedCutoff = new Date(now.getTime() - SOFT_DELETED_WORK_LOG_DAYS * DAY_MS);
   const closedTodoCutoff = new Date(now.getTime() - CLOSED_TODO_DAYS * DAY_MS);
   const deliveryCutoff = nudgeDeliveryCutoff(now, env.APP_TIMEZONE);
@@ -272,6 +276,24 @@ export async function purgeRetention(
     ),
   );
 
+  // Owner messages first would cascade to their replies; by day both go in the same window anyway.
+  const petMessageCount = await inBatches(batch, async (limit) =>
+    affected(
+      await db
+        .delete(petMessages)
+        .where(
+          inArray(
+            petMessages.id,
+            db
+              .select({ id: petMessages.id })
+              .from(petMessages)
+              .where(lt(petMessages.dayKey, petMessageKeyCutoff))
+              .limit(limit),
+          ),
+        ),
+    ),
+  );
+
   const summary: RetentionSummary = {
     dmMessages,
     roomMessages,
@@ -284,6 +306,7 @@ export async function purgeRetention(
     todos: todoCount,
     activityReports: activityReportCount,
     clearedManual,
+    petMessages: petMessageCount,
   };
   // Counts only (no content): proof that retention ran, kept like any other audit event.
   await audit(db, { actorType: 'system', action: 'retention.purge', metadata: { ...summary } });

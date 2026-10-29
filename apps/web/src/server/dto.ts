@@ -1,11 +1,22 @@
-import type { chatMessages, claudeLinks, petNudges, pets, profiles, todos, workLogs } from '@enu/db';
+import type {
+  chatMessages,
+  claudeLinks,
+  petMessages,
+  petNudges,
+  pets,
+  profiles,
+  todos,
+  workLogs,
+} from '@enu/db';
 import { canViewChatSummary, canViewLog, canViewLogTimestamps, petDefaultVisibility } from '@enu/domain';
 import {
   DEFAULT_AVATAR,
   LINK_STATES,
   NUDGE_KINDS,
   NUDGE_STATUSES,
+  PET_ANSWER_STATES,
   PET_REPLY_ROUTES,
+  PET_REPLY_SOURCES,
   PET_SPECIES,
   PET_TINTS,
   TEAM_IDS,
@@ -19,14 +30,18 @@ import {
   type ChatItemDto,
   type ClaudeLinkDto,
   type ClaudeSummaryDto,
+  type ColleaguePetMessageDto,
   type DeskDto,
   type LinkState,
   type NudgeDto,
   type OwnerPetDto,
+  type OwnerPetMessageDto,
+  type PetAnswerState,
   type PersonDto,
   type PetDto,
   type PetInfoDto,
   type PetReplyRoute,
+  type PetReplySource,
   type PetSpecies,
   type PetTint,
   type TeamId,
@@ -288,5 +303,49 @@ export function toOwnerPetDto(p: PetRow, profileDefault: Visibility, stats: PetM
     defaultVisibility,
     effectiveDefaultVisibility: petDefaultVisibility(defaultVisibility, profileDefault),
     ...stats,
+  };
+}
+
+export type PetMessageRow = typeof petMessages.$inferSelect;
+
+/** A message in my own pet room (the owner sees every field). */
+export function toOwnerPetMessageDto(m: PetMessageRow): OwnerPetMessageDto {
+  return {
+    view: 'owner',
+    id: m.id,
+    petId: m.petId,
+    author: m.author === 'pet' ? 'pet' : 'owner',
+    text: m.body,
+    createdAt: m.createdAt.toISOString(),
+    dayKey: m.dayKey,
+    visibility: oneOf(VISIBILITIES, m.visibility, 'private'),
+    visibilitySetBy: m.visibilitySetBy === 'claude' ? 'claude' : 'owner',
+    source:
+      m.source && (PET_REPLY_SOURCES as readonly string[]).includes(m.source)
+        ? (m.source as PetReplySource)
+        : null,
+    clientMsgId: m.clientMsgId,
+    inReplyTo: m.inReplyTo,
+    replyPart: m.replyPart,
+    answerState:
+      m.answerState && (PET_ANSWER_STATES as readonly string[]).includes(m.answerState)
+        ? (m.answerState as PetAnswerState)
+        : null,
+    unread: m.unread,
+  };
+}
+
+/**
+ * A message in someone else's pet room, only after `canViewPetMessage` allowed it: the date and the text, nothing
+ * that tells when it was written, how it was answered or whether it was read.
+ */
+export function toColleaguePetMessageDto(m: PetMessageRow): ColleaguePetMessageDto {
+  return {
+    view: 'colleague',
+    id: m.id,
+    petId: m.petId,
+    author: m.author === 'pet' ? 'pet' : 'owner',
+    text: m.body,
+    dayKey: m.dayKey,
   };
 }

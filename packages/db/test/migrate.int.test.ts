@@ -234,6 +234,114 @@ describe('migrations 0002_town_visualization and 0003_no_presence_traces', () =>
       constraint: 'pets_owner_look_uidx',
     });
 
+    /** A message in pet a5 with `extra` columns (name -> SQL expression); the base row is an owner message. */
+    const petMessage = (id: string, extra: Record<string, string>) => {
+      const all: Record<string, string> = {
+        id: `'${id}'`,
+        pet_id: `'00000000-0000-4000-8000-0000000000a5'`,
+        user_id: `'u-a'`,
+        author: `'owner'`,
+        body: `'오늘 할 일 정리해 줘'`,
+        day_key: `'2026-10-29'`,
+        visibility: `'company'`,
+        visibility_set_by: `'owner'`,
+        client_msg_id: `'${id.slice(-4)}'`,
+        answer_state: `'pending'`,
+        created_at: 'now()',
+        ...extra,
+      };
+      const cols = Object.entries(all).filter(([, v]) => v !== 'omit');
+      return `insert into pet_messages (${cols.map(([k]) => k).join(', ')})
+              values (${cols.map(([, v]) => v).join(', ')})`;
+    };
+    const question = '00000000-0000-4000-8000-0000000000b0';
+    /** A reply to `question` (every owner-only column left out). */
+    const reply = (id: string, extra: Record<string, string>) =>
+      petMessage(id, {
+        author: `'pet'`,
+        body: `'오전에는 견적서부터 봐요'`,
+        visibility_set_by: `'claude'`,
+        source: `'claude_code_channel'`,
+        in_reply_to: `'${question}'`,
+        reply_part: '1',
+        client_msg_id: 'omit',
+        answer_state: 'omit',
+        ...extra,
+      });
+    await q(petMessage(question, {}));
+    await violation(
+      'pet_messages_author_chk',
+      petMessage('00000000-0000-4000-8000-0000000000b1', {
+        author: `'bot'`,
+        client_msg_id: 'omit',
+        answer_state: 'omit',
+      }),
+    );
+    await violation(
+      'pet_messages_body_len_chk',
+      petMessage('00000000-0000-4000-8000-0000000000b2', { body: `''` }),
+    );
+    await violation(
+      'pet_messages_set_by_chk',
+      petMessage('00000000-0000-4000-8000-0000000000b3', { visibility_set_by: `'admin'` }),
+    );
+    await violation(
+      'pet_messages_source_chk',
+      petMessage('00000000-0000-4000-8000-0000000000b4', { source: `'claude_code'` }),
+    );
+    await violation(
+      'pet_messages_source_chk',
+      reply('00000000-0000-4000-8000-0000000000b5', { source: `'email'` }),
+    );
+    await violation(
+      'pet_messages_owner_fields_chk',
+      petMessage('00000000-0000-4000-8000-0000000000b6', { client_msg_id: 'omit' }),
+    );
+    await violation(
+      'pet_messages_pet_fields_chk',
+      reply('00000000-0000-4000-8000-0000000000b7', { reply_part: '4' }),
+    );
+    await violation(
+      'pet_messages_pet_fields_chk',
+      reply('00000000-0000-4000-8000-0000000000b8', { in_reply_to: 'omit' }),
+    );
+    await violation(
+      'pet_messages_answer_chk',
+      petMessage('00000000-0000-4000-8000-0000000000b9', { answer_state: `'done'` }),
+    );
+    await violation(
+      'pet_messages_lane_chk',
+      petMessage('00000000-0000-4000-8000-0000000000ba', { answered_lane: `'email'` }),
+    );
+    await violation(
+      'pet_messages_claim_chk',
+      petMessage('00000000-0000-4000-8000-0000000000bb', {
+        claimed_by: `'00000000-0000-4000-8000-0000000000ff'`,
+      }),
+    );
+    await violation(
+      'pet_messages_claim_chk',
+      petMessage('00000000-0000-4000-8000-0000000000bc', {
+        claimed_by: `'00000000-0000-4000-8000-0000000000ff'`,
+        claim_until: 'now()',
+      }),
+    );
+    await violation(
+      'pet_messages_unread_chk',
+      petMessage('00000000-0000-4000-8000-0000000000bd', { unread: 'true' }),
+    );
+    // One message per idempotency key and one reply per part; deleting a question deletes its replies.
+    expect(
+      await failure(petMessage('00000000-0000-4000-8000-0000000000be', { client_msg_id: `'00b0'` })),
+    ).toMatchObject({ code: '23505', constraint: 'pet_messages_owner_client_uidx' });
+    await q(reply('00000000-0000-4000-8000-0000000000c0', { unread: 'true' }));
+    expect(await failure(reply('00000000-0000-4000-8000-0000000000c1', {}))).toMatchObject({
+      code: '23505',
+      constraint: 'pet_messages_reply_part_uidx',
+    });
+    await q(`delete from pet_messages where id = '${question}'`);
+    expect((await q('select count(*)::int as n from pet_messages')).rows).toEqual([{ n: 0 }]);
+
     /** An activity report for u-b with `extra` columns (name -> SQL expression). */
     const report = (extra: Record<string, string>, source = "'cowork_scheduled'") => {
       const cols = ['user_id', 'period_key', 'source', ...Object.keys(extra)].join(', ');

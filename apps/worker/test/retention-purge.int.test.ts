@@ -4,14 +4,16 @@ import {
   chatMessages,
   newId,
   nudgeDeliveries,
+  petMessages,
   petNudges,
+  pets,
   profiles,
   todos,
   workLogs,
   type DbHandle,
 } from '@enu/db';
 import { createTestUser, setupTestDb, truncateAll } from '@enu/testing';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { nudgeDeliveryCutoff, purgeRetention } from '../src/jobs/retention-purge';
 import { DAY, HOUR, kst, plus, testEnv } from './helpers';
@@ -345,5 +347,44 @@ describe('retention.purge', () => {
     expect(byId.get(c)).toMatchObject({ manualStatus: null, statusText: '재택' });
     const run = (await h.db.select().from(auditEvents)).find((a) => a.action === 'retention.purge');
     expect(run?.metadata).toMatchObject({ clearedManual: 1, activityReports: 0 });
+  });
+
+  it('deletes pet conversations of days past the window, with their replies', async () => {
+    const u = await users();
+    const [pet] = await h.db
+      .select()
+      .from(pets)
+      .where(and(eq(pets.userId, u.a), eq(pets.isDefault, true)));
+    const msg = (id: string, dayKey: string, over: Partial<typeof petMessages.$inferInsert> = {}) => ({
+      id,
+      petId: pet!.id,
+      userId: u.a,
+      author: 'owner',
+      body: '오늘 할 일 알려줘',
+      dayKey,
+      visibility: 'company' as const,
+      visibilitySetBy: 'owner',
+      clientMsgId: id,
+      answerState: 'answered',
+      createdAt: NOW,
+      ...over,
+    });
+    const oldQ = '00000000-0000-4000-8000-000000000001';
+    const keepQ = '00000000-0000-4000-8000-000000000002';
+    // 90 days before 2026-10-29 is 2026-07-31: that day is still kept, the day before goes.
+    await h.db.insert(petMessages).values([msg(oldQ, '2026-07-30'), msg(keepQ, '2026-07-31')]);
+    await h.db.insert(petMessages).values({
+      ...msg('00000000-0000-4000-8000-000000000003', '2026-07-31'),
+      author: 'pet',
+      body: '세 가지예요',
+      clientMsgId: null,
+      answerState: null,
+      inReplyTo: oldQ,
+      replyPart: 1,
+      source: 'cowork_scheduled',
+    });
+    const s = await purgeRetention(h.db, NOW, env);
+    expect(s.petMessages).toBe(1);
+    expect(remaining(await h.db.select({ id: petMessages.id }).from(petMessages))).toEqual([keepQ]);
   });
 });

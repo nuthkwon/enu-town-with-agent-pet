@@ -1,6 +1,6 @@
 /**
  * Local demo data (NEVER in production): one dev user per seat with profiles, Claude links,
- * sample Claude-style work logs, to-dos, pet nudges and chat. Idempotent: replaces dev.* users.
+ * sample Claude-style work logs, to-dos, pet nudges, pet conversations and chat. Idempotent: replaces dev.* users.
  * Dev users sign in through the dev-login flow (DEV_LOGIN_ENABLED=1) with their dev email.
  */
 import {
@@ -19,6 +19,7 @@ import {
   chatMessages,
   claudeLinks,
   desks,
+  petMessages,
   petNudges,
   privacyConsents,
   profiles,
@@ -88,6 +89,26 @@ const NUDGES = [
   '잠깐 스트레칭하고 다시 집중해 봐요 ✨',
 ];
 
+/** One exchange per day with the default pet: the owner asks, the owner's Claude answers. */
+const PET_CHATS = [
+  [
+    '오늘 오전에 끝낼 일 정리해 줄래?',
+    '견적서 회신과 배포 체크리스트 두 가지만 오전에 끝내 봐요. 나머지는 오후로 미뤄도 괜찮아요!',
+  ],
+  [
+    '어제 PR 리뷰 코멘트 어디까지 반영했지?',
+    '재시도 로직 쪽 코멘트는 모두 반영했고, 테스트 케이스 추가 요청 하나가 남아 있어요.',
+  ],
+  [
+    '회의 자료에 넣을 지표 세 개만 골라 줘',
+    '주간 활성 사용자, 처리 시간 중앙값, 오류율 세 가지를 추천해요. 지난 분기와 비교하면 흐름이 잘 보여요.',
+  ],
+  [
+    '요구사항 문서 다음 단계가 뭐였지?',
+    '화면 흐름 검토 결과를 문서 3장에 반영하고, 예외 시나리오를 정리하는 단계예요.',
+  ],
+] as const;
+
 const now = new Date();
 const today = localDateKey(now, TZ);
 const yesterday = localDateKey(addLocalDays(now, TZ, -1), TZ);
@@ -127,10 +148,11 @@ await db.transaction(async (tx) => {
       onboardingCompletedAt: now,
       timezone: TZ,
     });
-    await insertDefaultPet(tx, { userId: id, name: seat.pet.name, species: seat.pet.species });
+    const pet = await insertDefaultPet(tx, { userId: id, name: seat.pet.name, species: seat.pet.species });
     await tx.insert(privacyConsents).values([
       { id: newId(), userId: id, noticeVersion: PRIVACY_NOTICE_VERSION, scope: 'service' },
       { id: newId(), userId: id, noticeVersion: PRIVACY_NOTICE_VERSION, scope: 'activity_sharing' },
+      { id: newId(), userId: id, noticeVersion: PRIVACY_NOTICE_VERSION, scope: 'pet_chat_sharing' },
     ]);
     await tx
       .insert(desks)
@@ -200,6 +222,48 @@ await db.transaction(async (tx) => {
       showAfter: now,
       expiresAt: new Date(now.getTime() + 8 * 3600_000),
     });
+
+    // Yesterday's exchange is answered; today's question waits for the owner's Claude (one person keeps it private).
+    for (const [k, day] of [yesterday, today].entries()) {
+      const [ask, answer] = PET_CHATS[(i + k) % PET_CHATS.length]!;
+      const asked =
+        day === today
+          ? new Date(now.getTime() - 20 * 60_000)
+          : atLocalTime(addLocalDays(now, TZ, -1), TZ, '10:15');
+      const visibility = i === 9 ? 'private' : 'company';
+      const questionId = newOpaqueId();
+      await tx.insert(petMessages).values({
+        id: questionId,
+        petId: pet.id,
+        userId: id,
+        author: 'owner',
+        body: ask,
+        dayKey: day,
+        visibility,
+        visibilitySetBy: 'owner',
+        clientMsgId: `demo-pet-${k}`,
+        answerState: day === today ? 'pending' : 'answered',
+        answeredLane: day === today ? null : 'connector',
+        replyCount: day === today ? 0 : 1,
+        createdAt: asked,
+      });
+      if (day === today) continue;
+      await tx.insert(petMessages).values({
+        id: newOpaqueId(),
+        petId: pet.id,
+        userId: id,
+        author: 'pet',
+        body: answer,
+        dayKey: day,
+        visibility,
+        visibilitySetBy: 'claude',
+        source: 'cowork_scheduled',
+        inReplyTo: questionId,
+        replyPart: 1,
+        oauthClientId: 'https://claude.ai/oauth/mcp-oauth-client-metadata',
+        createdAt: new Date(asked.getTime() + 25 * 60_000),
+      });
+    }
   }
 
   // A little chat history.

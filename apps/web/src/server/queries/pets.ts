@@ -21,17 +21,11 @@ import {
 import type { OwnerPetDto, PetCreate, PetInfoDto, PetPatch, PetTint, Visibility } from '@enu/shared';
 import { and, asc, desc, eq, ne } from 'drizzle-orm';
 import { ko } from '@/i18n/ko';
-import {
-  NO_PET_MESSAGES,
-  asVisibility,
-  toOwnerPetDto,
-  toPetInfoDto,
-  type PetMessageStats,
-  type PetRow,
-} from '../dto';
+import { NO_PET_MESSAGES, asVisibility, toOwnerPetDto, toPetInfoDto, type PetRow } from '../dto';
 import { HttpError, notFound, type FieldIssue } from '../http';
 import type { Viewer } from '../session';
 import { requireVisibleAuthor } from './logs';
+import { petMessageStats } from './pet-messages';
 
 /**
  * Pets (ADR 0005): the owner creates up to five, edits and deletes them; the default pet is created at provisioning
@@ -39,11 +33,6 @@ import { requireVisibleAuthor } from './logs';
  */
 
 const ORDER = [desc(pets.isDefault), asc(pets.sortOrder), asc(pets.createdAt)] as const;
-
-/** Unread replies, waiting messages and the last line of each of my pets (none until pets can talk). */
-async function loadPetStats(_db: DbOrTx, _userId: string): Promise<Map<string, PetMessageStats>> {
-  return new Map();
-}
 
 async function profileDefault(db: DbOrTx, userId: string): Promise<Visibility> {
   const [p] = await db
@@ -63,7 +52,7 @@ export async function listMyPets(db: DbOrTx, viewer: Viewer): Promise<OwnerPetDt
       .where(eq(pets.userId, viewer.userId))
       .orderBy(...ORDER),
     profileDefault(db, viewer.userId),
-    loadPetStats(db, viewer.userId),
+    petMessageStats(db, viewer.userId),
   ]);
   return rows.map((r) => toOwnerPetDto(r, def, stats.get(r.id) ?? NO_PET_MESSAGES));
 }
@@ -82,7 +71,7 @@ export async function requireMyPet(db: DbOrTx, viewer: Viewer, petId: string): P
 async function myPetDto(db: DbOrTx, viewer: Viewer, row: PetRow): Promise<OwnerPetDto> {
   const [def, stats] = await Promise.all([
     profileDefault(db, viewer.userId),
-    loadPetStats(db, viewer.userId),
+    petMessageStats(db, viewer.userId),
   ]);
   return toOwnerPetDto(row, def, stats.get(row.id) ?? NO_PET_MESSAGES);
 }

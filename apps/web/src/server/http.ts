@@ -104,7 +104,11 @@ export function assertSameOrigin(req: Request, expectedOrigin: string): void {
  * YYYY-MM-DD period key, and id is the row's UUID tie-breaker.
  * ------------------------------------------------------------------------------------------- */
 
-export type CursorKind = 'micros' | 'date';
+/**
+ * `ref` holds only a row id (k = 'r'); the server looks the row up under the caller's own visibility rule, so a
+ * colleague's cursor never carries a time and an invisible id is indistinguishable from an unknown one.
+ */
+export type CursorKind = 'micros' | 'date' | 'ref';
 export interface Cursor {
   k: string;
   id: string;
@@ -136,7 +140,8 @@ export function decodeCursor(raw: string | null | undefined, kind: CursorKind): 
   if (!Array.isArray(v) || v.length !== 2 || typeof v[0] !== 'string' || typeof v[1] !== 'string')
     throw bad();
   const [k, id] = v as [string, string];
-  if (!(kind === 'micros' ? MICROS_RE : DATE_RE).test(k) || !isUuid(id)) throw bad();
+  const keyOk = kind === 'ref' ? k === 'r' : (kind === 'micros' ? MICROS_RE : DATE_RE).test(k);
+  if (!keyOk || !isUuid(id)) throw bad();
   return { k, id };
 }
 
