@@ -147,7 +147,29 @@ export const NUDGE_POLICY = {
 /** Local work hours: scheduled check-ins are skipped and colleagues' state is hidden outside of them. */
 export const WORK_HOURS = { start: '08:30', end: '19:30' } as const;
 
-export const PET_SPECIES = ['cat', 'bunny', 'fox', 'chick', 'hamster', 'dragon'] as const;
+/**
+ * Fairy pet species. Append only (ids are stored per user). There are at least as many species as
+ * seats so every employee can have a different-looking pet; each one has its own silhouette and
+ * dominant colour (see `packages/sprites/src/parts/pets.ts`).
+ */
+export const PET_SPECIES = [
+  'cat',
+  'bunny',
+  'fox',
+  'chick',
+  'hamster',
+  'dragon',
+  'puppy',
+  'panda',
+  'penguin',
+  'owl',
+  'hedgehog',
+  'koala',
+  'frog',
+  'unicorn',
+  'whale',
+  'lamb',
+] as const;
 export type PetSpecies = (typeof PET_SPECIES)[number];
 
 export const PET_SPECIES_LABEL_KO: Record<PetSpecies, string> = {
@@ -157,6 +179,16 @@ export const PET_SPECIES_LABEL_KO: Record<PetSpecies, string> = {
   chick: '병아리',
   hamster: '햄스터',
   dragon: '아기용',
+  puppy: '강아지',
+  panda: '판다',
+  penguin: '펭귄',
+  owl: '부엉이',
+  hedgehog: '고슴도치',
+  koala: '코알라',
+  frog: '개구리',
+  unicorn: '유니콘',
+  whale: '고래',
+  lamb: '아기양',
 };
 
 export const BODY_TYPES = ['f', 'm'] as const;
