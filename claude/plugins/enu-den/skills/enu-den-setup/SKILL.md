@@ -1,6 +1,6 @@
 ---
 name: enu-den-setup
-description: ENU Den 처음 설정 도우미. ENU Den 커넥터 연결 상태를 확인하고, 업무 로그를 주기적으로 쓰는 예약 작업("ENU Den 체크인")을 만드는 방법을 안내한다. 사용자가 ENU Den 연결·설정·예약 작업·펫이 잠들어 있음·활동 공유 등을 물을 때 사용한다.
+description: ENU Den 처음 설정 도우미. ENU Den 커넥터 연결 상태를 확인하고, 업무 로그를 주기적으로 쓰는 예약 작업("ENU Den 체크인")과 (선택) Claude Code 펫 채널을 설정하는 방법을 안내한다. 사용자가 ENU Den 연결·설정·예약 작업·펫이 잠들어 있음·활동 공유·펫 채널·enu-pet 등을 물을 때 사용한다.
 ---
 
 # ENU Den 설정 도우미
@@ -55,6 +55,34 @@ description: ENU Den 처음 설정 도우미. ENU Den 커넥터 연결 상태를
 - Google Calendar·Gmail 커넥터를 연결하면 일정과 메일 제목으로 할 일을 더 잘 찾는다.
   활동 공유를 켰다면 회의·집중·부재 일정도 캘린더에서 가져온다.
 
+## 5. (선택) Claude Code 펫 채널 — 펫이 바로 답하게 하기
+
+체크인만 쓰면 펫은 근무 시간의 다음 체크인 때 답한다. Claude Code를 쓰는 사람은 펫 채널을 연결하면 `enu-pet`으로
+열어 둔 세션이 펫 메시지에 바로 답한다(근무 시간 밖에도, 본인이 보낸 메시지만).
+
+1. **준비:** 회사 Claude 관리자(Owner)가 조직 설정에서 채널을 켜고 `enu-den-channel` 플러그인을 허용해야 한다.
+   Claude Code에서 `/plugin install enu-den-channel@enu-tech`로 설치한다.
+2. **`enu-pet` 명령 만들기 (macOS·Linux):** 아래 함수를 `~/.zshrc` 또는 `~/.bashrc`에 추가하고 새 터미널을 연다.
+   사용자가 원하면 대신 추가해 주되, 파일을 고치기 전에 먼저 확인을 받는다.
+
+   ```bash
+   enu-pet() {
+     local server
+     server="$(ls -d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/enu-tech/enu-den-channel/*/server/den-channel.mjs 2>/dev/null | tail -n 1)"
+     case "$1" in
+       pair|status|unpair) node "$server" "$@" ;;
+       *) ENU_DEN_PET=1 claude --channels plugin:enu-den-channel@enu-tech "$@" ;;
+     esac
+   }
+   ```
+
+3. **연결(페어링):** ENU Den 설정 > 내 Claude 연결에서 'Claude Code 펫 채널' 코드를 만들고, **사용자가 직접 터미널에서**
+   `enu-pet pair 코드`를 실행하게 한다. 코드를 채팅에 붙여 넣으라고 하거나 대신 실행하지 않는다
+   (연결은 사람만 한다). 성공하면 연결된 ENU Den 계정 이름이 나온다.
+4. **사용:** `enu-pet`으로 Claude Code를 시작한다(프로젝트 폴더에서도 된다). `reply`·`status` 도구 승인 창이 뜨면
+   항상 허용해도 된다. 펫 메시지 때문에 셸 명령·파일 수정·다른 커넥터를 쓰기 전에는 Claude가 터미널에서 꼭 다시 묻는다.
+5. **해제:** `enu-pet unpair`, 또는 ENU Den 설정 > 내 Claude 연결에서 해제한다. 컴퓨터는 3대까지 연결할 수 있다.
+
 ## 자주 묻는 질문
 
 - **회사가 내 Claude 대화를 보나요?** 아니요. 내 Claude가 요약해서 보낸 내용만, 내가 정한 공개 범위에서 보입니다.
@@ -68,3 +96,4 @@ description: ENU Den 처음 설정 도우미. ENU Den 커넥터 연결 상태를
 - **타운의 내 아바타는 누가 조작하나요?** 아무도 조작하지 않습니다. 내가 정한 상태, 타운 접속, (활동 공유를 켰다면)
   내 Claude가 보낸 캘린더 일정으로 ENU Den이 자리를 정합니다. 내 Claude의 '지금 하는 일'은 이름표로만 붙습니다.
 - **출근·근태 확인에 쓰이나요?** 아니요. 아바타 위치는 실제 위치가 아니라 업무 상태이고, 이력도 남지 않습니다.
+- **펫 채널을 켜 두면 동료가 알 수 있나요?** 아니요. 채널이 연결되어 있는지는 나에게만 보이고 저장되지 않습니다.

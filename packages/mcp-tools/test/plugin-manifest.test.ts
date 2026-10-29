@@ -72,10 +72,25 @@ describe('check-in skill', () => {
 });
 
 describe('managed settings example', () => {
+  const settings = readJson<{
+    channelsEnabled?: boolean;
+    allowedChannelPlugins?: { marketplace: string; plugin: string }[];
+    permissions: { allow: string[]; deny?: string[] };
+  }>(path.join(CLAUDE_DIR, 'managed-settings/claude-code.managed.example.json'));
+
   it('pre-approves the read-only context tool', () => {
-    const settings = readJson<{ permissions: { allow: string[] } }>(
-      path.join(CLAUDE_DIR, 'managed-settings/claude-code.managed.example.json'),
-    );
     expect(settings.permissions.allow.some((p) => p.endsWith(`__${MCP_TOOL_NAMES.getMyContext}`))).toBe(true);
+  });
+
+  it('allows only the pet channel plugin, pre-approves only its two tools and hides its credentials', () => {
+    expect(settings.allowedChannelPlugins).toEqual([
+      { marketplace: marketplace.name, plugin: 'enu-den-channel' },
+    ]);
+    expect(marketplace.plugins.map((p) => p.name)).toContain('enu-den-channel');
+    const channelTools = settings.permissions.allow.filter((p) => p.includes('enu-den-channel'));
+    expect(channelTools.map((p) => p.split('__').pop()).sort()).toEqual(['reply', 'status']);
+    expect(settings.permissions.deny).toEqual(
+      expect.arrayContaining(['Read(~/.claude/channels/**)', 'Edit(~/.claude/channels/**)']),
+    );
   });
 });
