@@ -21,7 +21,7 @@ show.
 - **Visibility** is decided only in `packages/domain/src/visibility.ts` (`canViewLog`, `canViewChatSummary`,
   `effectiveVisibility`, `canShareActivity`, `canShowLive`, `canViewLogTimestamps`, `projectForColleagues`, `canViewPet`,
   `canChatWithPet`, `canViewPetPrivateFields`, `canViewPetMessage`, `petDefaultVisibility`, `petMessageVisibility`,
-  `petReplyVisibility`). Claude may lower visibility, never raise it above the owner default; only the owner turns
+  `petReplyVisibility`, `canListWorkLogEntry`, `canShowWorkLogEntryTime`). Claude may lower visibility, never raise it above the owner default; only the owner turns
   activity sharing on.
 - **Pet conversations.** Only the owner writes to a pet. Colleagues see company messages from the same day, **dates
   only**. Their DTOs have no times, sources, answer, read or typing state, channel liveness or companion mood. A reply
@@ -31,6 +31,11 @@ show.
   in a terminal (`enu-pet pair`). Tokens are stored as hashes. Whether a channel is live is kept only in web memory:
   never stored, NOTIFY'd, logged or audited. Polls, replies and reads are not audited. Connector (MCP) replies are
   allowed only in office hours; replies over the owner's own channel are allowed at any time.
+- **Work overview (ADR 0007).** The one cross-person feed is of work-log changes written by each person's own Claude:
+  company, unedited logs of active authors who accepted the current notice. `HH:MM` only for today's office-hours
+  writes of authors who share activity; everything else one digest per person per day (no write counts or order).
+  Owner edits and deletes remove entries; write times are kept for the current office day only; live pushes only in
+  office hours. No presence, status or `now` entries, no rankings, no list of people without a log.
 - **Avatars are never steered.** Every avatar state comes from `resolveActivity` + `projectForColleagues` over real
   inputs (the owner's status, an open town, their Claude's calendar blocks) — never fabricate motion or activity.
   Claude's `now` report and the work log only label an avatar or desk plate; people are grouped only when their own

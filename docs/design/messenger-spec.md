@@ -16,7 +16,7 @@ a change to a contract here changes this document in the same commit.
 | D6  | "접속" (online dot, avatar drawn) means ENU Den is open (a realtime session in any view), still gated by `show_live`.                                                                                                         |
 | D7  | Pilot only: fresh database at cutover, privacy notice `2026-12`, everyone accepts it again.                                                                                                                                   |
 | D8  | Owner-started chat is answered at any time by the channel. Connector replies (scheduled or interactive) only in office hours. Nudges keep their office-hours and quiet-hours rules.                                           |
-| D9  | One 전체 room and 1:1 DMs. No per-team channels, no cross-person feed: rooms are per person.                                                                                                                                  |
+| D9  | One 전체 room and 1:1 DMs. No per-team channels; rooms are per person. The one cross-person view is the work-log feed of [ADR 0007](../adr/0007-work-overview.md) (§10).                                                      |
 | D10 | One realtime session per user (4101); the shell explains a replaced session.                                                                                                                                                  |
 | D11 | Up to 5 pets per person ("새 펫 만들기"). Only the creator chats with them. Each pet has a name, look, role instructions, reply route and default visibility. All of a person's pets follow their avatar in the town.         |
 | D12 | A Claude Code pet session may run in any folder, including projects. Shell commands, file edits and other connectors always need the owner's confirmation in the terminal.                                                    |
@@ -297,3 +297,28 @@ recent[{author, sent_at, text}]}], items[{message_id, pet_id, sent_at, owner_tex
   deleted after 30 days; expired pairing codes with the auth cleanup.
 - Export `enu-den-export` version 2 adds `pets` (with role instructions) and `petMessages`.
 - Colleague pages are tested on the raw HTML (RSC payload included): no time of day, no owner-only keys.
+
+## 10. Work overview ([ADR 0007](../adr/0007-work-overview.md))
+
+- **Data:** `work_log_entries` (migration 0008): `id` (UUIDv4), `log_id` (FK `work_logs`, cascade), `user_id`,
+  `day_key` (office day, `APP_TIMEZONE`), `seq` (per log, never sent), `written_at` (null once compacted),
+  `in_office_hours`, `kind` (`created` / `updated` / `day`), `changes` (1–64 of `task_added {title,status}`,
+  `task_status {title,from,to}`, `blocker_added {text}`, `summary {text}`).
+- **Writes:** `postWorkLog` adds one entry in the write's transaction when the result is `created` or `updated`, the
+  log is company and `workLogDelta` is not empty; NOTIFY `work_log_changed` then carries `overview: true`. The
+  owner's content edit (`editedByUser`) and delete remove the log's entries in the same transaction.
+- **Rules** (`packages/domain`): `workLogDelta`, `mergeWorkLogChanges`, `projectWorkLogFeed`, `feedDayNav`;
+  `canListWorkLogEntry` and `canShowWorkLogEntryTime` in `visibility.ts`. Timed entries (today, office hours,
+  author shares activity) one per write, newest first; everything else one digest per person per day, ordered by
+  team, desk and name.
+- **REST** (cookie, `overviewRead` 120/min, `no-store`): `GET /api/v1/overview/feed?day` →
+  `WorkLogFeedDto {day, isToday, items, prevDay, nextDay}`; `GET /api/v1/overview/today` → `OverviewTodayDto`. Authors
+  must be active and have accepted the current notice. No ISO times, `seq`, `source` or refs in any response.
+- **Realtime:** `overview:changed {}` to everyone, throttled, only while the office is open, on `work_log_changed`
+  with `overview`, `profile_changed` and `user_deactivated`. No `PROTOCOL_VERSION` bump.
+- **Web:** the town panel shows the feed under the canvas; 크게 보기 opens a modal `<dialog>` (blurred, translucent
+  backdrop) with the town, the feed and four widgets (team today, task totals by team, town now, blockers). Only one
+  Phaser game runs at a time. The popup counts as busy for the owner's bubbles.
+- **Privacy, logs, retention:** Caddy `log_skip` for `/api/v1/overview/*`; entries follow `RETENTION_WORKLOG_DAYS`
+  by `day_key`; the nightly purge merges past days into one `day` row per log without a time; export version 3 adds
+  `workLogEntries`.

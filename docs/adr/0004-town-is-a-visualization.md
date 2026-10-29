@@ -91,6 +91,13 @@ design, its alternatives and the review that shaped it are in
 - Item 7: ADR 0005 is the new ADR for the dated pet conversations colleagues can read; its HR review is in the list
   below.
 
+## Addendum (2026-10-30): the work overview ([ADR 0007](0007-work-overview.md))
+
+- P4: presence and activity stay current-state only. The feed lists work-log changes; the time of each write is kept
+  for the current office day only and the nightly purge drops it, like `activity_reports`.
+- Item 7: ADR 0007 is the new ADR for the feed and the overview; its HR review is in the list below.
+- The overview's "town now" widget reads the same live projection as the map, in office hours only, and stores nothing.
+
 ## Review before rollout
 
 The notice is a draft until these are done. Record the results here.
@@ -107,3 +114,6 @@ The notice is a draft until these are done. Record the results here.
 - [ ] Claude organization: channels enabled, `enu-den-channel` allow-listed in managed settings, Always allow for the
       six connector tools: ________
 - [ ] Old pilot database, volumes and backup destroyed after the cutover: date ________
+- [ ] Work overview (ADR 0007): HR / legal review of the company-wide feed of work-log changes, its `HH:MM` times for
+      today's office hours, the team totals and blockers board, and what untimed entries and weekend dates reveal
+      about work outside office hours: ________

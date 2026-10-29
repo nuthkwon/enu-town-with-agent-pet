@@ -36,7 +36,8 @@ details are in [ADR 0006](0006-claude-code-pet-channel.md).
    everyone reconnects (see the [cutover runbook](../runbooks/rename-enu-den.ko.md)).
 2. **Messenger-first.** The left list holds the owner's pets (the default pet first), 전체, DMs and people; the
    centre is the conversation; the town is a collapsible panel with a full view on demand, under every ADR 0004
-   rule. There are no per-team channels and no cross-person feed.
+   rule. There are no per-team channels and no cross-person feed (the work-log feed of
+   [ADR 0007](0007-work-overview.md) supersedes this for work logs).
 3. **Pets.**
    - Every active employee has 1–5 pets. The default pet (the former single pet) is created at onboarding; it can be
      renamed and restyled but not deleted. Extra pets are created and deleted by the owner.
@@ -95,8 +96,8 @@ details are in [ADR 0006](0006-claude-code-pet-channel.md).
   colleague. ENU Den approving tool use on an employee's computer (no permission relay).
 - Presence or activity history, attendance reports, admin activity views, presence jobs, town replay, tab visibility
   as presence, per-user connection lines in logs (channel polls included).
-- Times, typing, read or live signals for colleagues in pet rooms; a cross-person feed; steering avatars;
-  Claude-written text on the map.
+- Times, typing, read or live signals for colleagues in pet rooms; a cross-person feed of anything but work logs
+  ([ADR 0007](0007-work-overview.md)); steering avatars; Claude-written text on the map.
 
 ## Consequences
 
@@ -114,7 +115,8 @@ details are in [ADR 0006](0006-claude-code-pet-channel.md).
 - Permission relay through ENU Den (a server compromise would approve tool use on every employee's computer).
 - Colleagues talking to someone's pet, pets messaging colleagues, shared pets (one person's Claude acting toward
   another person; a prompt-injection path).
-- Per-team channels or a cross-person team feed (comparative and history-like, town spec D13/Q6).
+- Per-team channels or a cross-person team feed (comparative and history-like, town spec D13/Q6). Superseded for
+  work logs by [ADR 0007](0007-work-overview.md).
 - Showing role instructions to colleagues (personal free text, not needed to read replies).
 - A unique species for every pet (16 species, up to 70 pets); the default pet keeps a person's identity on the map.
 - Next-day release and an after-hours private default: considered for P4/P5; the owner chose same-day visibility and

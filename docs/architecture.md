@@ -39,7 +39,7 @@ only purges.
 1. Cowork runs the employee's scheduled task, which runs the `enu-den-checkin` skill.
 2. The skill calls `get_my_context`. Outside work hours this returns `skip` and the skill stops. Its `activity` section tells Claude whether the owner shares activity, what it reported earlier today and any status the owner set by hand. Its `pet_inbox` lists the owner's messages to their pets that the connector may answer (never while `skip`).
 3. `post_pet_reply` answers them through `postPetReplies` (`packages/mcp-tools/src/services/pet-replies.ts`), the same core the Claude Code pet channel uses: the first lane to answer wins (`decideReplyAdmission`), replies are verbatim or rejected, never above the question's visibility, and are not audited.
-4. `post_work_log` upserts the day's log, keyed by `(user, local date)`.
+4. `post_work_log` upserts the day's log, keyed by `(user, local date)`. A company write that changes something visible also adds a `work_log_entries` row (what changed) for the work overview ([ADR 0007](adr/0007-work-overview.md)).
 5. `post_activity` (only when the owner shares activity) → `activity_reports` (one row per user and office day: the `now` kind and until, today's calendar blocks, refs as keyed daily hashes) → `activity_changed` → the realtime director.
 6. `upsert_todos` upserts by `external_ref`.
 7. `post_pet_nudges` queues bubble text, which is shown verbatim.
@@ -79,6 +79,23 @@ messages from the same day, and a reply only while its question is company. `Col
 in the web process's memory (`server/pet-channel/liveness.ts`); only I see it, through
 `/api/v1/me/pet-channel/status`. Polls, replies and reads are not audited, and Caddy logs no line for the pet
 channel, my pet rooms, the channel status or colleagues' pages and reads (`log_skip`).
+
+## Work overview
+
+[ADR 0007](adr/0007-work-overview.md). Under the town panel the messenger shows a feed of work-log changes; 크게
+보기 opens a full-screen popup with the town, the feed and four widgets (team today, task totals by team, town now,
+blockers).
+
+1. `postWorkLog` adds a `work_log_entries` row in the write's transaction (company logs, non-empty `workLogDelta`)
+   and marks the NOTIFY with `overview: true`. The owner's edit or delete of the log removes its rows.
+2. Realtime broadcasts an empty `overview:changed`, throttled, only while the office is open; clients fetch
+   `/api/v1/overview/feed` and `/api/v1/overview/today` again.
+3. Reads join company, undeleted, unedited logs of active authors who accepted the current notice, and project them
+   with `projectWorkLogFeed`. No ISO time, sequence or source leaves the server.
+4. The nightly purge merges past days into one row per log without a time, so write times exist for the current
+   office day only. The routes are skipped in the Caddy access log.
+5. "Town now" is computed in the browser from the live roster (office hours only, never stored). Only one Phaser game
+   runs: while the popup shows the town, the panel shows a placeholder.
 
 ## Town director
 
@@ -120,6 +137,8 @@ See `CLAUDE.md` for the package map. The key invariants live in pure functions w
 | `packages/domain/src/worklog-upsert.ts` | Owner edits, deletes and visibility always win                                                                                                                                                                                                                                        |
 | `packages/domain/src/validation.ts`     | Text that breaks the rules is rejected, never rewritten; `post_activity` is rejected as a whole                                                                                                                                                                                       |
 | `packages/domain/src/nudge-policy.ts`   | When a bubble may show (office hours, quiet hours, interval, daily cap, focus or meeting)                                                                                                                                                                                             |
+| `packages/domain/src/worklog-delta.ts`  | What a Claude write changed (tasks added, status moves, blockers added, summary); empty when nothing visible changed                                                                                                                                                                  |
+| `packages/domain/src/worklog-feed.ts`   | The work feed: `HH:MM` only for today's office-hours writes of authors who share activity; everything else one digest per person per day, ordered by team, desk and name                                                                                                              |
 | `packages/domain/src/link-state.ts`     | Not linked / linked / stale                                                                                                                                                                                                                                                           |
 | `packages/domain/src/pets.ts`           | Pet limits and looks; `decideReplyAdmission`: the first lane to answer wins, claims are 10-minute leases, the connector lane only in office hours                                                                                                                                     |
 | `packages/map/src/spots.ts`             | Where the director may place people and pets; allocation is deterministic and never doubles up a tile                                                                                                                                                                                 |

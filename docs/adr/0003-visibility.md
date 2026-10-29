@@ -46,3 +46,12 @@ null`); it can never turn sharing on. Only the owner can, explicitly.
 - Owner-only: role instructions, reply routes, exact times, to-dos, nudges, the channel state. Pet names and looks
   are company-wide.
 - Admins see exactly what colleagues see; they cannot read private pet messages.
+
+## Addendum (2026-10-30): the work overview ([ADR 0007](0007-work-overview.md))
+
+- `canListWorkLogEntry` and `canShowWorkLogEntryTime` live in `packages/domain/src/visibility.ts`.
+- A feed entry is listed only while its log passes `canViewLog(ANY_COLLEAGUE, …)`, is not edited by its owner, and
+  its author is active and accepted the current notice. Owner edits and deletes remove the entries.
+- The one exception to `canViewLogTimestamps`: the feed shows `HH:MM` for today's office-hours writes of authors who
+  share activity. Every log DTO keeps returning `null` times to colleagues.
+- Everyone, the owner included, sees the same feed; admins see what colleagues see.
