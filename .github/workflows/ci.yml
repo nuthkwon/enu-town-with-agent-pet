@@ -53,6 +53,43 @@ jobs:
         env:
           SKIP_ENV_VALIDATION: '1'
 
+  e2e:
+    runs-on: ubuntu-latest
+    needs: check
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: enu
+          POSTGRES_PASSWORD: enu
+          POSTGRES_DB: enu_den_e2e
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U enu -d enu_den_e2e"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      E2E_DATABASE_URL: postgres://enu:enu@localhost:5432/enu_den_e2e
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Chromium for Playwright
+        run: pnpm --filter @enu/e2e exec playwright install --with-deps chromium
+      - name: End-to-end tests (Next dev + Colyseus + Postgres)
+        run: pnpm test:e2e
+      - name: Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
+
   images:
     runs-on: ubuntu-latest
     needs: check
