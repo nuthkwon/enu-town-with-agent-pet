@@ -21,6 +21,8 @@ export const townEvent = z.discriminatedUnion('type', [
     created: z.boolean(),
     /** Who wrote: the owner's Claude (`post_work_log`) or the owner on the web (PATCH/DELETE). */
     by: z.enum(['claude', 'user']),
+    /** The work overview changed (ADR 0007): a feed entry was added, removed, hidden or shown again. */
+    overview: z.boolean().optional(),
   }),
   /** The owner's `activity_reports` row for today changed (post_activity, or sharing turned off). */
   z.object({ v: z.literal(1), type: z.literal('activity_changed'), user_id: z.string() }),

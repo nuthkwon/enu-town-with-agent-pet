@@ -3,8 +3,10 @@ import type { ResolvedActivity } from '../src/activity';
 import {
   ANY_COLLEAGUE,
   NEUTRAL_PROJECTION,
+  canListWorkLogEntry,
   canShareActivity,
   canShowLive,
+  canShowWorkLogEntryTime,
   canViewChatSummary,
   canViewLog,
   canViewLogTimestamps,
@@ -184,5 +186,48 @@ describe('projectForColleagues', () => {
   it('drops the group key unless the owner shares', () => {
     expect(projectForColleagues(r(), ctx({ share: false })).groupKey).toBeNull();
     expect(projectForColleagues(r(), ctx({ share: true })).groupKey).toEqual(key);
+  });
+});
+
+describe('work overview (ADR 0007)', () => {
+  const feedLog = (over: Partial<Parameters<typeof canListWorkLogEntry>[0]> = {}) => ({
+    ownerId: 'owner',
+    visibility: 'company' as const,
+    chatSummaryVisibility: 'private' as const,
+    deletedAt: null,
+    editedByUser: false,
+    ...over,
+  });
+  const author = { active: true, noticeAccepted: true };
+
+  it('lists entries of company, unedited logs of active authors who accepted the notice', () => {
+    expect(canListWorkLogEntry(feedLog(), author)).toBe(true);
+    expect(canListWorkLogEntry(feedLog({ visibility: 'private' }), author)).toBe(false);
+    expect(canListWorkLogEntry(feedLog({ deletedAt: new Date() }), author)).toBe(false);
+    expect(canListWorkLogEntry(feedLog({ editedByUser: true }), author)).toBe(false);
+    expect(canListWorkLogEntry(feedLog(), { ...author, active: false })).toBe(false);
+    expect(canListWorkLogEntry(feedLog(), { ...author, noticeAccepted: false })).toBe(false);
+  });
+
+  it("shows a time only for today's office-hours writes of authors who share activity", () => {
+    const today = '2026-10-30';
+    const sharing = { active: true, shareActivity: true };
+    expect(canShowWorkLogEntryTime({ dayKey: today, inOfficeHours: true }, today, sharing)).toBe(true);
+    expect(canShowWorkLogEntryTime({ dayKey: '2026-10-29', inOfficeHours: true }, today, sharing)).toBe(
+      false,
+    );
+    expect(canShowWorkLogEntryTime({ dayKey: today, inOfficeHours: false }, today, sharing)).toBe(false);
+    expect(
+      canShowWorkLogEntryTime({ dayKey: today, inOfficeHours: true }, today, {
+        active: true,
+        shareActivity: null,
+      }),
+    ).toBe(false);
+    expect(
+      canShowWorkLogEntryTime({ dayKey: today, inOfficeHours: true }, today, {
+        active: true,
+        shareActivity: false,
+      }),
+    ).toBe(false);
   });
 });

@@ -12,6 +12,7 @@ import type {
   PetSpecies,
   PetTint,
   ScheduleKind,
+  TaskStatus,
   TeamId,
   TodoStatus,
   Visibility,
@@ -25,6 +26,8 @@ import type {
  *
  * Routes (all require a session cookie; writes also require Origin === PUBLIC_URL):
  *   GET    /api/v1/me                                   -> MeDto
+ *   GET    /api/v1/overview/feed?day                    -> WorkLogFeedDto (ADR 0007)
+ *   GET    /api/v1/overview/today                       -> OverviewTodayDto
  *   PATCH  /api/v1/me/profile            (profilePatch)  -> MeDto
  *   POST   /api/v1/me/onboarding         (onboardingSubmit) -> MeDto
  *   GET    /api/v1/me/pet                               -> MyPetDto
@@ -203,6 +206,62 @@ export interface WorkLogDto {
   userEditedAt: string | null;
   /** e.g. "김OO님의 Claude가 작성" (+ " · 본인 수정"). */
   provenanceLabel: string;
+}
+
+/**
+ * One visible change in a work log as the work overview shows it (ADR 0007). Titles and text are Claude's,
+ * verbatim; the labels around them are ENU Den's.
+ */
+export type WorkLogChange =
+  | { type: 'summary'; text: string }
+  | { type: 'task_status'; title: string; from: TaskStatus; to: TaskStatus }
+  | { type: 'task_added'; title: string; status: TaskStatus }
+  | { type: 'blocker_added'; text: string };
+
+/**
+ * A line of the work feed: one Claude write (`entry`, today's office hours of an author who shares activity, with
+ * `time`) or everything else of one person's day merged (`digest`, no time). Never an ISO time, a write count, a
+ * sequence or a source.
+ */
+export interface WorkLogFeedItemDto {
+  id: string;
+  logId: string;
+  userId: string;
+  authorName: string;
+  team: TeamId | null;
+  dayKey: string;
+  /** 'HH:MM' (office time zone) or null. */
+  time: string | null;
+  form: 'entry' | 'digest';
+  changes: WorkLogChange[];
+}
+
+export interface WorkLogFeedDto {
+  day: string;
+  isToday: boolean;
+  items: WorkLogFeedItemDto[];
+  /** Calendar days inside the retention window, whatever the data. */
+  prevDay: string | null;
+  nextDay: string | null;
+}
+
+/** One person with a company work log today (people without one are not listed). */
+export interface OverviewMemberDto {
+  userId: string;
+  authorName: string;
+  team: TeamId | null;
+  logId: string;
+  summary: string | null;
+  tasks: { title: string; status: TaskStatus }[];
+  blockers: string[];
+  provenanceLabel: string;
+  /** 'HH:MM' of the latest write when the feed may show it, else null. */
+  lastUpdate: string | null;
+}
+
+export interface OverviewTodayDto {
+  day: string;
+  members: OverviewMemberDto[];
 }
 
 export interface ProfileCardDto {

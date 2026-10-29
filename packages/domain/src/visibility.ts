@@ -71,6 +71,39 @@ export function canShareActivity(owner: { shareActivity: boolean | null }, autho
   return author.active && owner.shareActivity === true;
 }
 
+/* ------------------------------------------------------------------ work overview (ADR 0007) */
+
+export interface FeedLogFields extends LogVisibilityFields {
+  editedByUser: boolean;
+}
+
+export interface FeedAuthorState extends AuthorState {
+  /** Accepted the current privacy notice (MCP writes do not require it; the feed does). */
+  noticeAccepted: boolean;
+}
+
+/**
+ * A work-log feed entry may be listed: its log is one any colleague may read, the owner has not edited it (their
+ * edits remove the entries), and the author is active and accepted the current notice. The same for every viewer,
+ * the owner included.
+ */
+export function canListWorkLogEntry(log: FeedLogFields, author: FeedAuthorState): boolean {
+  return canViewLog(ANY_COLLEAGUE, log, author) && !log.editedByUser && author.noticeAccepted;
+}
+
+/**
+ * The one exception to `canViewLogTimestamps`: the feed may show `HH:MM` for a write from today's office day, made
+ * in office hours, by an author who shares activity (the log sparkle's condition). Checked when read, so turning
+ * sharing off drops the times at once.
+ */
+export function canShowWorkLogEntryTime(
+  entry: { dayKey: string; inOfficeHours: boolean },
+  todayKey: string,
+  author: { active: boolean; shareActivity: boolean | null },
+): boolean {
+  return entry.dayKey === todayKey && entry.inOfficeHours && canShareActivity(author, author);
+}
+
 /** Having the town open may draw the owner and their online dot (접속 표시). */
 export function canShowLive(owner: { showLive: boolean }): boolean {
   return owner.showLive;

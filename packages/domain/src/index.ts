@@ -1,5 +1,7 @@
 export * from './visibility';
 export * from './worklog-upsert';
+export * from './worklog-delta';
+export * from './worklog-feed';
 export * from './link-state';
 export * from './checkin';
 export * from './validation';
