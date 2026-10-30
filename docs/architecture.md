@@ -88,8 +88,9 @@ blockers).
 
 1. `postWorkLog` adds a `work_log_entries` row in the write's transaction (company logs, non-empty `workLogDelta`)
    and marks the NOTIFY with `overview: true`. The owner's edit or delete of the log removes its rows.
-2. Realtime broadcasts an empty `overview:changed`, throttled, only while the office is open; clients fetch
-   `/api/v1/overview/feed` and `/api/v1/overview/today` again.
+2. Realtime broadcasts an empty `overview:changed`, only while the office is open; clients fetch
+   `/api/v1/overview/feed` and `/api/v1/overview/today` again. It is immediate (3 s throttle) only when the feed dates
+   the write anyway (the `logPulse` rule) or the person is shown; other changes go out in a 10-minute batch.
 3. Reads join company, undeleted, unedited logs of active authors who accepted the current notice, and project them
    with `projectWorkLogFeed`. No ISO time, sequence or source leaves the server.
 4. The nightly purge merges past days into one row per log without a time, so write times exist for the current

@@ -7,6 +7,7 @@ import {
   type AuthContext,
   type Client,
   type Deferred,
+  type Delayed,
 } from '@colyseus/core';
 import { StateView } from '@colyseus/schema';
 import { loadHolidays, profiles } from '@enu/db';
@@ -23,6 +24,7 @@ import {
   type EmoteMsg,
   type ErrorMsg,
   type NoticeMsg,
+  type OverviewChangedMsg,
   type PetChangedMsg,
   type PingedMsg,
   type StatusSetMsg,
@@ -65,6 +67,10 @@ export type OfficeClient = Client<{ auth: OfficeAuth; userData: OfficeUserData }
 /** Seconds a dropped connection keeps its seat (and stays live) for an automatic reconnect. */
 export const RECONNECT_SECONDS = 20;
 export const RESYNC_INTERVAL_MS = 5 * 60 * 1000;
+/** At most one immediate `overview:changed` per this many ms (leading and trailing). */
+export const OVERVIEW_THROTTLE_MS = 3000;
+/** Changes the feed shows without a time are announced together, at most this often. */
+export const OVERVIEW_BATCH_MS = 10 * 60 * 1000;
 
 /** Close codes after which a seat is never held for reconnection. */
 const NO_RECONNECT_CODES: ReadonlySet<number> = new Set<number>([
@@ -127,6 +133,10 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
   /** Office date the loaded signals belong to (APP_TIMEZONE). */
   private signalsDay = '';
   private dayReload: Promise<void> | null = null;
+  /** The work overview (ADR 0007): the last immediate announcement, a pending trailing one, a pending batch. */
+  private overviewSentAt = Number.NEGATIVE_INFINITY;
+  private overviewTrailing: Delayed | null = null;
+  private overviewDirty = false;
   /** Per-key load sequence, so a slow, stale load never overwrites a newer one. */
   private readonly seqs = new Map<string, number>();
   /** This instance holds `officeRoomClaimed`. */
@@ -243,12 +253,17 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
     this.clock.setInterval(() => this.evaluate(), TOWN_TIMING.directorTickMs);
     this.clock.setInterval(() => void this.scheduler.tick(), env.NUDGE_TICK_MS);
     this.clock.setInterval(() => void this.resyncAll(), RESYNC_INTERVAL_MS);
+    this.clock.setInterval(() => this.flushOverview(), OVERVIEW_BATCH_MS);
 
     this.events = new DbEvents({
       connectionString: env.DATABASE_URL,
       logger,
       onEvent: (event) => void this.handleTownEvent(event),
-      onReconnect: () => void this.resyncAll(),
+      onReconnect: () => {
+        // Events may have been missed while LISTEN was down.
+        this.overviewDirty = true;
+        void this.resyncAll();
+      },
     });
     await this.events.start();
     logger.info({ room: OFFICE_ROOM_NAME, roomId: this.roomId, mapHash: map.mapHash }, 'office room created');
@@ -619,9 +634,13 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
           if (event.state !== 'not_linked' && this.byUser.has(event.user_id))
             await this.scheduler.reload(event.user_id);
           return;
-        case 'profile_changed':
+        case 'profile_changed': {
+          // A shown person's change (sharing turned off, a new name) shows in the town at once anyway.
+          const shown = this.director.projected(event.user_id)?.shown === true;
           await this.reloadMember(event.user_id);
+          this.announceOverview(shown);
           return;
+        }
         case 'pets_changed':
           await this.reloadMember(event.user_id);
           this.tellOwner(event.user_id, { petId: null });
@@ -636,7 +655,13 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
         case 'work_log_changed': {
           await this.reloadSignals([event.user_id]);
           this.evaluate();
-          this.director.noteLogWrite(event.user_id, event.by);
+          const pulsed = this.director.noteLogWrite(event.user_id, event.by);
+          if (event.overview) {
+            // Now only when the feed shows this write with its time (the same rule as the sparkle) or the owner
+            // is shown in the town anyway; otherwise the push would date a write the feed shows without one.
+            const shown = this.director.projected(event.user_id)?.shown === true;
+            this.announceOverview(event.by === 'claude' ? pulsed : shown);
+          }
           if (event.visibility !== 'company' || !event.created) return;
           const notice: NoticeMsg = {
             kind: 'work_log_published',
@@ -649,6 +674,7 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
         case 'user_deactivated':
           this.removeFromTown(event.user_id);
           this.evaluate();
+          this.announceOverview(true);
           return;
         case 'desks_changed':
           await this.reloadRoster();
@@ -658,6 +684,35 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
     } catch (err) {
       this.ctx.logger.error({ err, type: event.type }, 'town event handling failed');
     }
+  }
+
+  /**
+   * The work overview changed (ADR 0007). `now`: tell everyone at once, throttled (leading and trailing); else with
+   * the next batch. Nothing is sent outside office hours: clients fetch again when the office opens.
+   */
+  private announceOverview(now: boolean): void {
+    if (!now) {
+      this.overviewDirty = true;
+      return;
+    }
+    if (this.overviewTrailing) return;
+    const wait = this.overviewSentAt + OVERVIEW_THROTTLE_MS - monotonicMs();
+    if (wait <= 0) return this.sendOverview();
+    this.overviewTrailing = this.clock.setTimeout(() => {
+      this.overviewTrailing = null;
+      this.sendOverview();
+    }, wait);
+  }
+
+  /** Sends the pending batch, if any (every OVERVIEW_BATCH_MS; tests call it directly). */
+  flushOverview(): void {
+    if (this.overviewDirty) this.sendOverview();
+  }
+
+  private sendOverview(): void {
+    this.overviewDirty = false;
+    this.overviewSentAt = monotonicMs();
+    if (this.state.officeOpen) this.broadcast(MSG.overviewChanged, {} satisfies OverviewChangedMsg);
   }
 
   private nextSeq(key: string): number {

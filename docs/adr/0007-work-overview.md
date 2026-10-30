@@ -50,8 +50,11 @@ The owner decided on 2026-10-30 that everyone should be able to grasp the compan
    - **Town now:** the meetings under way and how many people are in a meeting, focused, away or absent, and how many
      are online, computed in the browser from the live town projection, in office hours only and never stored.
    - **Blockers:** today's blockers from company logs, grouped by team.
-7. **Live updates** while the office is open only: realtime broadcasts an empty `overview:changed` (throttled) and
-   clients fetch again over REST. Nothing is pushed after hours.
+7. **Live updates** while the office is open only: realtime broadcasts an empty `overview:changed` and clients fetch
+   again over REST. It goes out at once (throttled) only for a change that is dated anyway: a write the feed shows
+   with its time, or a change by someone the town shows. Any other change (an untimed write, a hidden owner's edit)
+   waits for a batch every 10 minutes, so the push never dates what the feed leaves undated. Nothing is pushed after
+   hours.
 8. **Everyone sees the same**, the owner included (the owner's exact times stay on `/me`). Admins have no extra view.
 9. **Logs.** The overview routes leave no per-request lines in the edge logs.
 10. **Consent.** Privacy notice `2027-01`; everyone accepts it again.

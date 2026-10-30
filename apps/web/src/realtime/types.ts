@@ -121,6 +121,8 @@ export interface SessionEvents {
   notice: NoticeMsg;
   /** My pets (`petId: null`) or one of my pet rooms changed: refetch it over REST (owner only). */
   'pet:refetch': PetChangedMsg;
+  /** The work overview changed (office hours only): fetch the feed and today's status again. Carries nothing. */
+  'overview:refetch': void;
   /** Server rejected a message (rate limit, invalid payload, …); the connection stays open. */
   'server:error': ErrorMsg;
 }

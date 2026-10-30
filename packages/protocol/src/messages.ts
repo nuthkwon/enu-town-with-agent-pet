@@ -73,6 +73,7 @@ export const MSG = {
   pinged: 'social:pinged',
   notice: 'notice',
   petChanged: 'pet:changed',
+  overviewChanged: 'overview:changed',
   error: 'error',
 } as const;
 
@@ -137,6 +138,13 @@ export interface NoticeMsg {
 export interface PetChangedMsg {
   petId: string | null;
 }
+
+/**
+ * To everyone, in office hours only (MSG.overviewChanged): the work overview changed (ADR 0007); clients fetch it
+ * again over REST. Empty: it never says whose log changed. A change the feed shows without a time is announced only
+ * with the next periodic batch, so the push never dates it.
+ */
+export type OverviewChangedMsg = Record<string, never>;
 
 /**
  * Payload of the server -> client `error` message (MSG.error). The connection stays open.

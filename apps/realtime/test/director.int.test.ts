@@ -1,5 +1,5 @@
 import { desks, newId, notifyTown, petNudges, profiles, user, workLogs } from '@enu/db';
-import { ActivityCode, PlateNote, SourceCode, type ErrorMsg } from '@enu/protocol';
+import { ActivityCode, MSG, PlateNote, SourceCode, type ErrorMsg } from '@enu/protocol';
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -231,6 +231,64 @@ describe('director (real room)', () => {
     await event(a.id, logA, 'company', 'claude');
     await sleep(400);
     expect(pulse(a.id)).toBe(0);
+  });
+
+  it('overview:changed goes to everyone at once only for writes the feed dates, else with the next batch, never after hours', async () => {
+    const a = await makeUser(h, { deskId: 'L4a', shareActivity: true });
+    const n = await makeUser(h, { deskId: 'L5b', shareActivity: false });
+    const w = await makeUser(h, { deskId: 'L5a', shareActivity: true });
+    await joinAs(h, a.id);
+    await joinAs(h, n.id);
+    const jw = await joinAs(h, w.id);
+    await waitFor(() => jw.room.state.players.get(a.id)?.shown === true, { message: 'a shown' });
+    const logA = await setWorkLog(h, a.id, { visibility: 'company' });
+    const logN = await setWorkLog(h, n.id, { visibility: 'company' });
+    const event = (userId: string, logId: string, by: 'claude' | 'user', overview = true) =>
+      notifyTown(h.db, {
+        v: 1,
+        type: 'work_log_changed',
+        user_id: userId,
+        log_id: logId,
+        visibility: 'company',
+        created: false,
+        by,
+        ...(overview ? { overview: true } : {}),
+      });
+    const seen = () => jw.inbox.of(MSG.overviewChanged);
+    const room = serverRoom(h, jw);
+
+    // A sharer's Claude write shows with its time: at once, as an empty message.
+    await event(a.id, logA, 'claude');
+    await waitFor(() => seen().length === 1, { timeoutMs: 1000, message: 'immediate' });
+    expect(seen()[0]).toEqual({});
+    // A burst within the throttle window comes as one trailing message.
+    await event(a.id, logA, 'claude');
+    await event(a.id, logA, 'claude');
+    await waitFor(() => seen().length === 2, { timeoutMs: 4500, message: 'trailing' });
+    await sleep(400);
+    expect(seen()).toHaveLength(2);
+
+    // Writes the feed shows without a time, and the hidden owner's own edit, wait for the batch.
+    await event(n.id, logN, 'claude');
+    await event(n.id, logN, 'user');
+    await event(a.id, logA, 'claude', false);
+    await sleep(400);
+    expect(seen()).toHaveLength(2);
+    room.flushOverview();
+    await waitFor(() => seen().length === 3, { message: 'batch' });
+    room.flushOverview();
+    await sleep(300);
+    expect(seen()).toHaveLength(3);
+
+    // After hours nothing is sent (clients fetch again when the office opens).
+    h.clock.set(AFTER_HOURS);
+    room.evaluateNow();
+    await waitFor(() => jw.room.state.officeOpen === false);
+    await event(a.id, logA, 'claude');
+    await event(n.id, logN, 'claude');
+    room.flushOverview();
+    await sleep(400);
+    expect(seen()).toHaveLength(3);
   });
 
   it('desks_changed during an active bubble: the owner still decodes bubbleText (same Pet instance)', async () => {

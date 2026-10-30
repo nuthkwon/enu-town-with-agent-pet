@@ -569,6 +569,18 @@ describe('RealtimeSession', () => {
     expect(seen).toEqual([{ petId: 'p-1' }, { petId: null }, { petId: null }]);
   });
 
+  it('passes the overview refetch signal on without any payload', async () => {
+    const h = harness();
+    const seen: unknown[][] = [];
+    h.session.on('overview:refetch', (...args: unknown[]) => seen.push(args));
+    h.session.start();
+    await flush();
+    const room = h.rooms[0] as FakeRoom;
+    room.message(MSG.overviewChanged, {});
+    room.message(MSG.overviewChanged, { userId: 'ignored' });
+    expect(seen).toEqual([[undefined], [undefined]]);
+  });
+
   it('presence is sent only when it changes', async () => {
     const h = harness();
     h.session.start();

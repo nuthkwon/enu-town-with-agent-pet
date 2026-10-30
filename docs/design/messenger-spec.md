@@ -314,8 +314,10 @@ recent[{author, sent_at, text}]}], items[{message_id, pet_id, sent_at, owner_tex
 - **REST** (cookie, `overviewRead` 120/min, `no-store`): `GET /api/v1/overview/feed?day` →
   `WorkLogFeedDto {day, isToday, items, prevDay, nextDay}`; `GET /api/v1/overview/today` → `OverviewTodayDto`. Authors
   must be active and have accepted the current notice. No ISO times, `seq`, `source` or refs in any response.
-- **Realtime:** `overview:changed {}` to everyone, throttled, only while the office is open, on `work_log_changed`
-  with `overview`, `profile_changed` and `user_deactivated`. No `PROTOCOL_VERSION` bump.
+- **Realtime:** `overview:changed {}` to everyone, only while the office is open, on `work_log_changed` with
+  `overview`, `profile_changed` and `user_deactivated`. Immediate (3 s throttle) only for a write the feed shows with
+  its time or a change by someone the town shows; anything else waits for the 10-minute batch, so the push never
+  dates an untimed write. No `PROTOCOL_VERSION` bump.
 - **Web:** the town panel shows the feed under the canvas; 크게 보기 opens a modal `<dialog>` (blurred, translucent
   backdrop) with the town, the feed and four widgets (team today, task totals by team, town now, blockers). Only one
   Phaser game runs at a time. The popup counts as busy for the owner's bubbles.

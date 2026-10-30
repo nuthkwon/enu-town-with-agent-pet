@@ -409,6 +409,7 @@ export class RealtimeSession extends TypedEmitter<SessionEvents> {
     on<PetChangedMsg>(MSG.petChanged, (m) => {
       this.emit('pet:refetch', { petId: typeof m?.petId === 'string' ? m.petId : null });
     });
+    on(MSG.overviewChanged, () => this.emit('overview:refetch'));
     on<ErrorMsg>(MSG.error, (m) => {
       if (m) this.emit('server:error', m);
     });
