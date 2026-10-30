@@ -4,18 +4,20 @@ import {
   auditEvents,
   chatMessages,
   claudeLinks,
+  newOpaqueId,
   nudgeDeliveries,
   petChannelTokens,
   petMessages,
   petNudges,
   profiles,
   todos,
+  workLogEntries,
   workLogs,
   type DbOrTx,
 } from '@enu/db';
-import { retentionCutoffs, type RetentionDays } from '@enu/domain';
+import { mergeWorkLogChanges, retentionCutoffs, type RetentionDays } from '@enu/domain';
 import { NUDGE_POLICY, localDateKey, startOfLocalDay } from '@enu/shared';
-import { and, eq, inArray, isNotNull, lt, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, lt, or, sql, type SQL } from 'drizzle-orm';
 import type { WorkerEnv } from '../env';
 import { affected, inBatches } from './types';
 
@@ -26,6 +28,8 @@ export const SOFT_DELETED_WORK_LOG_DAYS = 30;
 export const CLOSED_TODO_DAYS = 30;
 /** Pet channel tokens are removed this many days after they expired or their link was revoked. */
 export const CHANNEL_TOKEN_GRACE_DAYS = 30;
+/** The most changes one feed entry row holds (the table's check). */
+const MAX_ENTRY_CHANGES = 64;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TERMINAL_NUDGE_STATUSES = ['acked', 'dismissed', 'expired', 'superseded'];
@@ -35,6 +39,12 @@ export interface RetentionSummary {
   dmMessages: number;
   roomMessages: number;
   workLogs: number;
+  /** Work feed entries of office days before the work-log cutoff (ADR 0007). */
+  workLogEntries: number;
+  /** Entries of deleted or owner-edited logs that were still stored. */
+  workLogEntriesOrphaned: number;
+  /** Past (log, office day) pairs merged into one entry without a time. */
+  workLogDaysCompacted: number;
   softDeletedWorkLogsPurged: number;
   softDeletedWorkLogsScrubbed: number;
   nudges: number;
@@ -85,6 +95,9 @@ export function retentionDaysFromEnv(env: RetentionEnv): RetentionDays {
  *
  * - chat: DMs older than the DM cutoff; room messages older than the room cutoff.
  * - work logs: `period_key` (owner's local date, keyed in APP_TIMEZONE) before the cutoff's local date.
+ * - work feed entries (ADR 0007): `day_key` before the same date; entries of deleted or owner-edited logs (the web
+ *   removes them already); every earlier office day merged into one `day` row per log without a time, so write
+ *   times exist for the current office day (APP_TIMEZONE) only.
  * - soft-deleted work logs: content columns emptied immediately; rows deleted 30 days after `deleted_at`.
  * - nudges: terminal ones created and expired before the nudge cutoff (active ones belong to nudges.expire).
  * - bubble deliveries: only what the bubble policy still reads survives a run (`nudgeDeliveryCutoff`), not
@@ -157,6 +170,31 @@ export async function purgeRetention(
   const softDeletedWorkLogsPurged = await deleteWorkLogs(
     and(isNotNull(workLogs.deletedAt), lt(workLogs.deletedAt, softDeletedCutoff)),
   );
+
+  const deleteEntries = (where: SQL | undefined) =>
+    inBatches(batch, async (limit) =>
+      affected(
+        await db
+          .delete(workLogEntries)
+          .where(
+            inArray(
+              workLogEntries.id,
+              db.select({ id: workLogEntries.id }).from(workLogEntries).where(where).limit(limit),
+            ),
+          ),
+      ),
+    );
+  const workLogEntryCount = await deleteEntries(lt(workLogEntries.dayKey, workLogKeyCutoff));
+  const workLogEntriesOrphaned = await deleteEntries(
+    inArray(
+      workLogEntries.logId,
+      db
+        .select({ id: workLogs.id })
+        .from(workLogs)
+        .where(or(isNotNull(workLogs.deletedAt), eq(workLogs.editedByUser, true))),
+    ),
+  );
+  const workLogDaysCompacted = await compactWorkLogDays(db, localDateKey(now, env.APP_TIMEZONE), batch);
 
   const hasContent = or(
     isNotNull(workLogs.summary),
@@ -335,6 +373,9 @@ export async function purgeRetention(
     dmMessages,
     roomMessages,
     workLogs: workLogCount,
+    workLogEntries: workLogEntryCount,
+    workLogEntriesOrphaned,
+    workLogDaysCompacted,
     softDeletedWorkLogsPurged,
     softDeletedWorkLogsScrubbed,
     nudges: nudgeCount,
@@ -350,4 +391,54 @@ export async function purgeRetention(
   // Counts only (no content): proof that retention ran, kept like any other audit event.
   await audit(db, { actorType: 'system', action: 'retention.purge', metadata: { ...summary } });
   return summary;
+}
+
+/**
+ * Merges the feed entries of each (log, office day) before `todayKey` into one `day` row without a time
+ * (`mergeWorkLogChanges`, the same merge the feed shows for a past day). A day whose writes cancel out is removed.
+ * Returns the number of days merged; each runs in its own transaction.
+ */
+export async function compactWorkLogDays(db: DbOrTx, todayKey: string, batchSize: number): Promise<number> {
+  return inBatches(batchSize, async (limit) => {
+    const days = await db
+      .select({ logId: workLogEntries.logId, dayKey: workLogEntries.dayKey })
+      .from(workLogEntries)
+      .where(lt(workLogEntries.dayKey, todayKey))
+      .groupBy(workLogEntries.logId, workLogEntries.dayKey)
+      .having(sql`count(*) > 1 or bool_or(${workLogEntries.kind} <> 'day')`)
+      .limit(limit);
+    for (const day of days) {
+      await db.transaction(async (tx) => {
+        const rows = await tx
+          .select()
+          .from(workLogEntries)
+          .where(and(eq(workLogEntries.logId, day.logId), eq(workLogEntries.dayKey, day.dayKey)))
+          .orderBy(asc(workLogEntries.seq))
+          .for('update');
+        const last = rows.at(-1);
+        if (!last) return;
+        await tx.delete(workLogEntries).where(
+          inArray(
+            workLogEntries.id,
+            rows.map((r) => r.id),
+          ),
+        );
+        const changes = mergeWorkLogChanges(rows.map((r) => r.changes)).slice(0, MAX_ENTRY_CHANGES);
+        if (changes.length === 0) return;
+        await tx.insert(workLogEntries).values({
+          id: newOpaqueId(),
+          logId: last.logId,
+          userId: last.userId,
+          dayKey: last.dayKey,
+          seq: last.seq,
+          writtenAt: null,
+          // Whether the day's writes fell in office hours goes with their times.
+          inOfficeHours: false,
+          kind: 'day',
+          changes,
+        });
+      });
+    }
+    return days.length;
+  });
 }

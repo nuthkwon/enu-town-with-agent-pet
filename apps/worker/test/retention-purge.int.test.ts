@@ -11,11 +11,13 @@ import {
   pets,
   profiles,
   todos,
+  workLogEntries,
   workLogs,
   type DbHandle,
 } from '@enu/db';
+import type { WorkLogChange } from '@enu/shared';
 import { createTestUser, setupTestDb, truncateAll } from '@enu/testing';
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { nudgeDeliveryCutoff, purgeRetention } from '../src/jobs/retention-purge';
 import { DAY, HOUR, kst, plus, testEnv } from './helpers';
@@ -431,5 +433,122 @@ describe('retention.purge', () => {
     expect(links.map((l) => l.clientId).sort()).toEqual(
       ['enu-den-channel:1', 'enu-den-channel:2', 'enu-den-channel:4'].sort(),
     );
+  });
+
+  it('merges past office days of the work feed into one untimed row and drops expired or orphaned entries', async () => {
+    const u = await users();
+    const log = async (periodKey: string, extra: Partial<typeof workLogs.$inferInsert> = {}) => {
+      const id = newId();
+      const start = new Date(`${periodKey}T00:00:00+09:00`);
+      await h.db.insert(workLogs).values({
+        id,
+        userId: u.a,
+        periodKey,
+        periodStart: start,
+        periodEnd: plus(start, DAY),
+        summary: '요약',
+        visibility: 'company',
+        source: 'cowork_scheduled',
+        claudeWrittenAt: plus(start, 10 * HOUR),
+        ...extra,
+      });
+      return id;
+    };
+    let seq = 0;
+    const entry = async (
+      logId: string,
+      dayKey: string,
+      changes: WorkLogChange[],
+      extra: Partial<typeof workLogEntries.$inferInsert> = {},
+    ) => {
+      const id = newId();
+      await h.db.insert(workLogEntries).values({
+        id,
+        logId,
+        userId: u.a,
+        dayKey,
+        seq: ++seq,
+        writtenAt: new Date(`${dayKey}T10:00:00+09:00`),
+        inOfficeHours: true,
+        kind: 'updated',
+        changes,
+        ...extra,
+      });
+      return id;
+    };
+    const entriesOf = (logId: string) =>
+      h.db
+        .select()
+        .from(workLogEntries)
+        .where(eq(workLogEntries.logId, logId))
+        .orderBy(asc(workLogEntries.dayKey), asc(workLogEntries.seq));
+
+    // Yesterday's three writes and one of today (2026-10-29 in APP_TIMEZONE).
+    const busy = await log('2026-10-28');
+    await entry(busy, '2026-10-28', [
+      { type: 'summary', text: '첫 요약' },
+      { type: 'task_added', title: '심사 증적', status: 'planned' },
+    ]);
+    await entry(busy, '2026-10-28', [
+      { type: 'task_status', title: '심사 증적', from: 'planned', to: 'in_progress' },
+      { type: 'blocker_added', text: '공급사 회신 대기' },
+    ]);
+    const lastOfDay = seq + 1;
+    await entry(busy, '2026-10-28', [{ type: 'summary', text: '마지막 요약' }]);
+    const todayEntry = await entry(busy, '2026-10-29', [{ type: 'summary', text: '오늘 요약' }]);
+    // A day whose writes cancel out.
+    const undone = await log('2026-10-27');
+    await entry(undone, '2026-10-27', [{ type: 'task_status', title: 'TARA', from: 'planned', to: 'done' }]);
+    await entry(undone, '2026-10-27', [{ type: 'task_status', title: 'TARA', from: 'done', to: 'planned' }]);
+    // Already merged.
+    const merged = await log('2026-10-20');
+    const mergedRow = await entry(merged, '2026-10-20', [{ type: 'summary', text: '지난 요약' }], {
+      kind: 'day',
+      writtenAt: null,
+      inOfficeHours: false,
+    });
+    // Office days before the work-log cutoff (2026-07-31) go even while their log stays.
+    const edge = await log('2026-08-01');
+    await entry(edge, '2026-07-30', [{ type: 'summary', text: '만료' }]);
+    await entry(edge, '2026-07-31', [{ type: 'summary', text: '경계' }]);
+    // Deleted and owner-edited logs keep no entries.
+    const deleted = await log('2026-10-29', { deletedAt: before(1) });
+    await entry(deleted, '2026-10-29', [{ type: 'summary', text: '삭제됨' }]);
+    const edited = await log('2026-10-26', { editedByUser: true });
+    await entry(edited, '2026-10-26', [{ type: 'summary', text: '본인이 고침' }]);
+
+    const s = await purgeRetention(h.db, NOW, env, { batchSize: 1 });
+    expect(s).toMatchObject({ workLogEntries: 1, workLogEntriesOrphaned: 2, workLogDaysCompacted: 3 });
+
+    const busyRows = await entriesOf(busy);
+    expect(busyRows).toHaveLength(2);
+    expect(busyRows[0]).toMatchObject({
+      dayKey: '2026-10-28',
+      kind: 'day',
+      writtenAt: null,
+      inOfficeHours: false,
+      seq: lastOfDay,
+      changes: [
+        { type: 'summary', text: '마지막 요약' },
+        { type: 'task_added', title: '심사 증적', status: 'in_progress' },
+        { type: 'blocker_added', text: '공급사 회신 대기' },
+      ],
+    });
+    expect(busyRows[0]!.id.charAt(14)).toBe('4');
+    // Today keeps its write time.
+    expect(busyRows[1]).toMatchObject({ id: todayEntry, kind: 'updated', inOfficeHours: true });
+    expect(busyRows[1]!.writtenAt).not.toBeNull();
+
+    expect(await entriesOf(undone)).toEqual([]);
+    expect((await entriesOf(merged)).map((r) => r.id)).toEqual([mergedRow]);
+    expect((await entriesOf(edge)).map((r) => [r.dayKey, r.kind, r.writtenAt])).toEqual([
+      ['2026-07-31', 'day', null],
+    ]);
+    expect(await entriesOf(deleted)).toEqual([]);
+    expect(await entriesOf(edited)).toEqual([]);
+
+    // Nothing is left to merge on the next run.
+    const again = await purgeRetention(h.db, NOW, env);
+    expect(again).toMatchObject({ workLogEntries: 0, workLogEntriesOrphaned: 0, workLogDaysCompacted: 0 });
   });
 });
