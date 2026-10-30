@@ -13,6 +13,8 @@ export const REST_LIMITS = {
   petMessageEdit: { max: 60, windowMs: MIN },
   petRead: { max: 60, windowMs: MIN },
   colleaguePetThread: { max: 120, windowMs: MIN },
+  /** The work overview's feed and today's status (ADR 0007). */
+  overviewRead: { max: 120, windowMs: MIN },
   pairingCodes: { max: 10, windowMs: HOUR },
   /** Unauthenticated pairing attempts: per client address, and for the whole server. */
   channelPairPerIp: { max: 10, windowMs: HOUR },

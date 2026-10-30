@@ -1,4 +1,4 @@
-import { audit, notifyTown, profiles, user, workLogs, type Db, type DbOrTx } from '@enu/db';
+import { audit, notifyTown, profiles, user, workLogEntries, workLogs, type Db, type DbOrTx } from '@enu/db';
 import { prepareWorkLog } from '@enu/domain';
 import type { ClaudeSummaryDto, Visibility, WorkLogDto, WorkLogPatch } from '@enu/shared';
 import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm';
@@ -233,6 +233,25 @@ export async function patchOwnLog(
         targetId: row.id,
       });
     }
+    // The work feed (ADR 0007): an owner edit removes the log's entries (copies of text the owner changed); a
+    // visibility change only hides or shows them again.
+    let overview = false;
+    if (set.editedByUser) {
+      overview =
+        (
+          await tx
+            .delete(workLogEntries)
+            .where(eq(workLogEntries.logId, row.id))
+            .returning({ id: workLogEntries.id })
+        ).length > 0;
+    } else if (patch.visibility !== undefined && patch.visibility !== visibilityBefore) {
+      const [some] = await tx
+        .select({ id: workLogEntries.id })
+        .from(workLogEntries)
+        .where(eq(workLogEntries.logId, row.id))
+        .limit(1);
+      overview = some !== undefined;
+    }
     await notifyTown(tx, {
       v: 1,
       type: 'work_log_changed',
@@ -241,6 +260,7 @@ export async function patchOwnLog(
       visibility: after.visibility as Visibility,
       created: false,
       by: 'user',
+      ...(overview ? { overview: true } : {}),
     });
     return after;
   });
@@ -259,6 +279,11 @@ export async function deleteOwnLog(db: Db, viewer: Viewer, id: string, now = new
       .where(and(eq(workLogs.id, id), eq(workLogs.userId, viewer.userId), isNull(workLogs.deletedAt)))
       .returning({ id: workLogs.id, visibility: workLogs.visibility });
     if (!row) throw notFound();
+    // A soft delete does not cascade: the feed's copies of the deleted text go now, too (ADR 0007).
+    const removed = await tx
+      .delete(workLogEntries)
+      .where(eq(workLogEntries.logId, row.id))
+      .returning({ id: workLogEntries.id });
     await audit(tx, {
       actorType: 'user',
       actorUserId: viewer.userId,
@@ -274,6 +299,7 @@ export async function deleteOwnLog(db: Db, viewer: Viewer, id: string, now = new
       visibility: row.visibility as Visibility,
       created: false,
       by: 'user',
+      ...(removed.length > 0 ? { overview: true } : {}),
     });
   });
 }

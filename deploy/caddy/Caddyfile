@@ -22,9 +22,9 @@
 	}
 
 	# Not logged per request: the pet channel (polls every 25 s per paired machine, replies), my pet rooms and
-	# the channel status the messenger re-reads every 30 s, and colleagues' pages and reads. A line per request
-	# would be a presence and conversation history per address (ADR 0004, ADR 0006, messenger-spec §9).
-	@unlogged path /api/v1/pet-channel/* /api/v1/me/pet-channel/* /api/v1/me/pets/* /api/v1/users/* /people/*
+	# the channel status the messenger re-reads every 30 s, colleagues' pages and reads, and the work overview. A
+	# line per request would be a presence and conversation history per address (ADR 0004, 0006, 0007).
+	@unlogged path /api/v1/pet-channel/* /api/v1/me/pet-channel/* /api/v1/me/pets/* /api/v1/users/* /api/v1/overview/* /people/*
 	log_skip @unlogged
 
 	header {

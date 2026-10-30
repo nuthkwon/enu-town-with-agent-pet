@@ -11,6 +11,7 @@ import {
   profiles,
   todos,
   user,
+  workLogEntries,
   workLogs,
   type DbOrTx,
 } from '@enu/db';
@@ -72,6 +73,19 @@ export async function buildExport(db: DbOrTx, userId: string, now = new Date()) 
     .from(petMessages)
     .where(eq(petMessages.userId, userId))
     .orderBy(asc(petMessages.createdAt), asc(petMessages.id));
+  const feed = await db
+    .select({
+      id: workLogEntries.id,
+      logId: workLogEntries.logId,
+      dayKey: workLogEntries.dayKey,
+      writtenAt: workLogEntries.writtenAt,
+      inOfficeHours: workLogEntries.inOfficeHours,
+      kind: workLogEntries.kind,
+      changes: workLogEntries.changes,
+    })
+    .from(workLogEntries)
+    .where(eq(workLogEntries.userId, userId))
+    .orderBy(asc(workLogEntries.dayKey), asc(workLogEntries.logId), asc(workLogEntries.seq));
   const consents = await db.select().from(privacyConsents).where(eq(privacyConsents.userId, userId));
   const links = await db.select().from(claudeLinks).where(eq(claudeLinks.userId, userId));
   const machines = await db
@@ -90,7 +104,7 @@ export async function buildExport(db: DbOrTx, userId: string, now = new Date()) 
 
   return {
     format: 'enu-den-export',
-    version: 2,
+    version: 3,
     exportedAt: now.toISOString(),
     noticeVersion: PRIVACY_NOTICE_VERSION,
     account: account ?? null,
@@ -161,6 +175,8 @@ export async function buildExport(db: DbOrTx, userId: string, now = new Date()) 
       unread: m.unread,
       createdAt: m.createdAt,
     })),
+    // The work feed's entries of my logs (ADR 0007): what each Claude write changed.
+    workLogEntries: feed,
     petNudges: nudges,
     sentChatMessages: sent.map((m) => ({
       id: m.id,

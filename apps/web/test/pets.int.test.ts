@@ -226,7 +226,7 @@ describe('my pets', () => {
     const body = await jsonOf<{ version: number; pets: { name: string; roleInstructions: string | null }[] }>(
       res,
     );
-    expect(body.version).toBe(2);
+    expect(body.version).toBe(3);
     expect(body.pets.map((p) => [p.name, p.roleInstructions])).toEqual([
       ['펫', null],
       ['정리봇', '회의록 정리'],
