@@ -637,8 +637,38 @@
 
 .townCanvas {
   position: relative;
+  flex: 3 1 0;
+  min-height: 0;
+}
+
+/* The work feed under the canvas (ADR 0007): about 40% of the panel, scrolling on its own. */
+.townFeed {
+  display: flex;
+  flex: 2 1 0;
+  flex-direction: column;
+  min-height: 160px;
+  border-top: 1px solid var(--c-line);
+  background: var(--c-card-soft);
+}
+
+.townFeedBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--c-line);
+}
+
+.townFeedTitle {
+  margin: 0;
+  font-size: 13px;
+}
+
+.townFeedScroll {
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
 }
 
 .townBar {

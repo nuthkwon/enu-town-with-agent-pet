@@ -1,0 +1,412 @@
+/* The work overview (ADR 0007): the feed under the town panel and the full-screen popup. Tokens come from
+   app/globals.css. */
+
+/* ---------------------------------------------------------------- feed */
+
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px 12px 14px;
+}
+
+.feedFull {
+  padding: 4px 4px 12px;
+}
+
+.feedMessage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 96px;
+  color: var(--c-ink-soft);
+  font-size: 13px;
+}
+
+.feedError {
+  margin: 0;
+  color: var(--c-danger);
+  font-size: 13px;
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dayHead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 2px 0;
+  background: var(--c-card-soft);
+  color: var(--c-ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dayEmpty {
+  margin: 0;
+  color: var(--c-muted);
+  font-size: 13px;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  padding: 8px 10px;
+  border: 1px solid var(--c-line);
+  border-left: 4px solid var(--team, var(--c-lavender));
+  border-radius: var(--radius-sm);
+  background: var(--c-card);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.itemHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.time {
+  color: var(--c-lavender-deep);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.who {
+  color: var(--c-ink);
+  font-weight: 700;
+}
+
+.digest {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--c-lavender-soft);
+  color: var(--c-ink-soft);
+  font-size: 11px;
+}
+
+.changes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--c-ink-soft);
+  white-space: pre-line;
+}
+
+/* ---------------------------------------------------------------- popup */
+
+.dialog {
+  width: calc(100vw - 32px);
+  max-width: 1760px;
+  height: calc(100dvh - 32px);
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--c-line-strong);
+  border-radius: var(--radius-lg);
+  /* Translucent: the messenger stays faintly visible behind it. */
+  background: rgba(251, 249, 255, 0.86);
+  box-shadow: var(--shadow-lg);
+  color: var(--c-ink);
+  overflow: hidden;
+}
+
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.dialog::backdrop {
+  background: rgba(245, 240, 255, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.dialogHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px 10px;
+  border-bottom: 1px solid var(--c-line);
+}
+
+.dialogTitle {
+  margin: 0;
+  font-size: 18px;
+}
+
+.lead {
+  margin: 4px 0 0;
+  color: var(--c-ink-soft);
+  font-size: 13px;
+}
+
+.grid {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) clamp(320px, 28vw, 440px);
+  grid-template-rows: minmax(0, 3fr) minmax(0, 2fr);
+  grid-template-areas:
+    'town widgets'
+    'feed widgets';
+  gap: 12px;
+  min-height: 0;
+  padding: 12px;
+}
+
+.gridTown {
+  position: relative;
+  display: flex;
+  grid-area: town;
+  min-height: 0;
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius);
+  background: var(--c-bg);
+  overflow: hidden;
+}
+
+.gridFeed {
+  grid-area: feed;
+  min-height: 0;
+  padding: 0 8px;
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius);
+  background: var(--c-card-soft);
+  overflow-y: auto;
+}
+
+.gridWidgets {
+  display: flex;
+  flex-direction: column;
+  grid-area: widgets;
+  gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Below 1024 px everything stacks and the popup body scrolls. */
+@media (max-width: 1023px) {
+  .grid {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .gridTown {
+    flex: none;
+    height: 46dvh;
+  }
+  .gridFeed,
+  .gridWidgets {
+    flex: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 767px) {
+  .dialog {
+    width: calc(100vw - 16px);
+    height: calc(100dvh - 16px);
+  }
+  .dialogHead {
+    padding: 12px 14px 8px;
+  }
+  .grid {
+    padding: 8px;
+  }
+  .gridTown {
+    height: 40dvh;
+  }
+}
+
+/* ---------------------------------------------------------------- widgets */
+
+.widget {
+  padding: 12px 14px;
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius);
+  background: var(--c-card);
+  font-size: 13px;
+}
+
+.widgetTitle {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.subTitle {
+  margin: 10px 0 4px;
+  color: var(--c-ink-soft);
+  font-size: 12px;
+}
+
+.muted {
+  margin: 0;
+  color: var(--c-muted);
+}
+
+.teamBlock {
+  padding-left: 8px;
+  border-left: 3px solid var(--team, var(--c-lavender));
+}
+
+.teamBlock + .teamBlock {
+  margin-top: 10px;
+}
+
+.teamName {
+  margin: 0 0 4px;
+  font-size: 12px;
+}
+
+.people,
+.tasks,
+.blockers,
+.meetings {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-wrap: anywhere;
+}
+
+.person {
+  padding: 6px 8px;
+  border-radius: var(--radius-xs);
+  background: var(--c-card-soft);
+}
+
+.personHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.summary {
+  margin: 2px 0 4px;
+  color: var(--c-ink-soft);
+  white-space: pre-line;
+}
+
+.status {
+  display: inline-block;
+  min-width: 3.4em;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  text-align: center;
+}
+
+.status_done {
+  background: var(--c-mint-soft);
+  color: var(--c-mint-deep);
+}
+
+.status_in_progress {
+  background: var(--c-sky-soft);
+  color: var(--c-sky-deep);
+}
+
+.status_planned {
+  background: var(--c-lavender-soft);
+  color: var(--c-ink-soft);
+}
+
+.status_blocked {
+  background: var(--c-danger-soft);
+  color: var(--c-danger);
+}
+
+.totals {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.totals th,
+.totals td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--c-line);
+  text-align: right;
+}
+
+.totals thead th {
+  color: var(--c-ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.totals th:first-child {
+  text-align: left;
+}
+
+.teamCell {
+  border-left: 3px solid var(--team, var(--c-lavender));
+  font-weight: 600;
+}
+
+.caption {
+  margin-bottom: 4px;
+  color: var(--c-muted);
+  font-size: 12px;
+  text-align: left;
+  caption-side: top;
+}
+
+.counts {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+}
+
+.count {
+  padding: 6px 4px;
+  border-radius: var(--radius-xs);
+  background: var(--c-card-soft);
+  text-align: center;
+}
+
+.count dt {
+  color: var(--c-ink-soft);
+  font-size: 11px;
+}
+
+.count dd {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.chip {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--c-pink-soft);
+  color: var(--c-pink-deep);
+  font-size: 12px;
+}

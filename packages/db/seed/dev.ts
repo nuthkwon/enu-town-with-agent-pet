@@ -1,6 +1,6 @@
 /**
  * Local demo data (NEVER in production): one dev user per seat with profiles, Claude links,
- * sample Claude-style work logs, to-dos, pet nudges, pet conversations and chat. Idempotent: replaces dev.* users.
+ * sample Claude-style work logs (with their work-feed entries), to-dos, pet nudges, pet conversations and chat. Idempotent: replaces dev.* users.
  * Dev users sign in through the dev-login flow (DEV_LOGIN_ENABLED=1) with their dev email.
  */
 import {
@@ -9,7 +9,9 @@ import {
   PRIVACY_NOTICE_VERSION,
   addLocalDays,
   atLocalTime,
+  formatLocalHm,
   localDateKey,
+  type WorkLogChange,
 } from '@enu/shared';
 import { like, sql } from 'drizzle-orm';
 import { createDb } from '../src/client';
@@ -24,6 +26,7 @@ import {
   privacyConsents,
   profiles,
   todos,
+  workLogEntries,
   workLogs,
 } from '../src/schema/app';
 import { user } from '../src/schema/auth';
@@ -112,6 +115,17 @@ const PET_CHATS = [
 const now = new Date();
 const today = localDateKey(now, TZ);
 const yesterday = localDateKey(addLocalDays(now, TZ, -1), TZ);
+// Roughly the office hours (weekdays 08:30-19:30; holidays are ignored in demo data).
+const weekday = new Date(`${today}T00:00:00Z`).getUTCDay();
+const hm = formatLocalHm(now, TZ);
+const inOfficeHours = weekday >= 1 && weekday <= 5 && hm >= '08:30' && hm < '19:30';
+
+/** What a first write of the day shows in the work feed (ADR 0007). */
+const firstWrite = (sample: (typeof SAMPLES)[number]): WorkLogChange[] => [
+  { type: 'summary', text: sample.summary },
+  ...sample.tasks.map((t) => ({ type: 'task_added' as const, title: t.title, status: t.status })),
+  ...sample.blockers.map((text) => ({ type: 'blocker_added' as const, text })),
+];
 
 await db.transaction(async (tx) => {
   // Remove previous dev users (cascades to their rows) and free their desks.
@@ -186,8 +200,9 @@ await db.transaction(async (tx) => {
       [yesterday, atLocalTime(addLocalDays(now, TZ, -1), TZ, '17:30')],
       ...(stale ? [] : [[today, now] as const]),
     ] as const) {
+      const logId = newOpaqueId();
       await tx.insert(workLogs).values({
-        id: newOpaqueId(),
+        id: logId,
         userId: id,
         periodKey: day,
         periodStart: atLocalTime(when, TZ, '09:00'),
@@ -201,6 +216,18 @@ await db.transaction(async (tx) => {
         source: 'cowork_scheduled',
         oauthClientId: 'https://claude.ai/oauth/mcp-oauth-client-metadata',
         claudeWrittenAt: when,
+      });
+      // Yesterday as the nightly purge leaves it (one untimed row), today's write with its time.
+      await tx.insert(workLogEntries).values({
+        id: newOpaqueId(),
+        logId,
+        userId: id,
+        dayKey: day,
+        seq: 1,
+        writtenAt: day === today ? when : null,
+        inOfficeHours: day === today && inOfficeHours,
+        kind: day === today ? 'created' : 'day',
+        changes: firstWrite(sample),
       });
     }
     const todoId = newId();

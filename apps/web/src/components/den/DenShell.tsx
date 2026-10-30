@@ -1,7 +1,6 @@
 'use client';
 
 import type { DmThreadDto } from '@enu/shared';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -14,9 +13,10 @@ import { apiFetch } from '@/lib/api';
 import { useDmUnread, useRoster } from '@/realtime/useRealtime';
 import { useDen } from './DenProvider';
 import s from './den.module.css';
-
-// Phaser touches `window` at import time: only ever load the game in the browser.
-const PhaserGame = dynamic(() => import('@/game/PhaserGame'), { ssr: false, loading: () => null });
+import { OverviewDialog } from './overview/OverviewDialog';
+import { OverviewFeed } from './overview/OverviewFeed';
+import { TownCanvas } from './overview/TownCanvas';
+import { useOverview, type OverviewState } from './overview/useOverview';
 
 function useWide(minPx: number): boolean {
   const [wide, setWide] = useState(false);
@@ -34,25 +34,32 @@ type Drawer = 'nav' | 'town' | null;
 
 /**
  * The messenger: the list of my pets, rooms and colleagues; the conversation; and the town, a panel that nobody
- * steers (a drawer below 1280 px, a tab below 768 px). The town canvas is mounted only while it is visible.
+ * steers (a drawer below 1280 px, a tab below 768 px), with the work feed under it (ADR 0007). 크게 보기 opens the
+ * overview popup. The town canvas is mounted only while it is visible, and in one place at a time.
  */
 export function DenShell({ children }: { children: ReactNode }) {
   const { session, status } = useDen();
   const pathname = usePathname();
   const wide = useWide(1280);
   const [drawer, setDrawer] = useState<Drawer>(null);
+  const [overviewOpen, setOverviewOpen] = useState(false);
   const t = ko.den;
 
-  // A navigation closes the mobile list and the town drawer.
-  useEffect(() => setDrawer(null), [pathname]);
+  // A navigation closes the mobile list, the town drawer and the overview popup.
+  useEffect(() => {
+    setDrawer(null);
+    setOverviewOpen(false);
+  }, [pathname]);
 
-  // Typing anywhere in the messenger counts as busy for my pet's town bubbles (owner-only scheduler input).
+  // Typing anywhere in the messenger, or the overview popup, counts as busy for my pet's town bubbles
+  // (owner-only scheduler input).
   const typing = useTextFocus();
   useEffect(() => {
-    session.setPresence({ uiBusy: typing });
-  }, [session, typing]);
+    session.setPresence({ uiBusy: typing || overviewOpen });
+  }, [session, typing, overviewOpen]);
 
   const townVisible = wide || drawer === 'town';
+  const overview = useOverview(session, townVisible || overviewOpen);
   return (
     <div className={s.shell}>
       <DenNav open={drawer === 'nav'} />
@@ -71,8 +78,20 @@ export function DenShell({ children }: { children: ReactNode }) {
         aria-label={t.town.label}
         hidden={!townVisible}
       >
-        {townVisible && <TownPanel onClose={wide ? null : () => setDrawer(null)} />}
+        {townVisible && (
+          <TownPanel
+            overview={overview}
+            expanded={overviewOpen}
+            onExpand={() => {
+              // Opening the popup also fetches the overview again (untimed changes are pushed only in batches).
+              overview.retry();
+              setOverviewOpen(true);
+            }}
+            onClose={wide ? null : () => setDrawer(null)}
+          />
+        )}
       </aside>
+      {overviewOpen && <OverviewDialog overview={overview} onClose={() => setOverviewOpen(false)} />}
       <nav className={s.tabbar} aria-label={t.nav.tabsLabel}>
         <button
           type="button"
@@ -114,47 +133,49 @@ function TownToggle({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-function TownPanel({ onClose }: { onClose: (() => void) | null }) {
-  const { bridge, bus, mapError, retryMap } = useDen();
+function TownPanel({
+  overview,
+  expanded,
+  onExpand,
+  onClose,
+}: {
+  overview: OverviewState;
+  /** The popup shows the town: only a placeholder here (one Phaser game at a time). */
+  expanded: boolean;
+  onExpand: () => void;
+  onClose: (() => void) | null;
+}) {
   const t = ko.den.town;
-
-  // The panel's own bar sits above the canvas: the camera fits the whole canvas (compact below 704 px).
-  useEffect(() => {
-    const emit = () => bus.emit('camera:insets', { top: 0, right: 0, bottom: 0, left: 0 });
-    emit();
-    return bus.on('game:ready', emit);
-  }, [bus]);
   return (
     <>
       <div className={s.townBar}>
         <span title={t.hint}>{t.label}</span>
-        <span style={{ display: 'flex', gap: 8 }}>
-          <Link href="/town">{ko.den.nav.townFull}</Link>
-          {onClose && (
-            <Button size="sm" variant="ghost" onClick={onClose}>
-              {t.hide}
-            </Button>
-          )}
-        </span>
-      </div>
-      <div className={s.townCanvas}>
-        {bridge ? (
-          <PhaserGame bridge={bridge} />
-        ) : (
-          <div className={s.townMessage} role="status">
-            {mapError ? (
-              <>
-                <span>{t.error}</span>
-                <Button size="sm" onClick={retryMap}>
-                  {ko.common.retry}
-                </Button>
-              </>
-            ) : (
-              <span>{t.loading}</span>
-            )}
-          </div>
+        {onClose && (
+          <Button size="sm" variant="ghost" onClick={onClose}>
+            {t.hide}
+          </Button>
         )}
       </div>
+      {expanded ? (
+        <div className={s.townCanvas}>
+          <div className={s.townMessage}>{ko.den.overview.townBusy}</div>
+        </div>
+      ) : (
+        <TownCanvas />
+      )}
+      <section className={s.townFeed} aria-labelledby="den-overview-title">
+        <div className={s.townFeedBar}>
+          <h2 id="den-overview-title" className={s.townFeedTitle} title={ko.den.overview.lead}>
+            {ko.den.overview.title}
+          </h2>
+          <Button size="sm" variant="secondary" onClick={onExpand} aria-haspopup="dialog">
+            {ko.den.overview.expand}
+          </Button>
+        </div>
+        <div className={s.townFeedScroll}>
+          <OverviewFeed state={overview} variant="compact" />
+        </div>
+      </section>
     </>
   );
 }
