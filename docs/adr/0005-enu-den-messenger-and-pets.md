@@ -77,7 +77,8 @@ details are in [ADR 0006](0006-claude-code-pet-channel.md).
 8. **Town.** All of a person's pets follow their avatar, the default pet first. Bubbles stay owner-only per pet with
    no shared indicator; pet conversation text is never drawn on the map. Pet changes made after hours reach the
    town when it opens.
-9. **Consent.** Privacy notice `2026-12`; everyone accepts it again, including the 펫 대화 공유 step.
+9. **Consent.** Privacy notice `2026-12`; everyone accepts it again, including the 펫 대화 공유 step (now `2027-01`,
+   which adds the work overview of [ADR 0007](0007-work-overview.md)).
 10. **HR review.** A dated conversation that colleagues can read the same day can be taken as an activity record.
     This ADR is the new ADR that ADR 0004 item 7 requires; the HR review in the extended list gates go-live.
 

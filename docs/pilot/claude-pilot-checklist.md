@@ -9,7 +9,9 @@ Record results in a copy of this file per pilot. Plan: ____ (Team / Enterprise)
 - [ ] Owner settings from `docs/admin-runbook.ko.md` applied (connector, cloud Cowork, Always allow for all six tools, roles, auto-approve, plugin)
 - [ ] Review items in [ADR 0004](../adr/0004-town-is-a-visualization.md) done (근로자 감시 설비 check, all-hands briefing, management's written "근태·평가 미사용" confirmation)
 - [ ] HR/legal reviewed the pet chat defaults (company by default, colleagues see it the same day with dates only) and
-      the Claude Code pet channel (local token, terminal confirmation); privacy notice 2026-12 accepted
+      the Claude Code pet channel (local token, terminal confirmation)
+- [ ] HR/legal reviewed the work overview (ADR 0007: feed times for today's office-hours writes of sharers only, team
+      totals, the blockers board, what untimed and weekend entries reveal); privacy notice 2027-01 accepted
 
 ## Connect (each person)
 
