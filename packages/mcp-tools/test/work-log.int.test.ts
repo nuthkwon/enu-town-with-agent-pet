@@ -1,4 +1,4 @@
-import { profiles, workLogs, type DbHandle } from '@enu/db';
+import { profiles, workLogEntries, workLogs, type DbHandle } from '@enu/db';
 import { MCP_TOOL_NAMES, postWorkLogOutput, type PostWorkLogOutput } from '@enu/shared';
 import { createTestUser, setupTestDb, truncateAll } from '@enu/testing';
 import { eq } from 'drizzle-orm';
@@ -105,6 +105,7 @@ describe.each(MODES)('post_work_log (%s)', (mode) => {
           visibility: 'company',
           created: true,
           by: 'claude',
+          overview: true,
         },
       ]),
     );
@@ -176,6 +177,60 @@ describe.each(MODES)('post_work_log (%s)', (mode) => {
     const allMetadata = JSON.stringify(audits.map((a) => a.metadata));
     for (const fragment of ['견적서', '배포', '스테이징', '이야기', 'ENU-123'])
       expect(allMetadata).not.toContain(fragment);
+  });
+
+  it('adds a work feed entry for each company write that changes something visible (ADR 0007)', async () => {
+    const me = await createTestUser(handle.db);
+    const entries = () =>
+      handle.db
+        .select()
+        .from(workLogEntries)
+        .where(eq(workLogEntries.userId, me.id))
+        .orderBy(workLogEntries.seq);
+    const task = (status: string) => ({ title: 'TARA 갱신', status, ref: 'doc:tara' });
+
+    // 14:00 Thursday (office hours).
+    await postOk(me.id, { summary: SUMMARY, tasks: [task('in_progress')], blockers: ['권한 대기'] });
+    // Status moved and a blocker added.
+    h.clock.advance(60 * 60 * 1000);
+    await postOk(me.id, { summary: SUMMARY, tasks: [task('done')], blockers: ['권한 대기', '공급사 회신'] });
+    // Only the chat summary: updated, but nothing the feed shows.
+    h.clock.advance(60 * 1000);
+    await postOk(me.id, {
+      summary: SUMMARY,
+      tasks: [task('done')],
+      blockers: ['권한 대기', '공급사 회신'],
+      claude_chat_summary: CHAT,
+    });
+    // 21:00: outside office hours.
+    h.clock.advance(6 * 60 * 60 * 1000);
+    await postOk(me.id, { summary: `${SUMMARY} 저녁 정리.`, tasks: [task('done')], blockers: [] });
+
+    const rows = await entries();
+    expect(rows.map((r) => [r.seq, r.kind, r.dayKey, r.inOfficeHours, r.writtenAt?.toISOString()])).toEqual([
+      [1, 'created', '2026-10-29', true, THU_14],
+      [2, 'updated', '2026-10-29', true, '2026-10-29T06:00:00.000Z'],
+      [3, 'updated', '2026-10-29', false, '2026-10-29T12:01:00.000Z'],
+    ]);
+    expect(rows[0]!.changes).toEqual([
+      { type: 'summary', text: SUMMARY },
+      { type: 'task_added', title: 'TARA 갱신', status: 'in_progress' },
+      { type: 'blocker_added', text: '권한 대기' },
+    ]);
+    expect(rows[1]!.changes).toEqual([
+      { type: 'task_status', title: 'TARA 갱신', from: 'in_progress', to: 'done' },
+      { type: 'blocker_added', text: '공급사 회신' },
+    ]);
+    expect(rows[2]!.changes).toEqual([{ type: 'summary', text: `${SUMMARY} 저녁 정리.` }]);
+    for (const r of rows) expect(r.id.charAt(14)).toBe('4');
+
+    // Private writes, visibility-only changes and the owner's edits make no entries.
+    h.clock.advance(60 * 1000);
+    await postOk(me.id, { summary: `${SUMMARY} 비공개 메모.`, visibility: 'private' });
+    await handle.db.update(workLogs).set({ editedByUser: true }).where(eq(workLogs.userId, me.id));
+    const skipped = await postOk(me.id, { summary: `${SUMMARY} 다시.` });
+    expect(skipped.result).toBe('skipped_user_edited');
+    expect(await entries()).toHaveLength(3);
   });
 
   it('never raises visibility above the owner default', async () => {

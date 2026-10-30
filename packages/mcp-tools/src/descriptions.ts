@@ -38,6 +38,7 @@ export const TOOL_DESCRIPTIONS = {
     'claude_chat_summary: 2-3 sentences about the topics of work conversations with Claude today; no quotes, no private or personal conversations. It is private unless the owner opted in.',
     "visibility / chat_summary_visibility: omit to use the owner's defaults. You may only lower visibility to private, never raise it; a visibility the owner set in ENU Den is kept.",
     "Results skipped_user_edited / skipped_user_deleted mean the owner edited or deleted today's log in ENU Den: that is not an error, do not retry or work around it. unchanged means the content was identical.",
+    "When the log is company, what this call changed (the summary, task status moves, new tasks and blockers) also appears in ENU Den's company work feed, with the time of day only during today's office hours and only if the owner shares activity. Send real changes only; do not call again just to refresh.",
   ].join('\n'),
   upsertTodos: [
     "Create or update the owner's ENU Den to-dos (visible only to the owner; the pet may remind them before due times).",

@@ -1,6 +1,13 @@
-import { audit, newOpaqueId, notifyTown, workLogs, type Db } from '@enu/db';
-import { decideWorkLogUpsert, prepareWorkLog, type ExistingWorkLog } from '@enu/domain';
+import { audit, newOpaqueId, notifyTown, workLogEntries, workLogs, type Db } from '@enu/db';
 import {
+  decideWorkLogUpsert,
+  isOfficeOpen,
+  prepareWorkLog,
+  workLogDelta,
+  type ExistingWorkLog,
+} from '@enu/domain';
+import {
+  APP_TIMEZONE_DEFAULT,
   SOURCE_HINT_TO_SOURCE,
   localDateKey,
   type PostWorkLogInput,
@@ -17,6 +24,8 @@ export interface PostWorkLogOptions {
   now: Date;
   publicUrl: string;
   owner?: OwnerContext;
+  /** APP_TIMEZONE: the office day and office hours of the work feed (ADR 0007). */
+  officeTimeZone?: string;
 }
 
 export function workLogViewUrl(publicUrl: string, logId: string): string {
@@ -162,7 +171,7 @@ export async function postWorkLog(
         chatSummaryVisibility = decision.chatSummaryVisibility;
       } else if (decision.result === 'unchanged') {
         logId = existing.id;
-        // Record the check-in without bumping updated_at (the company feed is ordered by it).
+        // Record the check-in without bumping updated_at (nothing the owner or colleagues see changed).
         await tx
           .update(workLogs)
           .set({
@@ -184,6 +193,37 @@ export async function postWorkLog(
       await markLinkedAfterWorkLog(tx, caller.userId, now);
       await recordLinkWrite(tx, caller, now);
 
+      // The work feed (ADR 0007): what this write changed, for company logs only (a private period never surfaces
+      // later), and only when something visible changed.
+      let feedEntry = false;
+      if ((decision.result === 'created' || decision.result === 'updated') && visibility === 'company') {
+        const changes = workLogDelta(decision.result === 'created' ? null : existingForDecision, {
+          summary: decision.content.summary,
+          tasks: log.tasks,
+          blockers: decision.content.blockers,
+        });
+        if (changes.length > 0) {
+          const officeTimeZone = opts.officeTimeZone ?? APP_TIMEZONE_DEFAULT;
+          // The log row is locked (created here, or `for update` above), so max(seq) cannot race.
+          const [last] = await tx
+            .select({ seq: sql<number>`coalesce(max(${workLogEntries.seq}), 0)::int` })
+            .from(workLogEntries)
+            .where(eq(workLogEntries.logId, logId));
+          await tx.insert(workLogEntries).values({
+            id: newOpaqueId(),
+            logId,
+            userId: caller.userId,
+            dayKey: localDateKey(now, officeTimeZone),
+            seq: (last?.seq ?? 0) + 1,
+            writtenAt: now,
+            inOfficeHours: isOfficeOpen(now, officeTimeZone, owner.holidays),
+            kind: decision.result,
+            changes,
+          });
+          feedEntry = true;
+        }
+      }
+
       if (decision.result === 'created' || decision.result === 'updated') {
         await notifyTown(tx, {
           v: 1,
@@ -193,6 +233,7 @@ export async function postWorkLog(
           visibility,
           created: decision.result === 'created',
           by: 'claude',
+          ...(feedEntry ? { overview: true } : {}),
         });
       }
 

@@ -301,7 +301,11 @@ export function buildEnuDenMcpServer(deps: McpDeps, caller: CallerInfo | undefin
     },
     (args) =>
       run(MCP_TOOL_NAMES.postWorkLog, async (c, now) => {
-        const out = await postWorkLog(deps.db, c, args, { now, publicUrl: deps.publicUrl });
+        const out = await postWorkLog(deps.db, c, args, {
+          now,
+          publicUrl: deps.publicUrl,
+          officeTimeZone: deps.officeTimeZone,
+        });
         return okResult(workLogSummaryKo, out);
       }),
   );
