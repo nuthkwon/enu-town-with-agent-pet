@@ -8,6 +8,8 @@ import {
   avatarSpriteKey,
 } from '@enu/shared';
 import { describe, expect, it } from 'vitest';
+import { isAvatarKey } from '@/game/assets';
+import { SPRITE_REVISION } from '@/game/spriteSpec';
 import { avatarSheetUrl, parseAvatarKey } from '@/lib/avatar-key';
 
 describe('parseAvatarKey', () => {
@@ -62,7 +64,23 @@ describe('parseAvatarKey', () => {
     }
   });
 
-  it('builds the sheet URL from the shared key', () => {
-    expect(avatarSheetUrl(DEFAULT_AVATAR)).toBe('/api/sprites/avatar/av-m-short-black-sky-warm');
+  it('builds the sheet URL from the shared key, with the sprite revision', () => {
+    expect(avatarSheetUrl(DEFAULT_AVATAR)).toBe(
+      `/api/sprites/avatar/av-m-short-black-sky-warm?r=${SPRITE_REVISION}`,
+    );
+    expect(avatarSheetUrl({ ...DEFAULT_AVATAR, wings: true, hat: false })).toBe(
+      `/api/sprites/avatar/av-m-short-black-sky-warm-w-n?r=${SPRITE_REVISION}`,
+    );
+  });
+
+  it('lets the town load every key the shared format produces (wings and no-hat suffixes too)', () => {
+    for (const hair of HAIR_STYLES)
+      for (const wings of [false, true])
+        for (const hat of [true, false]) {
+          const key = avatarSpriteKey({ ...DEFAULT_AVATAR, hair, wings, hat });
+          expect(isAvatarKey(key), key).toBe(true);
+        }
+    expect(isAvatarKey('av-m-short-black-sky-warm-n-w')).toBe(false);
+    expect(isAvatarKey('av-m-short-black-sky-warm-x')).toBe(false);
   });
 });

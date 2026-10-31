@@ -1365,7 +1365,8 @@ glance`; `eligible` fires only for `shownCount = 0` after `join`, and respects t
   - `allocateSpots` is deterministic, has no duplicates, keeps current holders and falls back on overflow (13 in a
     meeting, 20 on a break, 6 desk-less guests: all placed, overflow by BFS).
   - `pnpm map:check` asserts the same.
-- **`packages/sprites/test/sprites.test.ts`**: the effects sheet has 3 rows and the new icon names at indices 16–23.
+- **`packages/sprites/test/sprites.test.ts`**: the effects sheet has 4 rows, the activity icon names at indices 16–23
+  and the wizard office icons at 24–31 ([ADR 0008](../adr/0008-wizard-office-effects-and-sound.md)).
 - **`apps/realtime/test/Walker.test.ts`**: cadence, stagger start, retarget mid-walk, teleport when unreachable, arrival anim and facing.
 - **`apps/realtime/test/Director.test.ts`** (fake `now`/`nowMs`, real 606 world):
   - snap at create;

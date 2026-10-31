@@ -14,7 +14,8 @@ import {
 /**
  * 16x16 effect icons. Keys: o ink outline, w white, y gold, Y gold shade, p pink, P pink shade,
  * q light pink, b blue, B blue shade, l lilac, L lilac shade, m mint, M mint shade, r red/coral,
- * g pale grey, G grey shade, c latte, C latte shade.
+ * g pale grey, G grey shade, c latte, C latte shade, n flame orange, N flame shade, s skin, S skin shade,
+ * k parchment, K parchment shade.
  */
 const K = {
   o: INK,
@@ -35,6 +36,12 @@ const K = {
   G: hex('#c9c1e2'),
   c: hex('#d9a27e'),
   C: hex('#b07a5e'),
+  n: hex('#ffad5c'),
+  N: hex('#f07a4a'),
+  s: hex('#ffdcc4'),
+  S: hex('#f2b89c'),
+  k: hex('#fff3d6'),
+  K: hex('#f0d6a8'),
 } satisfies Record<string, RGBA>;
 
 const SPARKLES: Template[] = [
@@ -430,6 +437,160 @@ const PLANE: Template = [
   '................',
 ];
 
+/* Wizard office icons (sheet row 3, ADR 0008): one per spell, the shield and the quest scroll. */
+
+const FIREBALL: Template = [
+  '................',
+  '................',
+  '.........oooo...',
+  '.......oonnnno..',
+  '......onnyyyyno.',
+  '.....onnywwwyno.',
+  '....onnyywwwyno.',
+  '...onnnyyywwyno.',
+  '..onrnnnyyyyno..',
+  '..orrnnnnnnno...',
+  '.orrrnonnnoo....',
+  '.orrooroooo.....',
+  '.oro..oo........',
+  '.oo.............',
+  '................',
+  '................',
+];
+
+const COFFEE: Template = [
+  '.....l..l.......',
+  '....L..L........',
+  '....l..l........',
+  '.....l..l.......',
+  '..oooooooooo....',
+  '..oCccccccCo....',
+  '..owwwwwwwGoooo.',
+  '..owwwwwwwGoGGo.',
+  '..obbbbbbbBo.oo.',
+  '..obbbbbbbBo.oo.',
+  '..owwwwwwwGoGGo.',
+  '..owwwwwwwGooo..',
+  '..owwwwwwGGo....',
+  '...oGGGGGGo.....',
+  '....oooooo......',
+  '................',
+];
+
+const BOLT: Template = [
+  '................',
+  '........oooooo..',
+  '.......owyyyyo..',
+  '......owyyyyo...',
+  '.....owyyyyo....',
+  '....owyyyyoooo..',
+  '...owyyyyyyyyo..',
+  '..oooooyyyyYo...',
+  '......oyyyYo....',
+  '.....oyyyYo.....',
+  '....oyyYYo......',
+  '...oyyYo........',
+  '..oyYoo.........',
+  '..oYo...........',
+  '..oo............',
+  '................',
+];
+
+const POTION: Template = [
+  '......oooo......',
+  '.....occCCo.....',
+  '......oooo......',
+  '......owgo......',
+  '......owgo......',
+  '....oowggGoo....',
+  '...owwggggggo...',
+  '..owwgggggggGo..',
+  '..oppppppppPPo..',
+  '.oqwpppppppPPPo.',
+  '.oqpppppppppPPo.',
+  '.opppppppppPPPo.',
+  '..oppppppppPPo..',
+  '...oPPPPPPPPo...',
+  '....oooooooo....',
+  '................',
+];
+
+const PALM: Template = [
+  '.y..............',
+  '..y....oo.......',
+  'y...ooosSooo....',
+  '.y.osSosSosSo...',
+  '...osSosSosSooo.',
+  '.ooosSosSosSosSo',
+  'osSosSosSosSosSo',
+  'osSosSosSosSosSo',
+  '.ossssssssssssSo',
+  '.ossssssssssssSo',
+  '..osssssssssssSo',
+  '...ossssssssssSo',
+  '...ossssssssssSo',
+  '....ossssssssSo.',
+  '.....ooooooooo..',
+  '................',
+];
+
+const FIREWORK: Template = [
+  '.......yy.......',
+  '..P....yy....B..',
+  '.PpP...ww...BbB.',
+  '..PP........BB..',
+  '....p..yy..b....',
+  '.......yy.......',
+  '.....yywwyy.....',
+  'yyww.ywwwwy.wwyy',
+  'YYyy.ywwwwy.yyYY',
+  '.....yywwyy.....',
+  '.......yy.......',
+  '....b..yy..p....',
+  '..BB........PP..',
+  '.BbB...ww...PpP.',
+  '..B....yy....P..',
+  '.......YY.......',
+];
+
+const SHIELD: Template = [
+  '................',
+  '..oooooooooooo..',
+  '.oyyyyyyyyyyyYo.',
+  '.oywwbbbbbbbbYo.',
+  '.oywbbbbbbbbBYo.',
+  '.oybbbbbbbbbBYo.',
+  '.oybbbbbbbbBBYo.',
+  '.oybbbbbbbbBBYo.',
+  '.oybbbbbbbbBBYo.',
+  '..oybbbbbbBBYo..',
+  '..oybbbbbbBBYo..',
+  '...oybbbbBBYo...',
+  '....oybbBBYo....',
+  '.....oyBBYo.....',
+  '......oYYo......',
+  '.......oo.......',
+];
+
+const SCROLL: Template = [
+  '................',
+  '..oooooooooooo..',
+  '.occcccccccccCo.',
+  '.oCCCCCCCCCCCCo.',
+  '..okkkkkkkkkko..',
+  '..okLLLLLkkkKo..',
+  '..okkkkkkkkkKo..',
+  '..okLLLLLLLkKo..',
+  '..okkkkkkkkkKo..',
+  '..okLLLLkkkkKo..',
+  '..okkkkkkkpkKo..',
+  '..okkkkkkpPpKo..',
+  '.occcccccccccCo.',
+  '.oCCCCCCCCCCCCo.',
+  '..oooooooooooo..',
+  '................',
+];
+
 function shadowFrame(rx: number, ry: number): Canvas {
   const c = new Canvas(EFFECT_FRAME, EFFECT_FRAME);
   c.ellipse(8, 8, rx, ry, hex('#3b2a52', 40));
@@ -462,6 +623,14 @@ const PAINT: Record<EffectName, () => Canvas> = {
   link: () => tpl(LINK),
   clipboard: () => tpl(CLIPBOARD),
   plane: () => tpl(PLANE),
+  fireball: () => tpl(FIREBALL),
+  coffee: () => tpl(COFFEE),
+  bolt: () => tpl(BOLT),
+  potion: () => tpl(POTION),
+  palm: () => tpl(PALM),
+  firework: () => tpl(FIREWORK),
+  shield: () => tpl(SHIELD),
+  scroll: () => tpl(SCROLL),
 };
 
 function zzz(): Canvas {

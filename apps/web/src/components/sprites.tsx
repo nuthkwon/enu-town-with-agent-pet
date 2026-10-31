@@ -1,16 +1,25 @@
 import { avatarSpriteKey, type AvatarPreset } from '@enu/shared';
 import type { CSSProperties, ReactNode } from 'react';
+import {
+  AVATAR_COLUMNS,
+  AVATAR_DIRECTIONS,
+  AVATAR_FRAME,
+  PET_COLUMNS,
+  PET_DIRECTIONS,
+  PET_FRAME,
+  SPRITE_PATHS,
+} from '@/game/spriteSpec';
 import { ko } from '@/i18n/ko';
 import s from './sprites.module.css';
 
 /**
  * Sprite previews drawn from the generated sheets (see packages/sprites spec):
- *   avatar: 10 columns x 4 rows of 32x32 (row 0 = facing down/front, columns 0-3 = idle)
+ *   avatar: 14 columns x 4 rows of 32x32 (row 0 = facing down/front, columns 0-3 = idle)
  *   pet:    12 columns x 2 rows of 24x24 (row 0 = facing left, columns 0-3 = idle hover)
- * Frames are scaled with nearest-neighbour (image-rendering: pixelated).
+ * Frames are scaled with nearest-neighbour (image-rendering: pixelated). URLs carry the sprite revision.
  */
-const AVATAR = { frame: 32, columns: 10, rows: 4 } as const;
-const PET = { frame: 24, columns: 12, rows: 2 } as const;
+const AVATAR = { frame: AVATAR_FRAME, columns: AVATAR_COLUMNS, rows: AVATAR_DIRECTIONS.length } as const;
+const PET = { frame: PET_FRAME, columns: PET_COLUMNS, rows: PET_DIRECTIONS.length } as const;
 
 function sheetStyle(url: string, frame: number, columns: number, rows: number, scale: number): CSSProperties {
   const size = frame * scale;
@@ -35,7 +44,7 @@ export function AvatarSprite({
   animate?: boolean;
   label?: string;
 }) {
-  const url = `/api/sprites/avatar/${avatarSpriteKey(preset)}`;
+  const url = SPRITE_PATHS.avatarApi(avatarSpriteKey(preset));
   return (
     <span
       role="img"
@@ -60,10 +69,7 @@ export function PetSprite({
   animate?: boolean;
   label?: string;
 }) {
-  const url =
-    tint === 'base'
-      ? `/assets/sprites/pets/${encodeURIComponent(species)}.png`
-      : `/api/sprites/pet/pt-${encodeURIComponent(species)}-${encodeURIComponent(tint)}`;
+  const url = tint === 'base' ? SPRITE_PATHS.pet(species) : SPRITE_PATHS.petApi(`pt-${species}-${tint}`);
   return (
     <span
       role="img"

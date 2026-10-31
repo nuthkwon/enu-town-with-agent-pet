@@ -98,6 +98,12 @@ export function AvatarEditor({
           onPick={(v) => set('skin', v)}
         />
 
+        <Toggle
+          checked={value.hat !== false}
+          onChange={(v) => set('hat', v)}
+          label={t.hat}
+          help={t.hatHelp}
+        />
         <Toggle checked={value.wings} onChange={(v) => set('wings', v)} label={t.wings} help={t.wingsHelp} />
       </div>
     </div>

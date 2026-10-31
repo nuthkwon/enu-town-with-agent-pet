@@ -23,15 +23,21 @@ export interface AnimDef {
 /* ------------------------------------------------------------------------------------------------
  * Avatars — one sheet per preset (`avatarSpriteKey(preset)`), 32x32 frames.
  *
- *   columns: 0-3 idle (breathing bounce), 4-9 walk (hop cycle)            -> 10 columns
+ *   columns: 0-3 idle (breathing bounce; the wand tip twinkles on 1 and 3), 4-9 walk (hop cycle),
+ *            10-13 cast (raise the wand, white star flash at the tip, hold, lower; plays once)  -> 14 columns
  *   rows:    0 down (front, face visible), 1 left, 2 right (mirror of left), 3 up (back)
- *   sheet:   320 x 128 px
+ *   sheet:   448 x 128 px
  *
- * The shoes' outline always ends on row `AVATAR_FEET_Y - 1` when grounded (idle, land and take-off
+ * Everyone is a wizard (ADR 0008): a robe in the outfit colours with cream trim and an accent sash, a wooden wand
+ * in the right hand (the near hand in the side views) and, unless `hat` is false, a pointy hat whose tip flops to
+ * the side so that it fits the frame.
+ *
+ * The shoes' outline always ends on row `AVATAR_FEET_Y - 1` when grounded (idle, cast, land and take-off
  * frames); the two air frames of the walk lift the feet by `AVATAR_WALK_LIFT` px, so keep the drop
  * shadow on the ground line and shrink/fade it on lifted frames. Idle = breathing bounce
  * (normal, squash 1px, normal, stretch 1px); walk = two little hops (squash on landing, stretch at
- * take-off, air). The top rows stay transparent so hops never clip. The figure is centred on x 16.
+ * take-off, air). Row 0 of every frame stays transparent (hat and hops included), so nothing is ever cut
+ * off at the top. The figure is centred on x 16.
  * ---------------------------------------------------------------------------------------------- */
 export const AVATAR_FRAME = 32;
 export const AVATAR_DIRECTIONS = ['down', 'left', 'right', 'up'] as const;
@@ -39,9 +45,10 @@ export type AvatarDirection = (typeof AVATAR_DIRECTIONS)[number];
 export const AVATAR_ANIMS = {
   idle: { start: 0, frames: 4, frameRate: 6, repeat: -1 },
   walk: { start: 4, frames: 6, frameRate: 12, repeat: -1 },
+  cast: { start: 10, frames: 4, frameRate: 10, repeat: 0 },
 } as const satisfies Record<string, AnimDef>;
 export type AvatarAnim = keyof typeof AVATAR_ANIMS;
-export const AVATAR_COLUMNS = 10;
+export const AVATAR_COLUMNS = 14;
 export const AVATAR_ROWS = AVATAR_DIRECTIONS.length;
 export const AVATAR_SHEET_WIDTH = AVATAR_COLUMNS * AVATAR_FRAME;
 export const AVATAR_SHEET_HEIGHT = AVATAR_ROWS * AVATAR_FRAME;
@@ -58,6 +65,19 @@ export const AVATAR_IDLE_LIFT = [0, 0, 0, 0] as const;
  */
 export const AVATAR_WALK_LIFT = [0, 0, 4, 0, 0, 4] as const;
 export const AVATAR_MAX_HOP = 4;
+/** The frame of the cast (0-based, `AVATAR_ANIMS.cast.start + 1` in a row) that shows the star flash at the tip. */
+export const AVATAR_CAST_FLASH_FRAME = 1;
+/**
+ * Where the wand tip is in the cast's flash frame, per direction: the centre of the tip pixel relative to the
+ * sprite origin (the point between the feet, `AVATAR_ORIGIN`), in px. Place a charge effect here; `right` mirrors
+ * `left`. The flash star is centred on this point.
+ */
+export const AVATAR_WAND_TIP = {
+  down: { x: -10.5, y: -16.5 },
+  left: { x: -9.5, y: -9.5 },
+  right: { x: 9.5, y: -9.5 },
+  up: { x: 10.5, y: -16.5 },
+} as const satisfies Record<AvatarDirection, { readonly x: number; readonly y: number }>;
 
 /* ------------------------------------------------------------------------------------------------
  * Pets — one sheet per species (`pets/<species>.png`), 24x24 frames.
@@ -85,12 +105,14 @@ export const PET_GROUND_Y = 23;
 export const PET_ORIGIN = { x: 0.5, y: PET_GROUND_Y / PET_FRAME } as const;
 
 /* ------------------------------------------------------------------------------------------------
- * Effects — `effects.png`, 16x16 frames, 8 columns x 3 rows (128 x 48 px).
+ * Effects — `effects.png`, 16x16 frames, 8 columns x 4 rows (128 x 64 px).
  *
  *   rows 0-1: sparkles, shadows and pet / bubble badges
  *   row 2:    activity icons drawn over a shown avatar's head or on a hidden person's desk plate.
  *             Their indices are fixed (the web client keeps a copy in apps/web/src/game/spriteSpec.ts);
  *             docs (문서 작성) reuses `note`.
+ *   row 3:    the wizard office (ADR 0008): one icon per spell for menus and toasts, the focus/meeting
+ *             shield and the quest scroll. Pictures only, never numbers or text.
  * ---------------------------------------------------------------------------------------------- */
 export const EFFECT_FRAME = 16;
 export const EFFECT_COLUMNS = 8;
@@ -132,9 +154,25 @@ export const EFFECT_FRAMES = {
   clipboard: 22,
   /** DM / work request paper plane (drawn for the two participants only). */
   plane: 23,
+  /** 응원 파이어볼 (cheer fireball). */
+  fireball: 24,
+  /** 커피 메테오 (a mug of coffee). */
+  coffee: 25,
+  /** 칭찬 번개 (praise bolt). */
+  bolt: 26,
+  /** 힐링 포션 (healing potion). */
+  potion: 27,
+  /** 하이파이브 (an open palm). */
+  palm: 28,
+  /** 축하 폭죽 (celebration firework). */
+  firework: 29,
+  /** The shield a spell bounces off (the target is focused or in a meeting). */
+  shield: 30,
+  /** 오늘의 퀘스트 (the quest scroll; owner-only surfaces). */
+  scroll: 31,
 } as const;
 export type EffectName = keyof typeof EFFECT_FRAMES;
-export const EFFECT_ROWS = 3;
+export const EFFECT_ROWS = 4;
 export const EFFECT_SHEET_WIDTH = EFFECT_COLUMNS * EFFECT_FRAME;
 export const EFFECT_SHEET_HEIGHT = EFFECT_ROWS * EFFECT_FRAME;
 export const EFFECT_ANIMS = {
@@ -152,15 +190,13 @@ export const TILESET_HEIGHT = TILESET_ROWS * TILE;
 export { TILESET_COLUMNS };
 
 /* ------------------------------------------------------------------------------------------------
- * Public asset URLs (relative to `apps/web/public`).
- * ---------------------------------------------------------------------------------------------- */
-/* ------------------------------------------------------------------------------------------------
  * Companions — the big pet of a pet room (messenger-spec §8), one sheet per species
  * (`companions/<species>.png`, base colours; tints come from `/api/sprites/pet/pc-<species>-<tint>`).
  *
  *   one row facing left (3/4 view), 24x24 frames drawn at 3-5x with pixelated scaling:
- *   0-3 idle, 4-5 blink, 6-7 listen, 8-11 think, 12-15 talk, 16-19 happy, 20-21 sleep   -> 22 columns
- *   sheet: 528 x 24 px
+ *   0-3 idle, 4-5 blink, 6-7 listen, 8-11 think, 12-15 talk, 16-19 happy, 20-21 sleep,
+ *   22-23 eat (munching a snack), 24-25 cast (paws up with a sparkle)                     -> 26 columns
+ *   sheet: 624 x 24 px
  * ---------------------------------------------------------------------------------------------- */
 export const COMPANION_FRAME = 24;
 export const COMPANION_EXPRESSIONS = {
@@ -171,21 +207,33 @@ export const COMPANION_EXPRESSIONS = {
   talk: { start: 12, frames: 4, frameRate: 8, repeat: -1 },
   happy: { start: 16, frames: 4, frameRate: 10, repeat: -1 },
   sleep: { start: 20, frames: 2, frameRate: 2, repeat: -1 },
+  eat: { start: 22, frames: 2, frameRate: 5, repeat: -1 },
+  cast: { start: 24, frames: 2, frameRate: 6, repeat: -1 },
 } as const satisfies Record<string, AnimDef>;
 export type CompanionExpression = keyof typeof COMPANION_EXPRESSIONS;
-export const COMPANION_COLUMNS = 22;
+export const COMPANION_COLUMNS = 26;
 export const COMPANION_SHEET_WIDTH = COMPANION_COLUMNS * COMPANION_FRAME;
 export const COMPANION_SHEET_HEIGHT = COMPANION_FRAME;
 
+/* ------------------------------------------------------------------------------------------------
+ * Public asset URLs (relative to `apps/web/public`).
+ *
+ * Sheets are served `immutable` at stable URLs, so every sprite URL carries `?r=${SPRITE_REVISION}`: bump the
+ * revision whenever the generated art changes and returning visitors fetch the new sheets (the sprite routes
+ * ignore the query string). The web keeps a copy (apps/web/src/game/spriteSpec.ts).
+ * ---------------------------------------------------------------------------------------------- */
+export const SPRITE_REVISION = 2;
+const REV = `?r=${SPRITE_REVISION}`;
+
 export const SPRITE_PATHS = {
-  manifest: '/assets/sprites/manifest.json',
-  effects: '/assets/sprites/effects.png',
+  manifest: `/assets/sprites/manifest.json${REV}`,
+  effects: `/assets/sprites/effects.png${REV}`,
   tileset: '/assets/maps/office-606/office-tiles.png',
-  pet: (species: string): string => `/assets/sprites/pets/${species}.png`,
-  companion: (species: string): string => `/assets/sprites/companions/${species}.png`,
+  pet: (species: string): string => `/assets/sprites/pets/${species}.png${REV}`,
+  companion: (species: string): string => `/assets/sprites/companions/${species}.png${REV}`,
   /** Tinted town (`pt-<species>-<tint>`) and companion (`pc-<species>-<tint>`) sheets, rendered on demand. */
-  petApi: (key: string): string => `/api/sprites/pet/${key}`,
-  avatar: (key: string): string => `/assets/sprites/avatars/${key}.png`,
+  petApi: (key: string): string => `/api/sprites/pet/${key}${REV}`,
+  avatar: (key: string): string => `/assets/sprites/avatars/${key}.png${REV}`,
 } as const;
 
 /** Frame numbers (inclusive range) of an avatar animation for one direction. */
@@ -207,6 +255,7 @@ export function petAnimFrames(dir: PetDirection, anim: PetAnim): { start: number
 /** JSON-friendly summary of the whole contract (written into manifest.json). */
 export function spriteSpec() {
   return {
+    revision: SPRITE_REVISION,
     avatar: {
       frameWidth: AVATAR_FRAME,
       frameHeight: AVATAR_FRAME,
@@ -217,6 +266,8 @@ export function spriteSpec() {
       origin: AVATAR_ORIGIN,
       idleLift: AVATAR_IDLE_LIFT,
       walkLift: AVATAR_WALK_LIFT,
+      castFlashFrame: AVATAR_CAST_FLASH_FRAME,
+      wandTip: AVATAR_WAND_TIP,
     },
     pet: {
       frameWidth: PET_FRAME,

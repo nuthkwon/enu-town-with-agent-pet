@@ -48,7 +48,8 @@ function isPreset(a: unknown): a is AvatarPreset {
     (HAIR_COLORS as readonly unknown[]).includes(p.hairColor) &&
     (OUTFIT_COLORS as readonly unknown[]).includes(p.outfit) &&
     (SKIN_TONES as readonly unknown[]).includes(p.skin) &&
-    typeof (p.wings ?? false) === 'boolean'
+    typeof (p.wings ?? false) === 'boolean' &&
+    typeof (p.hat ?? true) === 'boolean'
   );
 }
 
@@ -60,7 +61,8 @@ function seatPresets(file: string): AvatarPreset[] {
   let skipped = 0;
   for (const seat of raw.seats ?? []) {
     const a = seat.avatar as Record<string, unknown> | undefined;
-    const preset = a ? { ...a, wings: a.wings ?? false } : undefined;
+    // presets written before the wizard hat (ADR 0008) wear it: the hat is the default
+    const preset = a ? { ...a, wings: a.wings ?? false, hat: a.hat ?? true } : undefined;
     if (isPreset(preset)) out.push(preset);
     else skipped++;
   }

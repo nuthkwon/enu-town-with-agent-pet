@@ -50,10 +50,11 @@ describe('pet tints', () => {
 });
 
 describe('companion sheets', () => {
-  it('are one row of 22 frames of 24x24, every frame drawn', () => {
+  it('are one row of 26 frames of 24x24, every frame drawn', () => {
     for (const species of PET_SPECIES) {
       const sheet = decodePng(renderCompanionSheet(species));
       expect([sheet.width, sheet.height]).toEqual([COMPANION_COLUMNS * COMPANION_FRAME, COMPANION_FRAME]);
+      expect(COMPANION_COLUMNS).toBe(26);
       for (let i = 0; i < COMPANION_COLUMNS; i++) {
         expect(sheet.crop(i * COMPANION_FRAME, 0, COMPANION_FRAME, COMPANION_FRAME).hasContent()).toBe(true);
       }
@@ -79,7 +80,25 @@ describe('companion sheets', () => {
       differs('talk', 1, renderCompanionFrame(species, 'talk', 0));
       differs('happy', 0, idle);
       differs('sleep', 0, idle);
+      differs('eat', 0, idle);
+      differs('eat', 1, renderCompanionFrame(species, 'eat', 0));
+      differs('cast', 0, idle);
+      differs('cast', 1, renderCompanionFrame(species, 'cast', 0));
     }
+  });
+
+  it('eat and cast sit at the end of the row and keep their props inside the frame', () => {
+    expect(COMPANION_EXPRESSIONS.eat).toMatchObject({ start: 22, frames: 2 });
+    expect(COMPANION_EXPRESSIONS.cast).toMatchObject({ start: 24, frames: 2 });
+    for (const species of PET_SPECIES)
+      for (const expr of ['eat', 'cast'] as const)
+        for (let i = 0; i < 2; i++) {
+          const f = renderCompanionFrame(species, expr, i);
+          for (let k = 0; k < COMPANION_FRAME; k++) {
+            expect(f.alpha(0, k), `${species} ${expr} ${i} left edge`).toBe(0);
+            expect(f.alpha(k, 0), `${species} ${expr} ${i} top edge`).toBe(0);
+          }
+        }
   });
 
   it('open a mouth on every species (beaks and big noses included)', () => {
