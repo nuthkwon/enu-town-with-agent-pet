@@ -12,6 +12,8 @@ export interface Recording {
   /** Stops adding frames (e.g. while a page loads off camera); `resume` continues without a jump. */
   pause(): void;
   resume(): void;
+  /** Whether frames are being held (sounds heard then are off camera and left out of the mix). */
+  paused(): boolean;
   stop(): Promise<void>;
 }
 
@@ -92,6 +94,7 @@ export async function startRecording(page: Page, outFile: string, fps = 30): Pro
       start = Date.now() - (written * 1000) / fps;
       paused = false;
     },
+    paused: () => paused,
     async stop() {
       clearInterval(timer);
       await cdp.send('Page.stopScreencast').catch(() => undefined);

@@ -6,10 +6,12 @@
   "scripts": {
     "test": "playwright test",
     "typecheck": "tsc -p .",
-    "demo": "playwright test -c demo/playwright.demo.config.ts"
+    "demo": "playwright test -c demo/playwright.demo.config.ts demo/csms.demo.ts",
+    "demo:effects": "playwright test -c demo/playwright.demo.config.ts demo/effects.demo.ts"
   },
   "devDependencies": {
     "@enu/config": "workspace:*",
+    "@enu/sfx": "workspace:*",
     "@modelcontextprotocol/client": "catalog:",
     "@playwright/test": "catalog:",
     "@types/node": "catalog:",

@@ -12,8 +12,8 @@ The living list of every effect and sound in ENU Den and who sees or hears it. T
 - Sound only for **my own actions** and **events addressed to me**. Never for colleagues' arrivals, logs, meetings,
   statuses or room chat; never for pet bubbles; never for a spell blocked by the target's shield (for the target).
 - Hidden tab: only `ping.in` (once per 10 s) and `dm.in` (once per 20 s). Nothing before the first click or key.
-- Reduced motion: decorative effects are skipped, loops show a still frame, information keeps a short static cue.
-  Sound is not affected.
+- Reduced motion: projectiles and looping auras are not drawn (the hit plays where it lands), floating words fade in
+  place without rising, and the messenger's strips end at once. Sound is not affected.
 - No numbers, scores, rankings or tallies. Floating text is onomatopoeia from `ko.ts`. No text inside baked effects.
 
 ## House style (pixel effects)

@@ -343,6 +343,9 @@ importers:
       '@enu/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@enu/sfx':
+        specifier: workspace:*
+        version: link:../../packages/sfx
       '@modelcontextprotocol/client':
         specifier: 'catalog:'
         version: 2.4.0
