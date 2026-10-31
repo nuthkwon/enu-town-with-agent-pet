@@ -192,6 +192,21 @@ export function planTrailer(sb: Storyboard, moments: Moment[], captureSeconds: R
     return all[n % all.length];
   };
 
+  /**
+   * Where a take's footage stops being its own: the next thing that happens on the same screen (a menu opening for
+   * the next cast; older captures without `ui` assume the town's menu opens about a second and a half before it).
+   */
+  const cleanEnd = (m: Moment): number => {
+    const after = m.impact ?? m.t;
+    let end = Infinity;
+    for (const k of moments) {
+      if (k === m || k.source !== m.source || k.name === 'cast' || k.name === 'establish') continue;
+      const b = k.ui ?? k.t - (k.source === 'town' && k.from ? 1.6 : 0.2);
+      if (b > after + 0.2 && b < end) end = b;
+    }
+    return end;
+  };
+
   const shots: ShotPlan[] = [];
   const accents: number[] = [];
   let frame = 0;
@@ -236,9 +251,13 @@ export function planTrailer(sb: Storyboard, moments: Moment[], captureSeconds: R
     let srcStart: number;
     let freezeAt = 0;
     if (peak !== undefined) {
-      // The peak lands on a beat: after enough whole beats of wind-up (at least one when the shot has room).
-      const leadBeats =
+      // The peak lands on a beat: after enough whole beats of wind-up (at least one when the shot has room)...
+      let leadBeats =
         shot.beats >= 2 ? clamp(Math.round((t.lead * pace) / speed / beat + 0.25), 1, shot.beats - 1) : 0;
+      // ...and late enough that the shot ends before the next thing on screen begins.
+      const afterPeak = (beats: number) => ((shot.beats - beats) * beat - freezeFrames / FPS) * speed;
+      const room = cleanEnd(m) - peak;
+      while (leadBeats < shot.beats - 1 && afterPeak(leadBeats) > room) leadBeats += 1;
       freezeAt = leadBeats * framesPerBeat;
       srcStart = peak - (freezeAt / FPS) * speed;
     } else {

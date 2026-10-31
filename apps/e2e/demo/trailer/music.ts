@@ -9,7 +9,7 @@ import { measureLufs } from '@enu/sfx';
 
 export const FS = 48_000;
 
-export type SectionKind = 'intro' | 'build' | 'groove' | 'drop' | 'break' | 'final' | 'outro';
+export type SectionKind = 'intro' | 'build' | 'groove' | 'drop' | 'sting' | 'break' | 'final' | 'outro';
 
 export interface MusicSection {
   name: string;
@@ -41,7 +41,8 @@ export function sectionKind(name: string, mood = ''): SectionKind {
   if (/outro|logo|ending|엔딩|마무리/.test(n)) return 'outro';
   if (/final|climax|finale|클라이맥스|피날레/.test(n)) return 'final';
   if (/break|breath|calm|브레이크|쉼/.test(n)) return 'break';
-  if (/drop|chorus|hook|title|main|드롭|후렴/.test(n)) return 'drop';
+  if (/title|sting|logo|타이틀/.test(n)) return 'sting';
+  if (/drop|chorus|hook|main|드롭|후렴/.test(n)) return 'drop';
   if (/groove|verse|montage|그루브/.test(n)) return 'groove';
   if (/build|rise|riser|빌드/.test(n)) return 'build';
   if (/intro|cold|open|인트로/.test(n)) return 'intro';
@@ -400,7 +401,9 @@ export function renderMusic(plan: MusicPlan): RenderedMusic {
 
   sections.forEach((sec, si) => {
     const next = sections[si + 1];
-    const intoDrop = next && (next.kind === 'drop' || next.kind === 'final' || next.kind === 'outro');
+    const intoDrop =
+      next &&
+      (next.kind === 'drop' || next.kind === 'final' || next.kind === 'outro' || next.kind === 'sting');
     for (let b = 0; b < sec.bars; b++) {
       const t0 = sec.start + b * bar;
       const chord = sec.kind === 'outro' ? CHORDS[0]! : CHORDS[b % 4]!;
@@ -416,7 +419,7 @@ export function renderMusic(plan: MusicPlan): RenderedMusic {
         for (let k = 0; k < 4; k++) {
           const bt = t0 + k * beat;
           if (bt >= gapAt) break;
-          kick(bus.drums, bt, 0.85);
+          kick(bus.drums, bt, 0.72);
           const p0 = Math.round(bt * FS);
           for (let i = 0; i < Math.round(beat * FS) && p0 + i < len; i++) {
             const x = i / FS;
@@ -463,6 +466,12 @@ export function renderMusic(plan: MusicPlan): RenderedMusic {
           if (st >= gapAt) break;
           snare(bus.drums, st, 0.1 + 0.025 * s16, seed++);
         }
+      } else if (sec.kind === 'break' && sec.bars >= 4 && b >= sec.bars / 2) {
+        // A long break picks the beat back up at half time before its last bar.
+        kick(bus.drums, t0, 0.6);
+        kick(bus.drums, t0 + 2 * beat, 0.6);
+        clap(bus.drums, t0 + 2 * beat, 0.45, seed++);
+        for (let k = 0; k < 4; k++) hat(bus.drums, t0 + k * beat + beat / 2, 0.09, false, seed++);
       } else if (sec.kind === 'intro' && lastBar && sec.bars > 1) {
         for (let k = 0; k < 4; k++) hat(bus.drums, t0 + k * beat + beat / 2, 0.08, false, seed++);
       }
@@ -499,7 +508,7 @@ export function renderMusic(plan: MusicPlan): RenderedMusic {
       }
 
       /* pads: every section; brighter in the drops */
-      if (sec.kind !== 'outro') {
+      if (sec.kind !== 'outro' && sec.kind !== 'sting') {
         const cutoff =
           sec.kind === 'intro'
             ? (u: number) => 500 + 900 * ((b + u) / sec.bars)
@@ -523,8 +532,8 @@ export function renderMusic(plan: MusicPlan): RenderedMusic {
             });
       }
 
-      /* arp: 16ths everywhere but the outro (filtered open through the intro) */
-      if (sec.kind !== 'outro') {
+      /* arp: 16ths everywhere but the outro and the sting (filtered open through the intro) */
+      if (sec.kind !== 'outro' && sec.kind !== 'sting') {
         for (let s16 = 0; s16 < 16; s16++) {
           const at = t0 + s16 * step;
           if (at >= gapAt) break;
@@ -574,6 +583,31 @@ export function renderMusic(plan: MusicPlan): RenderedMusic {
 
     /* the drop's downbeat */
     if (sec.kind === 'drop' || sec.kind === 'final') impact(bus.fx, sec.start, 0.6, seed++);
+    if (sec.kind === 'sting') {
+      // The logo's moment: one big hit and a bright chord that rings, no beat; a quick run up on top.
+      impact(bus.fx, sec.start, 0.8, seed++);
+      const hold = sec.end - sec.start;
+      for (const m of [50, 62, 66, 69, 74, 78])
+        for (const det of [-8, 8])
+          tone(bus.pad, sec.start, hold, hz(m), 0.045, {
+            wave: 'saw',
+            attack: 0.01,
+            decay: hold * 0.8,
+            sustain: 0.35,
+            release: 0.3,
+            cutoff: (u) => 3600 - 2200 * u,
+            detuneCents: det,
+          });
+      tone(bus.bass, sec.start, hold, hz(38), 0.3, { wave: 'sine', decay: hold, sustain: 0.3, release: 0.2 });
+      [74, 78, 81, 86, 90].forEach((m, i) =>
+        tone(bus.lead, sec.start + beat / 2 + 0.07 * i, 0.35, hz(m), 0.07, {
+          wave: 'square',
+          decay: 0.15,
+          sustain: 0.3,
+          release: 0.3,
+        }),
+      );
+    }
     if (sec.kind === 'outro') {
       impact(bus.fx, sec.start, 0.75, seed++);
       const hold = sec.end - sec.start + 1.5;
@@ -622,15 +656,14 @@ export function renderMusic(plan: MusicPlan): RenderedMusic {
       bus.pad[i]! * p +
       bus.fx[i]!;
   }
-  // Gentle saturation glues the mix; a DC blocker, then the loudness the editor asks for.
-  let x1 = 0;
-  let y1 = 0;
+  // Gentle saturation glues the mix; then the master EQ: nothing under 35 Hz (it only eats headroom) and the lows
+  // shelved down a little, so the kick and the booms leave room for the spells' own sounds on small speakers.
+  const sub = new Svf(0.707);
+  const low = new Svf(0.6);
   for (let i = 0; i < len; i++) {
-    const s = Math.tanh(out[i]! * 1.2) / 1.2;
-    const y = s - x1 + 0.9995 * y1;
-    x1 = s;
-    y1 = y;
-    out[i] = y;
+    const x = Math.tanh(out[i]! * 1.2) / 1.2;
+    const hp = sub.run(x, 35).hp;
+    out[i] = hp - 0.3 * low.run(hp, 140).lp;
   }
   const lufs = measureLufs(out, FS);
   const k = Number.isFinite(lufs) ? 10 ** (((plan.lufs ?? -16) - lufs) / 20) : 1;

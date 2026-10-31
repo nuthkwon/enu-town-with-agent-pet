@@ -20,4 +20,6 @@ export interface Moment {
   at: Point;
   /** The other end (the caster of a spell), when there is one. */
   from?: Point;
+  /** When a menu for it opened on screen, before `t` (the shot before it stops short of that). */
+  ui?: number;
 }

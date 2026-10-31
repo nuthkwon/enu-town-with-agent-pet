@@ -236,6 +236,7 @@ test('ENU Den trailer footage: the town', async ({ browser }) => {
     const from = await where(me.id);
     await page.mouse.move(at.x, at.y, { steps: show ? 12 : 6 });
     if (show) await pause(350);
+    const ui = v.elapsed();
     await page.mouse.click(at.x, at.y);
     const menu = page.getByRole('menu');
     await expect(menu).toBeVisible();
@@ -243,13 +244,21 @@ test('ENU Den trailer footage: the town', async ({ browser }) => {
     await expect(button).toBeEnabled({ timeout: 20_000 });
     let book: Moment | null = null;
     if (show) {
-      const box = await menu.boundingBox();
+      // The shot looks at the spellbook itself (the grid of spells at the bottom of the menu).
+      const grid = await menu
+        .locator('[data-spell]')
+        .first()
+        .evaluate((el) => {
+          const r = (el.parentElement ?? el).getBoundingClientRect();
+          return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+        });
       book = {
         source: 'town',
         name: 'spellbook',
         t: v.elapsed() - 0.6,
-        at: { x: Math.round(box!.x + box!.width / 2), y: Math.round(box!.y + box!.height / 2) },
+        at: { x: Math.round(grid.x), y: Math.round(grid.y) },
         end: 0,
+        ui,
       };
       // Over the spell icons one by one (few pointer steps: the recorded page is busy drawing the town).
       for (const icon of await menu.locator('[data-spell]').all()) {
@@ -270,10 +279,20 @@ test('ENU Den trailer footage: the town', async ({ browser }) => {
     // The wand goes up when the server's answer arrives (the charge at its tip), then the spell lands.
     const raised = await landed('spell/charge', charges);
     const impact = await landed(hitStrip, before);
-    log({ name, t: raised ?? t, impact: impact ?? undefined, end: (impact ?? t + 1) + 1.6, at, from });
+    log({
+      name,
+      t: raised ?? t,
+      impact: impact ?? undefined,
+      end: (impact ?? t + 1) + 1.6,
+      at,
+      from,
+      ...(show ? {} : { ui }),
+    });
     // Every cast of 직원07's is also a take of the wand going up.
     if (raised !== null)
       log({ name: 'cast', t: raised - 0.1, impact: raised + 0.15, end: raised + 1.2, at: from });
+    // Let the effect play out before anything else happens on screen.
+    await pause(1500);
     return { t: raised ?? t, impact };
   };
   /** A spell between two colleagues (both cast from their own screens; 직원07 only watches). */
