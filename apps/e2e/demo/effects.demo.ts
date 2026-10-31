@@ -3,9 +3,9 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import { BASE_URL, ROOT, devEmail } from '../env';
-import { devLogin } from '../support/auth';
+import { devLogin, userIdOf } from '../support/auth';
 import { connectClaude, mcpClient, structured } from '../support/claude';
-import { openMenuFromRail, railRow, setMyStatus, wakeSound } from '../support/town';
+import { railRow, setMyStatus, wakeSound } from '../support/town';
 import { listenForSounds, muxAudio, type Tap } from './audio';
 import { Captions, VIDEO } from './captions';
 import { glideClick, glideTo, hideCard, installOverlay, showCard, typeInto } from './overlay';
@@ -52,22 +52,52 @@ interface Colleague {
   ctx: BrowserContext;
   page: Page;
   name: string;
+  id: string;
 }
 
-async function colleague(browser: Browser, desk: string, name: string, url = '/town'): Promise<Colleague> {
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+/**
+ * A colleague with ENU Den open in a small window: below 1280 px the messenger mounts no town canvas, so a dozen
+ * colleagues cost the machine nothing while still being drawn in 직원07's town.
+ */
+async function colleague(browser: Browser, desk: string, name: string): Promise<Colleague> {
+  const ctx = await browser.newContext({ viewport: { width: 1000, height: 700 } });
   await devLogin(ctx, devEmail(desk));
+  const id = await userIdOf(ctx);
   const page = await ctx.newPage();
+  page.setDefaultTimeout(30_000);
   await shifted(page);
-  await page.goto(url);
-  if (url === '/town') await expect(page.locator('canvas').first()).toBeVisible({ timeout: 90_000 });
-  return { ctx, page, name };
+  await page.goto('/all');
+  await expect(page.getByRole('navigation', { name: '대화 목록' })).toBeVisible({ timeout: 90_000 });
+  return { ctx, page, name, id };
 }
 
-/** A colleague casts from their own screen (their avatar menu's spellbook). */
-async function castFrom(from: Colleague, targetName: string, spell: string): Promise<void> {
-  const menu = await openMenuFromRail(from.page, targetName);
-  const button = menu.getByRole('menuitem', { name: spell });
+/** Sets a colleague's own status in the town's status menu (off camera), then back to the messenger. */
+async function statusOf(c: Colleague, option: string, duration: string): Promise<void> {
+  await c.page.goto('/town');
+  await expect(c.page.locator('canvas').first()).toBeVisible({ timeout: 90_000 });
+  await setMyStatus(c.page, option, duration);
+  await c.page.goto('/all');
+  await expect(c.page.getByRole('navigation', { name: '대화 목록' })).toBeVisible({ timeout: 90_000 });
+}
+
+/** Opens someone's page in a colleague's messenger (a client-side move: the session stays connected). */
+async function openPerson(c: Colleague, to: { id: string; name: string }): Promise<void> {
+  if (c.page.url().endsWith(`/people/${to.id}`)) return;
+  await c.page
+    .getByRole('navigation', { name: '대화 목록' })
+    .getByRole('link', { name: new RegExp(`^${to.name}`) })
+    .first()
+    .click();
+  await expect(c.page).toHaveURL(new RegExp(`/people/${to.id}$`));
+}
+
+/** A colleague casts from their own screen: the 마법 button on the target's page in the messenger. */
+async function castFrom(from: Colleague, to: { id: string; name: string }, spell: string): Promise<void> {
+  await openPerson(from, to);
+  await from.page.getByRole('button', { name: /마법/ }).click();
+  const button = from.page
+    .getByRole('dialog', { name: `${to.name}님에게 마법 쓰기` })
+    .getByRole('button', { name: spell });
   await expect(button).toBeEnabled({ timeout: 20_000 });
   await button.click();
 }
@@ -88,8 +118,10 @@ test('ENU Den demo: the wizard office', async ({ browser }) => {
     boss: await colleague(browser, CAST.boss.desk, CAST.boss.name),
     sec: await colleague(browser, CAST.sec.desk, CAST.sec.name),
   };
-  const extras = await Promise.all(EXTRAS.map((d) => colleague(browser, d, d, '/all')));
-  for (const p of Object.values(people)) await setMyStatus(p.page, '자동 (일정·Claude·업무 기록 기준)');
+  const extras = await Promise.all(EXTRAS.map((d) => colleague(browser, d, d)));
+  // Their own statuses, already public: 직원04 focuses, 직원11 takes a break (the town draws them as auras).
+  await statusOf(people.qa, '집중 모드', '1시간');
+  await statusOf(people.dev, '휴식', '1시간');
 
   const rec = await browser.newContext({
     viewport: { width: VIDEO.width, height: VIDEO.appHeight },
@@ -99,10 +131,12 @@ test('ENU Den demo: the wizard office', async ({ browser }) => {
   let video: Recording | null = null;
   const taps: Tap[] = await listenForSounds(rec, () => video);
   await devLogin(rec, devEmail(ME.desk));
+  const me = { id: await userIdOf(rec), name: ME.name };
   const claude = await mcpClient((await connectClaude(rec)).token);
   const palClaude = await mcpClient((await connectClaude(people.pal.ctx)).token);
   await claude.callTool({ name: 'upsert_todos', arguments: { items: QUESTS } });
   const page = await rec.newPage();
+  page.setDefaultTimeout(30_000);
   await shifted(page);
   for (const url of ['/', '/town', '/me?tab=settings', '/pets/new']) {
     await page.goto(url);
@@ -173,11 +207,9 @@ test('ENU Den demo: the wizard office', async ({ browser }) => {
     await pause(1500);
 
     /* -------------------------------------------------------------- 2. auras */
-    cc.say('이미 공개된 상태는 마법으로 그려져요. 집중 모드는 방어막, 휴식은 마나 회복.');
-    await setMyStatus(people.qa.page, '집중 모드', '1시간');
-    await setMyStatus(people.dev.page, '휴식', '30분');
+    cc.say('이미 공개된 상태는 마법으로 그려져요. 집중 중인 직원04는 방어막, 휴식 중인 직원11은 마나 회복.');
     await pause(1500);
-    let menu = await myMenuOn(CAST.qa.name);
+    const menu = await myMenuOn(CAST.qa.name);
     await glideClick(page, menu.getByRole('menuitem', { name: '이 사람 보기' }));
     mark();
     await pause(5000);
@@ -186,7 +218,7 @@ test('ENU Den demo: the wizard office', async ({ browser }) => {
 
     /* -------------------------------------------------------------- 3. a fireball for me */
     cc.say('직원11이 나에게 응원 파이어볼! 마법은 모두에게 보이지만, 소리는 쓴 사람과 받은 사람만 들어요.');
-    await castFrom(people.dev, ME.name, '응원 파이어볼');
+    await castFrom(people.dev, me, '응원 파이어볼');
     mark();
     await pause(5500);
 
@@ -198,7 +230,7 @@ test('ENU Den demo: the wizard office', async ({ browser }) => {
 
     /* -------------------------------------------------------------- 5. combo */
     cc.say('하이파이브를 10초 안에 돌려주면 콤보! 그 순간의 연출일 뿐, 세거나 남기지 않아요.');
-    await castFrom(people.pal, ME.name, '하이파이브');
+    await castFrom(people.pal, me, '하이파이브');
     await pause(2200);
     await castMine(CAST.pal.name, '하이파이브');
     mark();
@@ -212,11 +244,11 @@ test('ENU Den demo: the wizard office', async ({ browser }) => {
 
     /* -------------------------------------------------------------- 7. raid */
     cc.say('1분 안에 세 명이 한 사람을 응원하면 전설의 응원! 지켜보는 나에게는 소리가 나지 않아요.');
-    await castFrom(people.boss, CAST.dev.name, '축하 폭죽');
+    await castFrom(people.boss, people.dev, '축하 폭죽');
     await pause(1600);
-    await castFrom(people.sec, CAST.dev.name, '힐링 포션');
+    await castFrom(people.sec, people.dev, '힐링 포션');
     await pause(1600);
-    await castFrom(people.pal, CAST.dev.name, '응원 파이어볼');
+    await castFrom(people.pal, people.dev, '응원 파이어볼');
     mark();
     await pause(6500);
 
@@ -225,16 +257,19 @@ test('ENU Den demo: the wizard office', async ({ browser }) => {
     await castMine(CAST.boss.name, '힐링 포션');
     mark();
     await pause(4000);
-    await castFrom(people.boss, ME.name, '축하 폭죽');
+    await castFrom(people.boss, me, '축하 폭죽');
     mark();
     await pause(5500);
 
     /* -------------------------------------------------------------- 9. a call and a log rune */
-    cc.say('누가 나를 부르면 내 머리 위에 느낌표가 튀어나와요.');
-    menu = await openMenuFromRail(people.sec.page, ME.name);
-    await menu.getByRole('menuitem', { name: '부르기' }).click();
+    cc.say('DM은 종이비행기로 날아와요. 비행기는 주고받는 두 사람의 화면에만, 소리는 받은 나에게만.');
+    await openPerson(people.sec, me);
+    await people.sec.page.getByRole('link', { name: 'DM 보내기' }).click();
+    const dm = people.sec.page.getByRole('textbox', { name: '메시지를 입력하세요' });
+    await dm.fill('점심 먹고 잠깐 이야기 나눌 수 있을까요?');
+    await dm.press('Enter');
     mark();
-    await pause(4500);
+    await pause(5000);
     cc.say('동료의 Claude가 업무 로그를 쓰면 머리 위에 룬이 반짝여요. 축하가 아닌 중립적인 표시예요.');
     await palClaude.callTool({
       name: 'post_work_log',
@@ -294,7 +329,7 @@ test('ENU Den demo: the wizard office', async ({ browser }) => {
 
     /* -------------------------------------------------------------- 13. a spell reaches the messenger */
     cc.say('메신저만 열어 두어도 마법을 받아요. 오른쪽 타운에도 그대로 그려져요.');
-    await castFrom(people.dev, ME.name, '칭찬 번개');
+    await castFrom(people.dev, me, '칭찬 번개');
     mark();
     await pause(5500);
 

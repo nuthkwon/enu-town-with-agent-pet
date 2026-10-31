@@ -18,5 +18,8 @@ export default defineConfig({
     baseURL: BASE_URL,
     locale: 'ko-KR',
     timezoneId: 'Asia/Seoul',
+    // A stuck step fails within a minute instead of recording until the test times out.
+    actionTimeout: 30_000,
+    navigationTimeout: 120_000,
   },
 });
