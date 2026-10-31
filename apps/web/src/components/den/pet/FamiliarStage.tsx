@@ -4,7 +4,7 @@ import type { OwnerPetDto } from '@enu/shared';
 import { useEffect, useRef, useState } from 'react';
 import { fxEntry, useFxLayer } from '@/components/fx/FxSprite';
 import { Button } from '@/components/ui';
-import { COMPANION_EXPRESSIONS, type CompanionExpression } from '@/game/spriteSpec';
+import type { CompanionExpression } from '@/game/spriteSpec';
 import { ko } from '@/i18n/ko';
 import { playMine } from '@/sound/engine';
 import { COMPANION_SPRITE, type CompanionExpr } from '../model/companionState';
@@ -16,11 +16,6 @@ const STAGE = 112;
 /** The companion's feet inside the stage (the 96 px sprite sits bottom-centre; its feet are at y 22 of 24). */
 const FEET = { x: STAGE / 2, y: STAGE - 8 };
 const MINI_SPELLS = ['pet/mini-fire', 'pet/mini-ice', 'pet/mini-star', 'pet/mini-zap'] as const;
-
-/** A sheet expression if this sheet has it (older cached sheets may not have eat/cast yet). */
-function pose(name: string, fallback: CompanionExpression): CompanionExpression {
-  return (name in COMPANION_EXPRESSIONS ? name : fallback) as CompanionExpression;
-}
 
 /**
  * My familiar in its room (owner only, nothing is sent or stored): pat it, give it a snack, ask for a little
@@ -97,13 +92,13 @@ export function FamiliarStage({
   const pat = () => {
     play('pet/pat-heart', FEET, SCALE);
     playMine('pet.pat');
-    setOverride({ expression: pose('happy', 'happy'), until: Date.now() + 1200 });
+    setOverride({ expression: 'happy', until: Date.now() + 1200 });
     onPlayed();
   };
   const snack = () => {
     play('pet/munch', FEET, SCALE);
     playMine('pet.munch');
-    setOverride({ expression: pose('eat', 'happy'), until: Date.now() + 1500 });
+    setOverride({ expression: 'eat', until: Date.now() + 1500 });
     onPlayed();
   };
   const show = () => {
@@ -111,7 +106,7 @@ export function FamiliarStage({
     mini.current += 1;
     play(id, FEET, SCALE);
     playMine('pet.spell');
-    setOverride({ expression: pose('cast', 'happy'), until: Date.now() + 1300 });
+    setOverride({ expression: 'cast', until: Date.now() + 1300 });
     onPlayed();
   };
 

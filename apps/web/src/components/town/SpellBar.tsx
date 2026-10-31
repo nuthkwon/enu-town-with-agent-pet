@@ -2,14 +2,14 @@
 
 import { SPELLS, type Spell } from '@enu/shared';
 import { useEffect, useState, type CSSProperties } from 'react';
-import { EFFECT_FRAMES, type EffectName } from '@/game/spriteSpec';
+import type { EffectName } from '@/game/spriteSpec';
 import { ko } from '@/i18n/ko';
 import type { RealtimeSession } from '@/realtime/RealtimeSession';
 import { EffectIcon } from './EffectIcon';
 import s from './town.module.css';
 
 /** The spellbook icons (effects sheet row 4). */
-const SPELL_ICON: Record<Spell, string> = {
+const SPELL_ICON: Record<Spell, EffectName> = {
   fireball: 'fireball',
   coffee: 'coffee',
   zap: 'bolt',
@@ -17,11 +17,6 @@ const SPELL_ICON: Record<Spell, string> = {
   highfive: 'palm',
   fireworks: 'firework',
 };
-
-function iconOf(spell: Spell): EffectName {
-  const name = SPELL_ICON[spell];
-  return (name in EFFECT_FRAMES ? name : 'star') as EffectName;
-}
 
 /** The server lets one caster hit the same person once per this many ms; the bar shows it as a cooldown ring. */
 export const TARGET_COOLDOWN_MS = 15_000;
@@ -92,7 +87,7 @@ export function SpellBar({
                 onCast?.(spell);
               }}
             >
-              <EffectIcon name={iconOf(spell)} size={24} />
+              <EffectIcon name={SPELL_ICON[spell]} size={24} />
               <span className={s.spellName}>{words.name}</span>
             </button>
           );

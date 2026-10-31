@@ -8,7 +8,7 @@ import {
   type PetInfoDto,
   type TownEvent,
 } from '@enu/shared';
-import { decodePng, renderCompanionSheet, renderPetSheet } from '@enu/sprites';
+import { COMPANION_SHEET_WIDTH, decodePng, renderCompanionSheet, renderPetSheet } from '@enu/sprites';
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import * as exportRoute from '@/app/api/v1/me/export/route';
@@ -321,7 +321,7 @@ describe('GET /api/sprites/pet/:key', () => {
     expect(Buffer.from(await town.arrayBuffer()).equals(renderPetSheet('owl', { tint: 'mint' }))).toBe(true);
     const png = Buffer.from(await (await get('pc-owl-mint')).arrayBuffer());
     expect(png.equals(renderCompanionSheet('owl', 'mint'))).toBe(true);
-    expect(decodePng(png).width).toBe(22 * 24);
+    expect(decodePng(png).width).toBe(COMPANION_SHEET_WIDTH);
   });
 
   it('refuses unknown keys', async () => {
