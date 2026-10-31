@@ -526,11 +526,15 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
       this.ctx.logger.error({ err, userId: s.userId }, 'saving status failed');
       return this.sendError(s, MSG.statusSet, 'INTERNAL');
     }
-    // A profile reload that started before this write must not bring the old status back.
-    this.nextSeq(`p:${s.userId}`);
     this.director.setManual(s.userId, manual);
     if (text !== undefined) this.director.setStatusText(s.userId, text);
     this.evaluate();
+    // A profile reload that started before this write must not bring the old status back, but it may carry another
+    // change (e.g. 마법 받지 않기) that would otherwise wait for the resync: a fresh reload, which reads this write,
+    // replaces it (starting it bumps the sequence, so the older one is dropped).
+    void this.reloadMember(s.userId).catch((err: unknown) =>
+      this.ctx.logger.error({ err, userId: s.userId }, 'reloading a profile after a status change failed'),
+    );
   }
 
   private async handleChat(s: Session, raw: string, clientMsgId: string): Promise<void> {

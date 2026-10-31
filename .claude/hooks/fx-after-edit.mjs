@@ -3,7 +3,7 @@
 // (packages/sfx/src/recipes/<group>-<name>.ts) is written, render it and run its check, then hand Claude the
 // picture to LOOK at before the next edit. It never blocks an edit: whatever happens, it exits 0.
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
 const done = (context) => {
@@ -65,15 +65,24 @@ const run = (args) => {
   return { ok: r.status === 0, out: out || (r.error ? String(r.error) : '') };
 };
 
+// Only a picture this render made is worth looking at: drop the last one first, so a failed render never sends
+// Claude to a stale one. One that cannot be removed is not offered either.
+const png = join(root, job.png);
+try {
+  rmSync(png, { force: true });
+} catch {
+  // still there: `stale` below keeps it from being offered
+}
+const stale = existsSync(png);
 const render = run(job.render);
 const check = run(job.check);
-const picture = existsSync(join(root, job.png)) ? job.png : null;
+const picture = !stale && existsSync(png) ? job.png : null;
 done(
   [
     `den-fx hook: the ${job.kind} ${job.id} was rendered and checked after this edit.`,
     picture
       ? `Open ${picture} with Read and LOOK at it before editing again: judge it at actual size, fix the single worst thing, three rounds at least (.claude/skills/den-fx).`
-      : `The render produced no picture:\n${render.out}`,
+      : `${job.render.join(' ')} made no picture, so there is nothing to look at yet:\n${render.out || '(no output)'}`,
     `${job.check.join(' ')}: ${check.ok ? 'pass' : 'FAIL'}`,
     check.ok ? '' : check.out,
   ]

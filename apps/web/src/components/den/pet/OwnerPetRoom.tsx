@@ -358,7 +358,8 @@ export function OwnerPetRoom({ pet }: { pet: OwnerPetDto }) {
           ))}
         </div>
       )}
-      {pet.isDefault && todos.length > 0 && (
+      {/* Stays up while its seal plays: completing the last quest shows the seal too. */}
+      {pet.isDefault && (todos.length > 0 || questFx.playing) && (
         <div className={s.quests} ref={questsRef} aria-label={ko.magic.quests.title}>
           <span className={s.questsTitle}>{ko.magic.quests.title}</span>
           {todos.slice(0, 5).map((x) => (

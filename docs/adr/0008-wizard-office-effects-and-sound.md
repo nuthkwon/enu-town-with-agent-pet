@@ -44,8 +44,10 @@ The owner asked on 2026-10-31 for:
    It is the person's own action (spec P2 forbids invented motion, not this); the avatar never moves.
 4. **Auras** draw state that is already projected, for everyone, in office hours only: a shield bubble on focus, mana
    motes on a break, a party circle when a meeting group first gathers (not for groups that already existed when the
-   viewer joined), a warp-in beam on arrival and a blink-out on leaving (same footprint and at most 0.7 s, guarded
-   against bursts), a rune sparkle when a colleague's Claude writes a company-visible log. Nothing new is revealed.
+   viewer joined), a warp-in beam on arrival and a blink-out on leaving (guarded against bursts), a rune sparkle when
+   a colleague's Claude writes a company-visible log. Nothing new is revealed. The arrival and leaving effects are
+   bigger and longer than the 16 px, 0.4 s sparkle they replace: against a 32 px avatar, the warp-in is a 32×64 px
+   strip (as wide as the avatar, twice as tall) and the blink-out a 40×56 px one, each 0.7 s (14 frames at 20 fps).
 5. **Familiar play and quests are owner-only and stored nowhere.** In the pet room the owner can pat, feed a snack to,
    and ask a familiar to show a little spell; a new pet hatches from an egg the first time its room opens; a reply
    arrives through a summon circle. Pets never get invented text: these are pictures only. The pet room's to-do strip
@@ -95,17 +97,19 @@ The owner asked on 2026-10-31 for:
 | **Auras** (focus shield, break motes, party circle, warp-in, blink-out, rune sparkle) | the existing projection                                                     | office hours                                                | all (same projection)                 |
 | **Ping on my avatar**                                                                 | `pinged` (target only)                                                      | target online                                               | target only                           |
 
-| Data item                             | Owner           | Colleague (office hours)         | Anyone after hours | Admin       | Owner's Claude | Stored       |
-| ------------------------------------- | --------------- | -------------------------------- | ------------------ | ----------- | -------------- | ------------ |
-| Spell (caster, target, kind, outcome) | ✓               | ✓                                | ✗ (disabled)       | = colleague | ✗              | not stored   |
-| `accept_spells`                       | ✓               | only "accepts / does not accept" | ✗                  | = colleague | ✗              | profile      |
-| Sound settings                        | ✓ (this device) | ✗                                | ✗                  | ✗           | ✗              | browser only |
-| Familiar play, quest-complete         | ✓               | ✗                                | ✓ (own screen)     | ✗           | ✗              | not stored   |
+| Data item                             | Owner           | Colleague (office hours)         | Anyone after hours                                                                                                          | Admin       | Owner's Claude | Stored       |
+| ------------------------------------- | --------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------- | -------------- | ------------ |
+| Spell (caster, target, kind, outcome) | ✓               | ✓                                | ✗ (disabled)                                                                                                                | = colleague | ✗              | not stored   |
+| `accept_spells`                       | ✓               | only "accepts / does not accept" | colleagues see only whether the person accepts spells (a profile preference, any hour); spells themselves need office hours | = colleague | ✗              | profile      |
+| Sound settings                        | ✓ (this device) | ✗                                | ✗                                                                                                                           | ✗           | ✗              | browser only |
+| Familiar play, quest-complete         | ✓               | ✗                                | ✓ (own screen)                                                                                                              | ✗           | ✗              | not stored   |
 
 ## Review before rollout (adds to ADR 0004)
 
 - HR: spells and auras as workplace play; whether combo and raid could feel like a pile-on (limits, the setting and
-  the shield are the mitigations); the louder arrival effect (kept to the old footprint and duration).
+  the shield are the mitigations); the louder arrival and leaving effects (not the old footprint and duration: a
+  32×64 px warp-in and a 40×56 px blink-out of 0.7 s each against a 32 px avatar, where the old sparkle was 16 px
+  for 0.4 s).
 - Accessibility: reduced motion turns decorative effects off; sound is off with one click and never needed to
   understand anything.
 

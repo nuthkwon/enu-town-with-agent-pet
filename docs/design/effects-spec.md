@@ -43,7 +43,7 @@ The living list of every effect and sound in ENU Den and who sees or hears it. T
 | `town/warp-in`, `town/blink-out`           | town            | arrival, leaving                          | office hours, burst guard | all                   | `scifi/warp-in`, `arcane/blink-out`               |
 | `town/rune-spark`                          | town            | a colleague's Claude writes a company log | existing log-sparkle gate | all                   | `arcane/mana-burst`                               |
 | `town/heart-burst`                         | town            | a wave lands                              | office open, both shown   | all                   | `pickups/collect-burst`                           |
-| `town/plane-puff`                          | town            | DM plane takes off and lands              | —                         | the two participants  | `spawn/poof`                                      |
+| `town/plane-puff`                          | town            | a DM plane lands                          | —                         | the two participants  | `spawn/poof`                                      |
 | `town/ping-bang`                           | town            | someone pings me                          | target online             | me                    | `ui/exclamation`                                  |
 | `town/bubble-pop`                          | town            | my pet's bubble appears                   | owner                     | me                    | fresh                                             |
 | `pet/hatch` (per tint)                     | pet room        | first open of a new pet's room            | owner                     | me                    | `spawn/egg-hatch`                                 |
@@ -51,9 +51,9 @@ The living list of every effect and sound in ENU Den and who sees or hears it. T
 | `pet/munch`                                | pet room        | 간식 주기                                 | owner                     | me                    | fresh                                             |
 | `pet/mini-*`                               | pet room        | 마법 보여 줘                              | owner                     | me                    | fresh                                             |
 | `pet/summon-reply`                         | pet room        | my pet's reply arrives                    | owner                     | me                    | `arcane/rune-circle`                              |
-| `pet/heart-rise`                           | pet room        | my pet's reply arrives                    | owner                     | me                    | `status/charmed`                                  |
+| `pet/heart-rise`                           | pet room        | my pet's reply: baked, not wired yet      | owner                     | me                    | `status/charmed`                                  |
 | `pet/pat-heart`                            | pet room        | 쓰다듬기                                  | owner                     | me                    | `pickups/heart-pickup`                            |
-| `ui/send-sparkle`                          | messenger       | I send a message                          | me                        | me                    | fresh                                             |
+| `ui/send-sparkle`                          | messenger       | I send a message: baked, not wired yet    | me                        | me                    | fresh                                             |
 | `ui/quest-done`                            | messenger, town | I complete a to-do                        | owner                     | me                    | `ui/quest-complete` (no text)                     |
 
 ## Sprite-sheet pieces
@@ -74,19 +74,22 @@ art changes, so cached sheets are fetched again.
 
 ## Sounds
 
-| id                                                                    | category    | plays when                                        | who hears                             |
-| --------------------------------------------------------------------- | ----------- | ------------------------------------------------- | ------------------------------------- |
-| `cast.<spell>` (6)                                                    | ui          | I cast a spell                                    | caster                                |
-| `hit.<spell>` (6)                                                     | notify      | a spell lands on me                               | target                                |
-| `spell.blocked`                                                       | ui          | my spell bounces off a shield                     | caster                                |
-| `spell.combo`                                                         | notify      | a combo                                           | the two people                        |
-| `spell.raid`                                                          | notify      | a raid on me                                      | target                                |
-| `ping.in`                                                             | notify      | someone pings me                                  | target (hidden tab: once per 10 s)    |
-| `dm.in` / `dm.tick`                                                   | notify / ui | a DM to me / a new line in the thread I'm reading | recipient (hidden tab: once per 20 s) |
-| `wave.out` / `wave.in`                                                | ui / notify | I wave / someone waves at me                      | sender / target                       |
-| `log.notice`                                                          | notify      | my Claude published my work log                   | owner                                 |
-| `pet.reply`, `pet.pat`, `pet.munch`, `pet.spell`, `pet.hatch`         | pet         | my pet's reply; pat; snack; spell show; hatch     | owner                                 |
-| `quest.done`                                                          | pet         | I complete a to-do                                | owner                                 |
-| `ui.tap`, `ui.on`, `ui.nope`, `msg.send`, `popup.open`, `popup.close` | ui          | my own clicks                                     | me                                    |
+| id                                                            | category    | plays when                                        | who hears                             |
+| ------------------------------------------------------------- | ----------- | ------------------------------------------------- | ------------------------------------- |
+| `cast.<spell>` (6)                                            | ui          | I cast a spell                                    | caster                                |
+| `hit.<spell>` (6)                                             | notify      | a spell lands on me (and 들어 보기 in settings)   | target (들어 보기: me)                |
+| `spell.blocked`                                               | ui          | my spell bounces off a shield                     | caster                                |
+| `spell.combo`                                                 | notify      | a combo                                           | the two people                        |
+| `spell.raid`                                                  | notify      | a raid on me                                      | target                                |
+| `ping.in`                                                     | notify      | someone pings me                                  | target (hidden tab: once per 10 s)    |
+| `dm.in` / `dm.tick`                                           | notify / ui | a DM to me / a new line in the thread I'm reading | recipient (hidden tab: once per 20 s) |
+| `wave.out` / `wave.in`                                        | ui / notify | I wave / someone waves at me                      | sender / target                       |
+| `log.notice`                                                  | notify      | my Claude published my work log                   | owner                                 |
+| `pet.reply`, `pet.pat`, `pet.munch`, `pet.spell`, `pet.hatch` | pet         | my pet's reply; pat; snack; spell show; hatch     | owner                                 |
+| `quest.done`                                                  | pet         | I complete a to-do                                | owner                                 |
+| `ui.on`                                                       | ui          | I turn the sound on with the speaker button       | me                                    |
+| `ui.nope`                                                     | ui          | the server refuses my wave, ping or spell         | me                                    |
+| `msg.send`                                                    | ui          | I send a message to my pet in its room            | me                                    |
+| `ui.tap`, `popup.open`, `popup.close`                         | ui          | my own clicks: a recipe, not wired yet            | me (once wired)                       |
 
 Loudness targets: ui −24 LUFS (peak −6 dBFS), notify −20 LUFS (peak −3 dBFS), pet −21 LUFS (peak −3 dBFS).

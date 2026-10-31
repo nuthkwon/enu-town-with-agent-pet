@@ -57,44 +57,94 @@ export function FxSprite({
   );
 }
 
+type FxDepth = FxCatalogEntry['depth'];
+
 interface Playing {
   key: number;
   id: string;
+  depth: FxDepth;
   at: { x: number; y: number };
   scale?: number;
 }
 
+/** What each layer draws. */
+const ALL_DEPTHS: readonly FxDepth[] = ['under', 'over'];
+const UNDER: readonly FxDepth[] = ['under'];
+const OVER: readonly FxDepth[] = ['over'];
+
 /**
- * A layer of transient effects over a positioned box: `play(id, at)` adds one, it removes itself when done.
- * Effects that are still looping stay until `stop(id)`.
+ * Transient effects in a positioned box: `play(id, at)` adds one, it removes itself when done; effects that are
+ * still looping stay until `stop(id)`. Put `layer` (every effect, over the box's content) in the box, or split them
+ * by the catalog's depth: `under` before what they surround and `over` after it. `under` (floor rings, summoning
+ * circles) paints below the box's content and above its background, so that box must be a stacking context
+ * (`isolation: isolate`). An effect plays only while a layer that draws it is mounted: one asked for without such a
+ * layer is dropped, and the last layer of a depth to go takes its effects along (nothing replays when one comes back).
  */
 export function useFxLayer(): {
   play: (id: string, at: { x: number; y: number }, scale?: number) => void;
   stop: (id: string) => void;
+  /** An effect is on (a box can stay up until its effect has played). */
+  playing: boolean;
   layer: ReactNode;
+  under: ReactNode;
+  over: ReactNode;
 } {
   const [items, setItems] = useState<Playing[]>([]);
   const seq = useRef(0);
+  /** How many mounted layers draw each depth. */
+  const drawn = useRef<Record<FxDepth, number>>({ under: 0, over: 0 });
   const play = useCallback((id: string, at: { x: number; y: number }, scale?: number) => {
-    if (!fxEntry(id)) return;
+    const e = fxEntry(id);
+    if (!e || drawn.current[e.depth] === 0) return;
     const key = ++seq.current;
-    setItems((prev) => [...prev.slice(-7), { key, id, at, scale }]);
+    setItems((prev) => [...prev.slice(-7), { key, id, depth: e.depth, at, scale }]);
   }, []);
   const stop = useCallback((id: string) => setItems((prev) => prev.filter((p) => p.id !== id)), []);
-  const layer = (
-    <span className={s.layer} aria-hidden="true">
-      {items.map((p) => (
-        <FxSprite
-          key={p.key}
-          id={p.id}
-          at={p.at}
-          scale={p.scale}
-          onDone={() => setItems((prev) => prev.filter((x) => x.key !== p.key))}
-        />
-      ))}
-    </span>
+  // Stable ref callbacks (a new one would detach and attach its layer on every render).
+  const track = useCallback((depths: readonly FxDepth[], el: HTMLSpanElement | null) => {
+    if (!el) return undefined;
+    for (const d of depths) drawn.current[d] += 1;
+    return () => {
+      for (const d of depths) drawn.current[d] -= 1;
+      const gone = depths.filter((d) => drawn.current[d] === 0);
+      if (gone.length > 0) setItems((prev) => prev.filter((p) => !gone.includes(p.depth)));
+    };
+  }, []);
+  const layerRef = useCallback((el: HTMLSpanElement | null) => track(ALL_DEPTHS, el), [track]);
+  const underRef = useCallback((el: HTMLSpanElement | null) => track(UNDER, el), [track]);
+  const overRef = useCallback((el: HTMLSpanElement | null) => track(OVER, el), [track]);
+  const strip = (p: Playing) => (
+    <FxSprite
+      key={p.key}
+      id={p.id}
+      at={p.at}
+      scale={p.scale}
+      onDone={() => setItems((prev) => prev.filter((x) => x.key !== p.key))}
+    />
   );
-  return { play, stop, layer };
+  const under = items.filter((p) => p.depth === 'under').map(strip);
+  const over = items.filter((p) => p.depth === 'over').map(strip);
+  return {
+    play,
+    stop,
+    playing: items.length > 0,
+    layer: (
+      <span ref={layerRef} className={s.layer} aria-hidden="true">
+        {under}
+        {over}
+      </span>
+    ),
+    under: (
+      <span ref={underRef} className={`${s.layer} ${s.under}`} aria-hidden="true">
+        {under}
+      </span>
+    ),
+    over: (
+      <span ref={overRef} className={s.layer} aria-hidden="true">
+        {over}
+      </span>
+    ),
+  };
 }
 
 /**

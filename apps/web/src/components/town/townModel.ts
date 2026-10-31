@@ -109,7 +109,8 @@ export interface CastState {
 
 /**
  * Spells follow the wave's rule (both drawn, the office open) plus the target's 마법 받지 않기, the only thing
- * colleagues learn of it.
+ * colleagues learn of it. Checked in the server's order (NOT_SHOWN, then NOT_ACCEPTED), so the setting shows only
+ * while a spell could otherwise be cast: never after hours or while either person is hidden.
  */
 export function castState(
   target: PlayerSnap | null | undefined,
@@ -117,9 +118,9 @@ export function castState(
   officeOpen: boolean | null,
   person: Pick<PersonDto, 'acceptsSpells'> | null | undefined,
 ): CastState {
-  if (person && person.acceptsSpells === false) return { canCast: false, reason: ko.magic.notAccepted };
   if (officeOpen !== true || target?.shown !== true || me?.shown !== true)
     return { canCast: false, reason: ko.magic.needsTown };
+  if (person && person.acceptsSpells === false) return { canCast: false, reason: ko.magic.notAccepted };
   return { canCast: true, reason: null };
 }
 

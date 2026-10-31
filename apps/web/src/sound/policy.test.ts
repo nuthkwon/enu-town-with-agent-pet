@@ -48,8 +48,8 @@ describe('the other sounds', () => {
   });
 
   it('a DM ticks in its open thread and rings elsewhere; calls and my log notice sound', () => {
-    expect(decideSfx({ kind: 'dm-in', viewing: true }, ME)).toBe('dm.tick');
-    expect(decideSfx({ kind: 'dm-in', viewing: false }, ME)).toBe('dm.in');
+    expect(decideSfx({ kind: 'dm-in', threadOpen: true, tabVisible: true }, ME)).toBe('dm.tick');
+    expect(decideSfx({ kind: 'dm-in', threadOpen: false, tabVisible: true }, ME)).toBe('dm.in');
     expect(decideSfx({ kind: 'ping-in' }, ME)).toBe('ping.in');
     expect(decideSfx({ kind: 'log-notice' }, ME)).toBe('log.notice');
     expect(decideSfx({ kind: 'mine', id: 'quest.done' }, ME)).toBe('quest.done');
@@ -57,5 +57,13 @@ describe('the other sounds', () => {
 
   it('only a call and a DM may ring in a background tab', () => {
     expect(Object.keys(BACKGROUND_GAP_MS).sort()).toEqual(['dm.in', 'ping.in']);
+  });
+
+  it('a DM to a hidden tab rings even with its thread open (once per background gap), never a dropped tick', () => {
+    for (const threadOpen of [true, false]) {
+      const id = decideSfx({ kind: 'dm-in', threadOpen, tabVisible: false }, ME);
+      expect(id).toBe('dm.in');
+      expect(BACKGROUND_GAP_MS[id!]).toBe(20_000);
+    }
   });
 });

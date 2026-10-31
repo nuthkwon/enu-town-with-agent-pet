@@ -43,13 +43,19 @@ export function auraFor(
 }
 
 /**
- * Meetings that just became gathered (everyone seated at the table) since the last call. The first call only
- * learns what is already there, so a meeting in progress when the town opens is not celebrated.
+ * Meetings that just became gathered (everyone seated at the table) since the last call, in office hours only.
+ * While the office state is unknown (joining, rejoining) or closed it celebrates nothing and forgets what it knew;
+ * the first call after that only learns what is already there, so a meeting in progress when the viewer joins or
+ * the office opens is not celebrated (ADR 0008 §4).
  */
 export class GatheringWatch {
   private known: Set<string> | null = null;
 
-  update(gathered: Iterable<string>): string[] {
+  update(gathered: Iterable<string>, officeOpen: boolean | null): string[] {
+    if (officeOpen !== true) {
+      this.known = null;
+      return [];
+    }
     const now = new Set(gathered);
     const fresh = this.known ? [...now].filter((id) => !this.known!.has(id)) : [];
     this.known = now;

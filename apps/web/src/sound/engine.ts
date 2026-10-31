@@ -2,7 +2,7 @@
 
 import { SFX_IDS, renderSfx, type SfxId } from '@enu/sfx';
 import { BACKGROUND_GAP_MS } from './policy';
-import { getSoundPrefs, subscribeSoundPrefs, type SoundLevel, type SoundPrefs } from './prefs';
+import { getSoundPrefs, setSoundPrefs, subscribeSoundPrefs, type SoundLevel, type SoundPrefs } from './prefs';
 
 /** Master gain per level (the recipes are already loudness-normalised per category). */
 export const LEVEL_GAIN: Record<SoundLevel, number> = { low: 0.35, mid: 0.6, high: 1 };
@@ -10,6 +10,17 @@ export const LEVEL_GAIN: Record<SoundLevel, number> = { low: 0.35, mid: 0.6, hig
 export const MAX_VOICES = 4;
 /** The same sound again within this many ms is dropped (a burst of events is one sound). */
 export const SAME_ID_GAP_MS = 90;
+
+/**
+ * The events that may wake the sound: the browser's activation-triggering input events (a mouse press, a touch or
+ * pen lifting, a key press) and the `touchend` and `click` Safari waits for. A touch `pointerdown` is not one.
+ */
+const GESTURES = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'] as const;
+/** The speaker button (`SoundToggle`): it wakes or silences the sound from its own onClick. */
+const SPEAKER = '[data-sound-state]';
+
+/** 'locked' until the first gesture, then whether the user wants sound. */
+export type SoundState = 'locked' | 'on' | 'off';
 
 type DropReason = 'off' | 'locked' | 'background' | 'repeat';
 
@@ -22,7 +33,7 @@ type AudioContextCtor = new () => AudioContext;
 
 /**
  * The one place that makes sound (ESLint keeps the Web Audio API in `src/sound`). The AudioContext is created
- * on the first pointer or key press (browsers require a gesture); sounds before that are dropped, never queued.
+ * on the first click, tap or key press (browsers require a gesture); sounds before that are dropped, never queued.
  * Buffers are rendered from the @enu/sfx recipes at the context's sample rate, once, and warmed while idle.
  */
 export class SoundEngine {
@@ -43,10 +54,13 @@ export class SoundEngine {
     private readonly env: {
       now: () => number;
       hidden: () => boolean;
+      /** Whether the page has transient user activation right now (where the browser can tell). */
+      userActive: () => boolean;
       audioContext: () => AudioContextCtor | null;
     } = {
       now: () => performance.now(),
       hidden: () => document.visibilityState !== 'visible',
+      userActive: () => navigator.userActivation?.isActive === true,
       audioContext: () =>
         (window.AudioContext ??
           (window as unknown as { webkitAudioContext?: AudioContextCtor }).webkitAudioContext ??
@@ -55,7 +69,7 @@ export class SoundEngine {
   ) {}
 
   /** 'locked' until the first gesture, then whether the user wants sound. */
-  get state(): 'locked' | 'on' | 'off' {
+  get state(): SoundState {
     if (!getSoundPrefs().on) return 'off';
     return this.ctx && this.ctx.state === 'running' ? 'on' : 'locked';
   }
@@ -73,13 +87,13 @@ export class SoundEngine {
   install(): () => void {
     this.installed++;
     if (this.installed === 1) {
-      const onGesture = () => this.unlock();
-      window.addEventListener('pointerdown', onGesture, true);
-      window.addEventListener('keydown', onGesture, true);
+      const onGesture = (e: Event) => {
+        if (this.wakes(e)) this.unlock();
+      };
+      for (const type of GESTURES) window.addEventListener(type, onGesture, true);
       const offPrefs = subscribeSoundPrefs(() => this.applyPrefs(getSoundPrefs()));
       this.uninstall = () => {
-        window.removeEventListener('pointerdown', onGesture, true);
-        window.removeEventListener('keydown', onGesture, true);
+        for (const type of GESTURES) window.removeEventListener(type, onGesture, true);
         offPrefs();
       };
     }
@@ -90,6 +104,19 @@ export class SoundEngine {
         this.uninstall = null;
       }
     };
+  }
+
+  /**
+   * Whether a gesture may wake the sound. A press on the speaker button is left to its onClick: this listener runs
+   * first, and waking here would make the button read 'on' and turn the sound off. A touch or pen `pointerdown`
+   * does not let the page start audio (the context would stay suspended), so its `pointerup`, `touchend` or `click`
+   * does the waking, unless the page is already activated.
+   */
+  private wakes(e: Event): boolean {
+    if (e.target instanceof Element && e.target.closest(SPEAKER)) return false;
+    if (e.type === 'pointerdown') return (e as PointerEvent).pointerType === 'mouse' || this.env.userActive();
+    if (e.type === 'pointerup') return (e as PointerEvent).pointerType !== 'mouse';
+    return true;
   }
 
   /** Creates or resumes the AudioContext; call only from a user gesture. */
@@ -104,8 +131,27 @@ export class SoundEngine {
       this.ctx.addEventListener('statechange', () => this.changed());
       this.warm();
     }
-    if (this.ctx.state === 'suspended') void this.ctx.resume().then(() => this.changed());
+    // If the browser refuses (not a gesture it counts), the context stays suspended and the next gesture tries again.
+    if (this.ctx.state === 'suspended')
+      void this.ctx.resume().then(
+        () => this.changed(),
+        () => undefined,
+      );
     this.changed();
+  }
+
+  /**
+   * The speaker button, pressed while it showed `shown`: 'on' turns the sound off; 'locked' or 'off' turns it on and
+   * wakes it (the press is a gesture) with the "on" chime.
+   */
+  pressSpeaker(shown: SoundState): void {
+    if (shown === 'on') {
+      setSoundPrefs({ on: false });
+      return;
+    }
+    setSoundPrefs({ on: true });
+    this.unlock();
+    this.play('ui.on');
   }
 
   private applyPrefs(p: SoundPrefs): void {

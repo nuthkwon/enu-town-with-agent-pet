@@ -3,7 +3,7 @@
 import type { OwnerPetDto } from '@enu/shared';
 import { useEffect, useRef, useState } from 'react';
 import { fxEntry, useFxLayer } from '@/components/fx/FxSprite';
-import { Button } from '@/components/ui';
+import { Button, cx } from '@/components/ui';
 import type { CompanionExpression } from '@/game/spriteSpec';
 import { ko } from '@/i18n/ko';
 import { playMine } from '@/sound/engine';
@@ -42,7 +42,9 @@ export function FamiliarStage({
 }) {
   const fx = useFxLayer();
   const [override, setOverride] = useState<{ expression: CompanionExpression; until: number } | null>(null);
-  const [hatching, setHatching] = useState(false);
+  // Read once, when the room opens: a later change of the URL never cuts the hatching short.
+  const [hatchOnOpen] = useState(hatch);
+  const [hatching, setHatching] = useState(hatchOnOpen);
   const mini = useRef(0);
   const { play, stop } = fx;
 
@@ -66,12 +68,14 @@ export function FamiliarStage({
     return () => stop('pet/zzz');
   }, [expr, hatching, play, stop]);
 
-  // A pet just made: the egg rocks, cracks and the familiar pops out at the burst.
+  // A pet just made: the egg rocks, cracks and the familiar pops out at the burst. Cut short (the room closes, or
+  // StrictMode runs the effect again), the egg goes and the familiar shows at once.
   useEffect(() => {
-    if (!hatch) return;
+    if (!hatchOnOpen) return;
     const id = fxEntry(`pet/hatch--${pet.tint}`) ? `pet/hatch--${pet.tint}` : 'pet/hatch--base';
     const e = fxEntry(id);
     if (!e) {
+      setHatching(false);
       onHatched();
       return;
     }
@@ -84,10 +88,12 @@ export function FamiliarStage({
     return () => {
       clearTimeout(reveal);
       clearTimeout(done);
+      setHatching(false);
+      stop(id);
     };
-    // Only when a hatching starts.
+    // Once, when the room opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hatch]);
+  }, []);
 
   const pat = () => {
     play('pet/pat-heart', FEET, SCALE);
@@ -113,12 +119,15 @@ export function FamiliarStage({
   const expression = override?.expression ?? COMPANION_SPRITE[expr];
   return (
     <div className={s.familiar}>
-      <span className={s.companionStage} style={{ width: STAGE, height: STAGE, position: 'relative' }}>
+      {/* The summoning circle under the familiar, everything else over it. */}
+      <span className={cx(s.companionStage, s.familiarStage)} style={{ width: STAGE, height: STAGE }}>
+        {fx.under}
         <button
           type="button"
           className={s.companionButton}
           style={{ opacity: hatching ? 0 : 1 }}
           onClick={pat}
+          disabled={hatching}
           aria-label={ko.magic.familiar.patLabel(pet.name)}
           title={ko.magic.familiar.pat}
         >
@@ -130,7 +139,7 @@ export function FamiliarStage({
             label={ko.den.companion.img(pet.name, ko.den.companion.expr[expr])}
           />
         </button>
-        {fx.layer}
+        {fx.over}
       </span>
       <div className={s.familiarBar} role="group" aria-label={ko.magic.familiar.playLabel}>
         <Button size="sm" variant="ghost" onClick={snack} disabled={hatching}>

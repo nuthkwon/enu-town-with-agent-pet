@@ -6,8 +6,9 @@ import { DEN, TAU, band, burst, ease, fit, flare, fly, lerp, rand } from '../_co
 import { squeezed } from '../_lib/arcane.js';
 
 // A colleague leaves (or steps away): the spot crackles with gathering light round them, flashes white, squeezes
-// into a vertical line of light that collapses to a point and pops away in a few sparks. Same footprint and
-// loudness as the small sparkle it replaces; the flash covers the avatar as it fades out.
+// into a vertical line of light that collapses to a point and pops away in a few sparks. Bigger and longer than the
+// 16 px, 0.4 s sparkle it replaces: a 40×56 px strip against the 32 px avatar, 0.7 s (14 frames at 20 fps). The
+// flash covers the avatar as it fades out.
 const OUT = 0.22,
   SQUEEZE = 0.1,
   COLLAPSE = 0.07,

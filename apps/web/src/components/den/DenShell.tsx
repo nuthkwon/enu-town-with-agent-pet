@@ -93,6 +93,15 @@ export function DenShell({ children }: { children: ReactNode }) {
 
   const townVisible = wide || drawer === 'town';
   const overview = useOverview(session, townVisible || overviewOpen);
+  // The overview popup is modal (the top layer covers the page and makes it inert): while it is open the toasts
+  // go inside it, at the same place, so they stay visible, clickable and announced.
+  const toastStack = (
+    <Toasts
+      toasts={toasts}
+      className={s.denToasts}
+      onClose={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))}
+    />
+  );
   return (
     <div className={s.shell}>
       <DenNav open={drawer === 'nav'} />
@@ -124,12 +133,11 @@ export function DenShell({ children }: { children: ReactNode }) {
           />
         )}
       </aside>
-      {overviewOpen && <OverviewDialog overview={overview} onClose={() => setOverviewOpen(false)} />}
-      <Toasts
-        toasts={toasts}
-        className={s.denToasts}
-        onClose={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))}
-      />
+      {overviewOpen ? (
+        <OverviewDialog overview={overview} toasts={toastStack} onClose={() => setOverviewOpen(false)} />
+      ) : (
+        toastStack
+      )}
       <nav className={s.tabbar} aria-label={t.nav.tabsLabel}>
         <button
           type="button"

@@ -10,7 +10,7 @@ import { Popover, onMenuKeyDown } from './Chrome';
 import { EffectIcon } from './EffectIcon';
 import { useDirectory } from './hooks';
 import { useTown } from './TownContext';
-import { SpellBar } from './SpellBar';
+import { SpellBar, useFreshPerson } from './SpellBar';
 import { castState, menuState } from './townModel';
 import s from './town.module.css';
 
@@ -24,6 +24,8 @@ import s from './town.module.css';
 export function AvatarContextMenu({ userId, x, y }: { userId: string; x: number; y: number }) {
   const { session, directory, ui, me } = useTown();
   useDirectory(directory);
+  // The menu holds the spellbook: read 마법 받지 않기 again each time it opens (the directory may be older).
+  useFreshPerson(directory, userId);
   const roster = useRoster(session);
   const officeOpen = useOfficeOpen(session);
   const person = directory.person(userId);

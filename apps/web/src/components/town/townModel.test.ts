@@ -318,10 +318,27 @@ describe('spellbook (ADR 0008)', () => {
     expect(castState(shown, shown, false, { acceptsSpells: true }).canCast).toBe(false);
   });
 
-  it('respects 마법 받지 않기 whatever else holds', () => {
+  it('respects 마법 받지 않기 once the town allows a spell', () => {
     expect(castState(shown, shown, true, { acceptsSpells: false })).toEqual({
       canCast: false,
       reason: ko.magic.notAccepted,
     });
+    // Someone not in the directory yet: the server decides (and refuses with NOT_ACCEPTED if it must).
+    expect(castState(shown, shown, true, undefined)).toEqual({ canCast: true, reason: null });
+  });
+
+  it('checks the town before 마법 받지 않기, like the server (NOT_SHOWN, then NOT_ACCEPTED)', () => {
+    const off = { acceptsSpells: false };
+    // After hours, or while either person is hidden, the setting is not what colleagues are told.
+    for (const officeOpen of [false, null]) {
+      expect(castState(shown, shown, officeOpen, off)).toEqual({
+        canCast: false,
+        reason: ko.magic.needsTown,
+      });
+    }
+    expect(castState(player({ shown: false }), shown, true, off).reason).toBe(ko.magic.needsTown);
+    expect(castState(shown, player({ shown: false }), true, off).reason).toBe(ko.magic.needsTown);
+    expect(castState(undefined, shown, true, off).reason).toBe(ko.magic.needsTown);
+    expect(castState(shown, null, true, off).reason).toBe(ko.magic.needsTown);
   });
 });

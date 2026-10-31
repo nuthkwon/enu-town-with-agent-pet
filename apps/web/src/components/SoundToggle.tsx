@@ -1,13 +1,13 @@
 'use client';
 
 import { ko } from '@/i18n/ko';
-import { playMine, soundEngine } from '@/sound/engine';
-import { setSoundPrefs } from '@/sound/prefs';
+import { soundEngine } from '@/sound/engine';
 import { useSoundState } from '@/sound/useSessionSfx';
 
 /**
  * The speaker button (top bar of the town and the messenger). Before the first gesture the browser keeps audio
- * locked: pressing the button then wakes the sound instead of turning it off.
+ * locked: pressing the button then wakes the sound instead of turning it off. `data-sound-state` also tells the
+ * engine's gesture listener to leave presses here to this onClick (by mouse, touch or keyboard).
  */
 export function SoundToggle({ className }: { className?: string }) {
   const state = useSoundState();
@@ -20,15 +20,7 @@ export function SoundToggle({ className }: { className?: string }) {
       title={label}
       aria-pressed={state === 'on'}
       data-sound-state={state}
-      onClick={() => {
-        if (state === 'on') {
-          setSoundPrefs({ on: false });
-          return;
-        }
-        setSoundPrefs({ on: true });
-        soundEngine().unlock();
-        playMine('ui.on');
-      }}
+      onClick={() => soundEngine().pressSpeaker(state)}
     >
       <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
         <path d="M2 6h3l4-3v10l-4-3H2z" fill="currentColor" />

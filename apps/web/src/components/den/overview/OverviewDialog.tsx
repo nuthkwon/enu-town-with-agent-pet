@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { useEscape, useFocusReturn } from '@/components/town/hooks';
 import { Button } from '@/components/ui';
 import { ko } from '@/i18n/ko';
@@ -16,7 +16,16 @@ import o from './overview.module.css';
  * translucent backdrop. The town (the one Phaser game of the tab while open) and the feed on the left, the four
  * widgets on the right (everything stacks below 1024 px). Esc or 닫기 closes it and focus returns to the button that opened it.
  */
-export function OverviewDialog({ overview, onClose }: { overview: OverviewState; onClose: () => void }) {
+export function OverviewDialog({
+  overview,
+  toasts,
+  onClose,
+}: {
+  overview: OverviewState;
+  /** The messenger's toasts: nothing outside a modal dialog can be seen, clicked or announced while it is open. */
+  toasts?: ReactNode;
+  onClose: () => void;
+}) {
   const { me, session } = useDen();
   const ref = useRef<HTMLDialogElement | null>(null);
   const t = ko.den.overview;
@@ -67,6 +76,7 @@ export function OverviewDialog({ overview, onClose }: { overview: OverviewState;
           <TeamTodayWidget today={overview.today} />
         </div>
       </div>
+      {toasts}
     </dialog>
   );
 }

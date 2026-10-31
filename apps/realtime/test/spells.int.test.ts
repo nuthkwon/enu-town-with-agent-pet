@@ -1,7 +1,8 @@
 import { auditEvents, notifyTown, profiles } from '@enu/db';
-import type { ErrorMsg, SpellMsg } from '@enu/protocol';
+import { ActivityCode, type ErrorMsg, type SpellMsg } from '@enu/protocol';
 import { eq } from 'drizzle-orm';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as roster from '../src/infra/roster';
 import {
   AFTER_HOURS,
   joinAs,
@@ -15,6 +16,12 @@ import {
 } from './helpers/server';
 
 /** Spells (ADR 0008): public like the wave, with shield, combo, raid and the 마법 받지 않기 opt-out. */
+
+// The room's own loader, passed through; one test holds a profile reload half-way.
+vi.mock('../src/infra/roster', async (importOriginal) => {
+  const actual = await importOriginal<typeof roster>();
+  return { ...actual, loadRosterMember: vi.fn(actual.loadRosterMember) };
+});
 
 const PORT = 3317;
 let h: Harness;
@@ -104,6 +111,44 @@ describe('spells', () => {
     await waitFor(() => !serverRoom(h, j.a).townDirector.acceptsSpells(u.b.id), { message: 'reloaded' });
     cast(j.a, u.b.id, 'highfive');
     await waitFor(() => j.a.inbox.of<ErrorMsg>('error').some((e) => e.code === 'NOT_ACCEPTED'));
+  });
+
+  it('a status change while that reload is under way keeps both: the new status and spells off', async () => {
+    const { u, j } = await people(['a', 'b']);
+    const actual = await vi.importActual<typeof roster>('../src/infra/roster');
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    let state: 'armed' | 'holding' | 'done' = 'armed';
+    vi.mocked(roster.loadRosterMember).mockImplementation(async (db, userId) => {
+      const snap = await actual.loadRosterMember(db, userId);
+      if (state === 'armed' && userId === u.b.id) {
+        state = 'holding';
+        await held;
+      }
+      return snap;
+    });
+    try {
+      await h.db.update(profiles).set({ acceptSpells: false }).where(eq(profiles.userId, u.b.id));
+      await notifyTown(h.db, { v: 1, type: 'profile_changed', user_id: u.b.id });
+      // The reload has read 마법 받지 않기 and is still on its way when B's status is saved.
+      await waitFor(() => state === 'holding', { message: 'profile reload under way' });
+      j.b.room.send('status:set', { status: 'focus', duration: '30m' });
+      await waitFor(() => j.a.room.state.players.get(u.b.id)?.activity === ActivityCode.Focus, {
+        message: 'b in focus',
+      });
+    } finally {
+      state = 'done';
+      release();
+      vi.mocked(roster.loadRosterMember).mockImplementation(actual.loadRosterMember);
+    }
+    const director = serverRoom(h, j.a).townDirector;
+    await waitFor(() => !director.acceptsSpells(u.b.id), { message: 'spells off' });
+    await sleep(150); // the held reload has finished as well: it must not bring the old status back
+    expect(director.projected(u.b.id)?.activity).toBe('focus');
+    cast(j.a, u.b.id, 'zap');
+    await waitFor(() => j.a.inbox.of<ErrorMsg>('error').some((e) => e.code === 'NOT_ACCEPTED'), {
+      message: 'NOT_ACCEPTED',
+    });
   });
 
   it('bounces off the shield of someone in focus mode, for everyone to see', async () => {

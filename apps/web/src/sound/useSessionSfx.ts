@@ -2,7 +2,7 @@
 
 import { useEffect, useSyncExternalStore } from 'react';
 import type { RealtimeSession } from '@/realtime/RealtimeSession';
-import { soundEngine } from './engine';
+import { soundEngine, type SoundState } from './engine';
 import { decideSfx, type SfxEvent } from './policy';
 import { subscribeSoundPrefs } from './prefs';
 
@@ -26,7 +26,11 @@ export function useSessionSfx(session: RealtimeSession, meId: string): void {
       session.on('pinged', () => play({ kind: 'ping-in' })),
       session.on('dm:msg', (m) => {
         if (m.fromUserId === meId || m.toUserId !== meId) return;
-        play({ kind: 'dm-in', viewing: session.getActiveDmPeer() === m.fromUserId });
+        play({
+          kind: 'dm-in',
+          threadOpen: session.getActiveDmPeer() === m.fromUserId,
+          tabVisible: document.visibilityState === 'visible',
+        });
       }),
       session.on('notice', (m) => {
         if (m.kind === 'work_log_published') play({ kind: 'log-notice' });
@@ -44,7 +48,7 @@ export function useSessionSfx(session: RealtimeSession, meId: string): void {
 }
 
 /** The engine's state for the speaker button: 'locked' (no gesture yet), 'on' or 'off'. */
-export function useSoundState(): 'locked' | 'on' | 'off' {
+export function useSoundState(): SoundState {
   return useSyncExternalStore(
     (fn) => {
       const offEngine = soundEngine().subscribe(fn);

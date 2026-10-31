@@ -240,6 +240,14 @@ export class WorldScene extends Phaser.Scene {
     this.fx = new Fx(this.stage, this.player);
     // The town's strips load in the background once the map is up (the first spell rarely waits).
     this.time.delayedCall(300, () => this.player.preload(TOWN_FX));
+    // The loop stops while the tab is hidden, so a meeting that gathers meanwhile would get its party circle late,
+    // on the tab's return: forget the meetings then and learn them again on the first frame back (ADR 0008 §4).
+    const onVisibility = () => {
+      if (this.player.hidden) this.gatherings.reset();
+      else this.dirty = true;
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    this.offs.push(() => document.removeEventListener('visibilitychange', onVisibility));
     const { w, h } = this.mapSize;
     this.night = this.world(this.add.rectangle(0, 0, w, h, COLORS.night, 0.4).setOrigin(0, 0));
     this.night.setDepth(DEPTH.night).setVisible(false).setAlpha(0);
@@ -577,22 +585,26 @@ export class WorldScene extends Phaser.Scene {
     if (view?.isShown) view.showChat(m.text, this.time.now);
   }
 
-  /** A public wave: an arc from the sender to the target (the server checked both are shown). */
+  /**
+   * A public wave: an arc from the sender to the target (the server checked both are shown). Not drawn while the
+   * tab is hidden (see onSpell).
+   */
   private onEmote(m: EmoteMsg): void {
-    if (m.kind !== 'wave' || this.officeOpen !== true) return;
+    if (m.kind !== 'wave' || this.officeOpen !== true || this.player.hidden) return;
     const from = this.avatars.get(m.fromUserId);
     const to = this.avatars.get(m.toUserId);
     if (!from?.isShown || !to?.isShown) return;
-    this.fx.wave(from.chest, to.chest);
-    this.fxDrawn.wave++;
+    if (this.fx.wave(from.chest, to.chest)) this.fxDrawn.wave++;
   }
 
   /**
    * A spell (public like a wave; the server checked both are shown in office hours): the caster raises the wand
    * and the same show plays on every screen. Sounds are decided elsewhere (only the two people involved hear it).
+   * A hidden tab draws none of it: the scene's clock is paused, so every show that arrived meanwhile would wait
+   * and play at once on the tab's return.
    */
   private onSpell(m: SpellMsg): void {
-    if (this.officeOpen !== true) return;
+    if (this.officeOpen !== true || this.player.hidden) return;
     const from = this.avatars.get(m.fromUserId);
     const to = this.avatars.get(m.toUserId);
     if (!to?.isShown) return;
@@ -612,15 +624,15 @@ export class WorldScene extends Phaser.Scene {
       this.player.play('town/ping-bang', spotOn('town/ping-bang', me.feet));
   }
 
-  /** DMs reach only their two participants, so the paper plane is drawn only on their screens. */
+  /**
+   * DMs reach only their two participants, so the paper plane is drawn only on their screens (not while the tab is
+   * hidden, see onSpell).
+   */
   private onDm(m: DmMsg): void {
-    if (this.officeOpen !== true || m.fromUserId === m.toUserId) return;
+    if (this.officeOpen !== true || this.player.hidden || m.fromUserId === m.toUserId) return;
     const from = this.anchorOf(m.fromUserId);
     const to = this.anchorOf(m.toUserId);
-    if (from && to) {
-      this.fx.plane(from, to);
-      this.fxDrawn.plane++;
-    }
+    if (from && to && this.fx.plane(from, to)) this.fxDrawn.plane++;
   }
 
   /** Where someone is on the map: their avatar while shown, else their desk plate, else nowhere. */
@@ -755,7 +767,9 @@ export class WorldScene extends Phaser.Scene {
         : [];
     const centre = this.meetingCentre;
     if (centre) {
-      for (const _fresh of this.gatherings.update(gathered)) {
+      // Not before the room state has arrived nor right as the office opens: a meeting already in progress then
+      // is learnt, not celebrated (ADR 0008 §4).
+      for (const _fresh of this.gatherings.update(gathered, this.officeOpen)) {
         this.player.play('aura/party-cast', centre);
       }
       if (gathered.length > 0 && !this.meetingRing) {
@@ -1024,6 +1038,8 @@ export class WorldScene extends Phaser.Scene {
       }
       return;
     }
+    // No bubble is up: the next one pops, even the same nudge or to-do shown again (its id is the same).
+    this.myBubbleId = null;
   }
 
   /** Floating tags never stack on top of each other (logic/tags.ts: alternate under the feet, then up). */

@@ -6,6 +6,12 @@
   overflow: visible;
 }
 
+/* `under` effects (floor rings, summoning circles): below the box's content and above its background. The box must
+   be a stacking context (`isolation: isolate`), or the layer sinks below the page around it. */
+.under {
+  z-index: -1;
+}
+
 .strip {
   position: absolute;
   display: block;

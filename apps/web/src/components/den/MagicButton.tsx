@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { useDirectory } from '@/components/town/hooks';
-import { SpellBar } from '@/components/town/SpellBar';
+import { SpellBar, useFreshPerson } from '@/components/town/SpellBar';
 import { castState } from '@/components/town/townModel';
 import { Button } from '@/components/ui';
 import { ko } from '@/i18n/ko';
@@ -20,6 +20,8 @@ export function MagicButton({ peerId }: { peerId: string }) {
   const roster = useRoster(session);
   const officeOpen = useOfficeOpen(session);
   const [open, setOpen] = useState(false);
+  // The directory was loaded with the page: read 마법 받지 않기 again each time the spellbook opens.
+  useFreshPerson(directory, peerId, open);
   const root = useRef<HTMLDivElement | null>(null);
   const panelId = useId();
   const person = directory.person(peerId);

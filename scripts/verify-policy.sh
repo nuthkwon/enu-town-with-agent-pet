@@ -49,12 +49,20 @@ if git grep -qIiE "$legacy" -- . "${legacy_allow[@]}"; then
   echo "✗ previous brand found (use ENU Den / enu-den / enu_den):"
   git grep -nIiE "$legacy" -- . "${legacy_allow[@]}"; fail=1
 fi
-if git ls-files | grep -qiE 'enu[-_]?town'; then
-  echo "✗ previous brand in a tracked path:"; git ls-files | grep -iE 'enu[-_]?town'; fail=1
+# Tracked paths matching an extended regex (any case), one per line. NUL-separated, so git never quotes a path (it
+# prints a Korean name as "\355..." in quotes, which a `$` anchor misses), and grep reads to the end: a `grep -q`
+# quits at the first match, `git ls-files` can then die of SIGPIPE, and pipefail reads that as no match.
+tracked_paths() { git ls-files -z | { grep -zaiE "$1" || [ "$?" -eq 1 ]; } | tr '\0' '\n'; }
+if ! brand_paths=$(tracked_paths 'enu[-_]?town'); then
+  echo "✗ tracked paths could not be listed"; fail=1
+elif [ -n "$brand_paths" ]; then
+  echo "✗ previous brand in a tracked path:"; echo "$brand_paths"; fail=1
 fi
 audio='\.(wav|mp3|ogg|oga|m4a|aac|flac|opus|weba|mid|midi)$'
-if git ls-files | grep -qiE "$audio"; then
-  echo "✗ audio file committed (sounds are code: packages/sfx recipes):"; git ls-files | grep -iE "$audio"; fail=1
+if ! audio_paths=$(tracked_paths "$audio"); then
+  echo "✗ tracked paths could not be listed"; fail=1
+elif [ -n "$audio_paths" ]; then
+  echo "✗ audio file committed (sounds are code: packages/sfx recipes):"; echo "$audio_paths"; fail=1
 fi
 if [ "$fail" -eq 0 ]; then echo "✓ policy checks passed"; fi
 exit "$fail"

@@ -5,9 +5,10 @@
 import { DEN, TAU, band, burst, clamp, ease, fit, fly, lerp, smooth } from '../_core.js';
 
 // A colleague arrives: a thin beam slams down onto the spot, two rings run down it over the person, sparkles scan
-// off their edges, and the beam pinches shut into a thread that snaps back up, leaving a few sparks. It replaces the
-// small arrival sparkle, so it stays thin and quick (0.7 s) and keeps the face readable: over the body the beam is
-// only its core and a veil of light.
+// off their edges, and the beam pinches shut into a thread that snaps back up, leaving a few sparks. Bigger and
+// longer than the 16 px, 0.4 s sparkle it replaces: a 32×64 px strip against the 32 px avatar (as wide, twice as
+// tall), 0.7 s (14 frames at 20 fps). The beam stays thin and keeps the face readable: over the body it is only its
+// core and a veil of light.
 const TOP = -60,
   HEAD = -27,
   W = 2.6;

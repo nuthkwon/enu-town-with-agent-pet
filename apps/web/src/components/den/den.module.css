@@ -769,7 +769,9 @@
   font-weight: 700;
 }
 
-/* Toasts in the messenger: top centre, over the page (ADR 0008: calls, waves and spells reach the messenger). */
+/* Toasts in the messenger: top centre, over the page (ADR 0008: calls, waves and spells reach the messenger). While
+   the overview popup is open they are rendered inside it (a modal dialog covers everything outside it); fixed, they
+   keep this place and are not clipped by the popup. */
 .denToasts.denToasts {
   position: fixed;
   top: 12px;
@@ -831,6 +833,13 @@
   flex: none;
 }
 
+/* A stacking context of its own: `under` effects (the summoning circle) paint over the stage's background and under
+   the familiar, the others over it. */
+.familiarStage {
+  position: relative;
+  isolation: isolate;
+}
+
 .companionButton {
   display: inline-flex;
   padding: 0;
@@ -839,6 +848,11 @@
   cursor: pointer;
   border-radius: 50%;
   transition: transform 0.12s ease-out;
+}
+
+/* While it hatches: nothing to pat yet. */
+.companionButton:disabled {
+  cursor: default;
 }
 
 .companionButton:hover {

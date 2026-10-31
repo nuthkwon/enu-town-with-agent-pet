@@ -1,10 +1,12 @@
 'use client';
 
-import { SPELLS, type Spell } from '@enu/shared';
+import { SPELLS, type ProfileCardDto, type Spell } from '@enu/shared';
 import { useEffect, useState, type CSSProperties } from 'react';
+import type { TownDirectory } from '@/game/directory';
 import type { EffectName } from '@/game/spriteSpec';
 import { ko } from '@/i18n/ko';
 import type { RealtimeSession } from '@/realtime/RealtimeSession';
+import { api, getJson } from './api';
 import { EffectIcon } from './EffectIcon';
 import s from './town.module.css';
 
@@ -25,6 +27,23 @@ const lastCastAt = new Map<string, number>();
 export function cooldownLeft(targetId: string, now: number): number {
   const at = lastCastAt.get(targetId);
   return at === undefined ? 0 : Math.max(0, at + TARGET_COOLDOWN_MS - now);
+}
+
+/**
+ * The directory is loaded once, and colleagues' clients are never told that someone changed 마법 받지 않기 (a signal
+ * to the whole room would announce private settings saves too). So each time a spellbook opens, the target's card
+ * (GET /api/v1/users/:id/card) is read once and its person replaces the cached one. While it loads, and if it fails,
+ * the cached entry stays.
+ */
+export function useFreshPerson(directory: TownDirectory, userId: string, open = true): void {
+  useEffect(() => {
+    if (!open) return;
+    const ctrl = new AbortController();
+    getJson<ProfileCardDto>(api.card(userId), ctrl.signal)
+      .then((card) => directory.updatePerson(card.person))
+      .catch(() => undefined);
+    return () => ctrl.abort();
+  }, [directory, userId, open]);
 }
 
 /**

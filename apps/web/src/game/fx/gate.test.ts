@@ -32,11 +32,48 @@ describe('auraFor', () => {
 describe('GatheringWatch', () => {
   it('celebrates only meetings that gather while watching', () => {
     const w = new GatheringWatch();
-    expect(w.update(['m1'])).toEqual([]);
-    expect(w.update(['m1', 'm2'])).toEqual(['m2']);
-    expect(w.update([])).toEqual([]);
-    expect(w.update(['m1'])).toEqual(['m1']);
+    expect(w.update(['m1'], true)).toEqual([]);
+    expect(w.update(['m1', 'm2'], true)).toEqual(['m2']);
+    expect(w.update([], true)).toEqual([]);
+    expect(w.update(['m1'], true)).toEqual(['m1']);
     w.reset();
-    expect(w.update(['m3'])).toEqual([]);
+    expect(w.update(['m3'], true)).toEqual([]);
+  });
+
+  it('celebrates nothing until the office state is known, then only learns (rejoin)', () => {
+    const w = new GatheringWatch();
+    expect(w.update(['m1'], true)).toEqual([]);
+    // A rejoin: the room is reset and the state has not arrived yet (nothing is drawn as gathered) ...
+    expect(w.update([], null)).toEqual([]);
+    // ... then it arrives with the meeting still in progress: it already existed, so no party circle.
+    expect(w.update(['m1'], true)).toEqual([]);
+    expect(w.update(['m1'], true)).toEqual([]);
+  });
+
+  it('does not celebrate a meeting already gathered when the office opens', () => {
+    const w = new GatheringWatch();
+    expect(w.update([], false)).toEqual([]);
+    expect(w.update(['m1'], false)).toEqual([]);
+    expect(w.update(['m1'], true)).toEqual([]);
+    // Closing forgets it; opening again with the meeting still there is no new gathering either.
+    expect(w.update([], false)).toEqual([]);
+    expect(w.update(['m1'], true)).toEqual([]);
+  });
+
+  it('celebrates a meeting that gathers while the office is open, once', () => {
+    const w = new GatheringWatch();
+    expect(w.update([], true)).toEqual([]);
+    expect(w.update(['m1'], true)).toEqual(['m1']);
+    expect(w.update(['m1'], true)).toEqual([]);
+  });
+
+  it('learns a meeting that gathered while the tab was hidden instead of celebrating it late', () => {
+    const w = new GatheringWatch();
+    expect(w.update([], true)).toEqual([]);
+    // The tab is hidden (the scene's loop stops): the scene forgets ...
+    w.reset();
+    // ... and its first frame back only learns the meeting that gathered meanwhile.
+    expect(w.update(['m1'], true)).toEqual([]);
+    expect(w.update(['m1', 'm2'], true)).toEqual(['m2']);
   });
 });

@@ -35,6 +35,21 @@ export class TownDirectory extends TypedEmitter<{ change: void }> {
     this.emit('change');
   }
 
+  /**
+   * Replaces one person with a fresher copy (e.g. their profile card, read when a spellbook opens, so a changed
+   * 마법 받지 않기 shows without a reload). Someone not in the list is ignored, so the list is never built up piecemeal;
+   * an identical copy changes nothing. True when the entry changed.
+   */
+  updatePerson(person: PersonDto): boolean {
+    const prev = this.byId.get(person.userId);
+    if (!prev || JSON.stringify(prev) === JSON.stringify(person)) return false;
+    this.byId.set(person.userId, person);
+    const people = this.snapshot.people.map((p) => (p.userId === person.userId ? person : p));
+    this.snapshot = { ...this.snapshot, version: this.snapshot.version + 1, people };
+    this.emit('change');
+    return true;
+  }
+
   setDesks(desks: readonly DeskDto[]): void {
     this.deskById.clear();
     for (const d of desks) this.deskById.set(d.deskId, d);

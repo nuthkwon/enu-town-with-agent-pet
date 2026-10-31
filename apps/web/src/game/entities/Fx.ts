@@ -78,9 +78,16 @@ export class Fx {
     });
   }
 
-  /** A public wave: a faint dotted arc from the sender to the target with three hearts travelling along it. */
-  wave(from: WorldPoint, to: WorldPoint): void {
-    if (!this.ready) return;
+  /**
+   * A public wave: a faint dotted arc from the sender to the target with three hearts travelling along it. With
+   * reduced motion no hearts fly: only their landing burst plays at the target. False when nothing was drawn.
+   */
+  wave(from: WorldPoint, to: WorldPoint): boolean {
+    if (this.player?.reduced) {
+      this.player.play('town/heart-burst', to);
+      return true;
+    }
+    if (!this.ready) return false;
     const c = arcControl(from, to);
     const trail = this.stage.world(this.scene.add.graphics());
     trail.setDepth(DEPTH.night - 1);
@@ -125,15 +132,21 @@ export class Fx {
         },
       });
     }
+    return true;
   }
 
   /**
    * A DM or work request between the two participants (drawn only on their own screens): a paper plane
    * at full icon size leaving a fading dotted trail, so it reads as a flight (a small pale plane alone
-   * looked like a mouse pointer).
+   * looked like a mouse pointer). With reduced motion nothing flies: only the puff where it lands plays.
+   * False when nothing was drawn.
    */
-  plane(from: WorldPoint, to: WorldPoint): void {
-    if (!this.ready) return;
+  plane(from: WorldPoint, to: WorldPoint): boolean {
+    if (this.player?.reduced) {
+      this.player.play('town/plane-puff', to);
+      return true;
+    }
+    if (!this.ready) return false;
     const c = arcControl(from, to);
     const plane = this.stage.world(this.scene.add.image(from.x, from.y, TEX.effects, EFFECT_FRAMES.plane));
     plane.setDepth(DEPTH.night - 1).setScale(PLANE_SCALE);
@@ -172,5 +185,6 @@ export class Fx {
         this.scene.tweens.add({ targets: trail, alpha: 0, duration: 500, onComplete: () => trail.destroy() });
       },
     });
+    return true;
   }
 }

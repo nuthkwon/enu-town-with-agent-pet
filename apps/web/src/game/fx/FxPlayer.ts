@@ -72,13 +72,24 @@ export class FxPlayer {
     return this.env.reduced();
   }
 
+  /** The tab is hidden: the scene's clock is paused, so a show started now would only wait and pile up. */
+  get hidden(): boolean {
+    return this.env.hidden();
+  }
+
   preload(ids: readonly string[]): void {
     this.loader.request(ids);
   }
 
-  /** Runs `fn` after `ms` on the scene's clock (it pauses with the scene). */
+  /**
+   * Runs `fn` after `ms` on the scene's clock (it pauses with the scene). Dropped while the tab is hidden, both
+   * when asked and when due, so a show never replays late on the tab's return (never use it for cleanup).
+   */
   after(ms: number, fn: () => void): void {
-    this.scene.time.delayedCall(ms, fn);
+    if (this.env.hidden()) return;
+    this.scene.time.delayedCall(ms, () => {
+      if (!this.env.hidden()) fn();
+    });
   }
 
   private allowed(): boolean {
