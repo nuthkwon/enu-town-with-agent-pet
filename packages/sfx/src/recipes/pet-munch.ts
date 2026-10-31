@@ -1,0 +1,66 @@
+import type { SfxRecipe } from '../types';
+
+export default {
+  category: 'pet',
+  desc: "Three crunchy bites, then a happy E6 G6 'yum'.",
+  voices: [
+    {
+      at: 0,
+      wave: 'noise',
+      hz: 0,
+      env: { a: 0.002, d: 0.05, s: 0, r: 0 },
+      gain: 0.5,
+      filter: { type: 'bp', hz: 2000, q: 1.5 },
+    },
+    {
+      at: 0,
+      wave: 'sine',
+      hz: 400,
+      glide: { to: 300, t: 0.05 },
+      env: { a: 0.002, d: 0.05, s: 0, r: 0 },
+      gain: 0.2,
+    },
+    {
+      at: 0.12,
+      wave: 'noise',
+      hz: 0,
+      env: { a: 0.002, d: 0.05, s: 0, r: 0 },
+      gain: 0.5,
+      filter: { type: 'bp', hz: 2200, q: 1.5 },
+    },
+    {
+      at: 0.12,
+      wave: 'sine',
+      hz: 420,
+      glide: { to: 320, t: 0.05 },
+      env: { a: 0.002, d: 0.05, s: 0, r: 0 },
+      gain: 0.2,
+    },
+    {
+      at: 0.24,
+      wave: 'noise',
+      hz: 0,
+      env: { a: 0.002, d: 0.05, s: 0, r: 0 },
+      gain: 0.5,
+      filter: { type: 'bp', hz: 1900, q: 1.5 },
+    },
+    {
+      at: 0.24,
+      wave: 'sine',
+      hz: 380,
+      glide: { to: 290, t: 0.05 },
+      env: { a: 0.002, d: 0.05, s: 0, r: 0 },
+      gain: 0.2,
+    },
+    { at: 0.36, wave: 'triangle', hz: 1318.51, env: { a: 0.004, d: 0.12, s: 0, r: 0 }, gain: 0.22 },
+    {
+      at: 0.44,
+      wave: 'triangle',
+      hz: 1567.98,
+      env: { a: 0.004, d: 0.26, s: 0, r: 0 },
+      gain: 0.22,
+      vibrato: { hz: 6, cents: 15, delay: 0.06 },
+    },
+  ],
+  highpass: 200,
+} satisfies SfxRecipe;

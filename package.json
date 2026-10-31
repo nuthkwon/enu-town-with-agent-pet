@@ -29,7 +29,11 @@
     "fx:library": "pnpm --filter @enu/fx fx library",
     "fx:new": "pnpm --filter @enu/fx fx new",
     "fx:render": "pnpm --filter @enu/fx fx render",
-    "fx:check": "pnpm --filter @enu/fx fx check"
+    "fx:check": "pnpm --filter @enu/fx fx check",
+    "sfx": "pnpm --filter @enu/sfx sfx",
+    "sfx:list": "pnpm --filter @enu/sfx sfx list",
+    "sfx:render": "pnpm --filter @enu/sfx sfx render",
+    "sfx:check": "pnpm --filter @enu/sfx sfx check"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",

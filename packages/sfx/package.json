@@ -1,0 +1,23 @@
+{
+  "name": "@enu/sfx",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run --passWithNoTests",
+    "sfx": "tsx scripts/sfx.ts"
+  },
+  "devDependencies": {
+    "@enu/config": "workspace:*",
+    "@enu/fx": "workspace:*",
+    "@enu/shared": "workspace:*",
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

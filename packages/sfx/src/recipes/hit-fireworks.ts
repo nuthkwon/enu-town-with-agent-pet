@@ -1,0 +1,60 @@
+import type { SfxRecipe } from '../types';
+
+export default {
+  category: 'spell',
+  desc: 'A soft bang, crackles drifting down and a twinkling C6 G6 C7 sparkle that rings out.',
+  voices: [
+    {
+      at: 0,
+      wave: 'noise',
+      hz: 0,
+      env: { a: 0.002, d: 0.2, s: 0, r: 0 },
+      gain: 0.6,
+      filter: { type: 'lp', hz: 2000 },
+    },
+    {
+      at: 0.12,
+      wave: 'noise',
+      hz: 0,
+      env: { a: 0.001, d: 0.02, s: 0, r: 0 },
+      gain: 0.2,
+      filter: { type: 'bp', hz: 4000, q: 2 },
+    },
+    {
+      at: 0.19,
+      wave: 'noise',
+      hz: 0,
+      env: { a: 0.001, d: 0.02, s: 0, r: 0 },
+      gain: 0.17,
+      filter: { type: 'bp', hz: 4200, q: 2 },
+    },
+    {
+      at: 0.26,
+      wave: 'noise',
+      hz: 0,
+      env: { a: 0.001, d: 0.02, s: 0, r: 0 },
+      gain: 0.14,
+      filter: { type: 'bp', hz: 3800, q: 2 },
+    },
+    {
+      at: 0.34,
+      wave: 'noise',
+      hz: 0,
+      env: { a: 0.001, d: 0.02, s: 0, r: 0 },
+      gain: 0.1,
+      filter: { type: 'bp', hz: 4400, q: 2 },
+    },
+    { at: 0.1, wave: 'triangle', hz: 1046.5, env: { a: 0.003, d: 0.25, s: 0, r: 0 }, gain: 0.2 },
+    { at: 0.16, wave: 'triangle', hz: 1567.98, env: { a: 0.003, d: 0.3, s: 0, r: 0 }, gain: 0.2 },
+    {
+      at: 0.22,
+      wave: 'triangle',
+      hz: 2093,
+      env: { a: 0.003, d: 0.5, s: 0, r: 0 },
+      gain: 0.2,
+      vibrato: { hz: 7, cents: 12, delay: 0.1 },
+    },
+  ],
+  echo: { delay: 0.11, feedback: 0.22, mix: 0.16 },
+  highpass: 150,
+} satisfies SfxRecipe;

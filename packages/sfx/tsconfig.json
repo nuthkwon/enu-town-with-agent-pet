@@ -1,0 +1,8 @@
+{
+  "extends": "@enu/config/tsconfig/base.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false
+  },
+  "include": ["src", "scripts", "test", "*.ts"]
+}
