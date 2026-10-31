@@ -23,6 +23,7 @@ export const avatarPresetSchema = z.object({
   outfit: z.enum(OUTFIT_COLORS),
   skin: z.enum(SKIN_TONES),
   wings: z.boolean().default(false),
+  hat: z.boolean().default(true),
 });
 
 const hm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);

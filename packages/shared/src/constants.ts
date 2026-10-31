@@ -319,6 +319,8 @@ export interface AvatarPreset {
   skin: SkinTone;
   /** Fairy wings accessory; pets always have wings, people default to false. */
   wings: boolean;
+  /** Pointy wizard hat (ADR 0008): on by default, people can take it off. */
+  hat: boolean;
 }
 
 export const DEFAULT_AVATAR: AvatarPreset = {
@@ -328,11 +330,15 @@ export const DEFAULT_AVATAR: AvatarPreset = {
   outfit: 'sky',
   skin: 'warm',
   wings: false,
+  hat: true,
 };
 
-/** Sprite sheet key for an avatar preset (one generated sheet per combination actually used). */
+/**
+ * Sprite sheet key for an avatar preset (one generated sheet per combination actually used). Optional parts:
+ * `-w` wings, `-n` no hat (the hat is the default).
+ */
 export function avatarSpriteKey(a: AvatarPreset): string {
-  return `av-${a.body}-${a.hair}-${a.hairColor}-${a.outfit}-${a.skin}${a.wings ? '-w' : ''}`;
+  return `av-${a.body}-${a.hair}-${a.hairColor}-${a.outfit}-${a.skin}${a.wings ? '-w' : ''}${a.hat === false ? '-n' : ''}`;
 }
 
 /**

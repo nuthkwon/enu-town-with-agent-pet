@@ -126,6 +126,7 @@ save(
         outfit: OUTFIT_COLORS[i]!,
         skin: SKIN_TONES[i % 3]!,
         wings: i === 2 || i === 5,
+        hat: i !== 3,
       };
       dirs.forEach(([d, a, f], col) =>
         c.blit(renderAvatarFrame(p, d, a, f), ((i % 2) * dirs.length + col) * cell, Math.floor(i / 2) * cell),
@@ -141,8 +142,24 @@ save(
   'avatar-anim.png',
   (() => {
     const list: AvatarPreset[] = [
-      { body: 'f', hair: 'ponytail', hairColor: 'pink', outfit: 'lilac', skin: 'light', wings: true },
-      { body: 'm', hair: 'swept', hairColor: 'blonde', outfit: 'mint', skin: 'tan', wings: false },
+      {
+        body: 'f',
+        hair: 'ponytail',
+        hairColor: 'pink',
+        outfit: 'lilac',
+        skin: 'light',
+        wings: true,
+        hat: true,
+      },
+      {
+        body: 'm',
+        hair: 'swept',
+        hairColor: 'blonde',
+        outfit: 'mint',
+        skin: 'tan',
+        wings: false,
+        hat: false,
+      },
     ];
     const sheetH = AVATAR_DIRECTIONS.length * AVATAR_FRAME;
     const c = new Canvas(AVATAR_COLUMNS * AVATAR_FRAME, sheetH * list.length);

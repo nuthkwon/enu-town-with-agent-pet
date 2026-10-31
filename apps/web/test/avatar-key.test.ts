@@ -17,13 +17,14 @@ describe('parseAvatarKey', () => {
         for (const hairColor of HAIR_COLORS)
           for (const outfit of OUTFIT_COLORS)
             for (const skin of SKIN_TONES)
-              for (const wings of [false, true]) {
-                const preset = { body, hair, hairColor, outfit, skin, wings };
-                expect(parseAvatarKey(avatarSpriteKey(preset))).toEqual(preset);
-              }
+              for (const wings of [false, true])
+                for (const hat of [true, false]) {
+                  const preset = { body, hair, hairColor, outfit, skin, wings, hat };
+                  expect(parseAvatarKey(avatarSpriteKey(preset))).toEqual(preset);
+                }
   });
 
-  it('parses the default avatar and the wings suffix', () => {
+  it('parses the default avatar and the wings and no-hat suffixes', () => {
     expect(parseAvatarKey('av-m-short-black-sky-warm')).toEqual(DEFAULT_AVATAR);
     expect(parseAvatarKey('av-f-bob-pink-rose-light-w')).toEqual({
       body: 'f',
@@ -32,7 +33,12 @@ describe('parseAvatarKey', () => {
       outfit: 'rose',
       skin: 'light',
       wings: true,
+      hat: true,
     });
+    expect(parseAvatarKey('av-f-bob-pink-rose-light-w-n')?.hat).toBe(false);
+    expect(parseAvatarKey('av-f-bob-pink-rose-light-n')).toMatchObject({ wings: false, hat: false });
+    // the suffixes come in one order only
+    expect(parseAvatarKey('av-f-bob-pink-rose-light-n-w')).toBeNull();
   });
 
   it('rejects anything not exactly in the shared enums', () => {

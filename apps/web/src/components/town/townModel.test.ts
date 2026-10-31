@@ -47,7 +47,15 @@ const person = (
 ): PersonDto => ({
   userId,
   displayName,
-  avatar: { body: 'm', hair: 'short', hairColor: 'black', outfit: 'sky', skin: 'warm', wings: false },
+  avatar: {
+    body: 'm',
+    hair: 'short',
+    hairColor: 'black',
+    outfit: 'sky',
+    skin: 'warm',
+    wings: false,
+    hat: true,
+  },
   avatarKey: 'av-m-short-black-sky-warm',
   pet: { species: 'cat', name: '냥' },
   deskId,
