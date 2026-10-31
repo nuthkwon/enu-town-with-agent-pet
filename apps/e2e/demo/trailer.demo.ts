@@ -50,6 +50,7 @@ const TRAILER_CSS = `
   [class*="town-module__"][class*="__dock"], [class*="town-module__"][class*="__banners"],
   [class*="town-module__"][class*="__toasts"], [class*="town-module__"][class*="__hoverCard"],
   [class*="town-module__"][class*="__legend"], [class*="town-module__"][class*="__nightBanner"] { display: none !important; }
+  [class*="den-module__"][class*="__count"] { display: none !important; }
 `;
 const POINTER_OFF = '#demo-pointer, .demo-ripple { display: none !important; }';
 /**

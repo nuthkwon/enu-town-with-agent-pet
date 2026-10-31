@@ -182,10 +182,16 @@ export function planTrailer(sb: Storyboard, moments: Moment[], captureSeconds: R
     throw new Error(`storyboard: shots take ${shotBeats} beats but the sections ${sectionBeats}`);
 
   const used = new Map<string, number>();
+  /** The moment's peak in its recording (its effect's start plus the delay to its best frame). */
+  const peakOf = (m: Moment): number | undefined =>
+    m.impact === undefined ? undefined : m.impact + (TIMING[m.name]?.peak ?? 0) * SOURCES[m.source].pace;
   const take = (name: string): Moment | undefined => {
-    // A take whose effect never showed (a cast that did not go through) is left out.
+    // A take whose effect never showed (a cast that did not go through) is left out, and so is one whose peak
+    // comes after the next thing on screen (a menu opening over it), unless there is nothing else.
     const needsPeak = (TIMING[name]?.lead ?? 1) > 0;
-    const all = moments.filter((m) => m.name === name && (!needsPeak || m.impact !== undefined));
+    const shown = moments.filter((m) => m.name === name && (!needsPeak || m.impact !== undefined));
+    const clean = shown.filter((m) => !needsPeak || cleanEnd(m) - peakOf(m)! > 0.4);
+    const all = clean.length ? clean : shown;
     if (!all.length) return undefined;
     const n = used.get(name) ?? 0;
     used.set(name, n + 1);
