@@ -145,6 +145,12 @@ export default tseslint.config(
     },
   },
   {
+    // Helpers copied from the pixelfx library by `pnpm fx:new --from` (import paths rewritten, otherwise as
+    // upstream wrote them): keep their terse comma-expression style.
+    files: ['packages/fx/effects/_lib/**/*.js'],
+    rules: { '@typescript-eslint/no-unused-expressions': 'off', 'no-useless-assignment': 'off' },
+  },
+  {
     files: ['**/test/**', '**/*.test.ts', 'apps/e2e/**'],
     rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
   },

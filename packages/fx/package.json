@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./catalog": "./src/catalog.gen.ts"
+    "./catalog": "./src/catalog.gen.ts",
+    "./types": "./src/types.ts"
   },
   "scripts": {
     "typecheck": "tsc -p .",
