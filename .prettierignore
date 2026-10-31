@@ -7,3 +7,6 @@ dist
 apps/web/next-env.d.ts
 # Generated plugin bundles (packages/pet-channel → `pnpm --filter @enu/pet-channel bundle`)
 claude/plugins/*/server/
+packages/fx/vendor/
+packages/fx/src/catalog.gen.ts
+records/

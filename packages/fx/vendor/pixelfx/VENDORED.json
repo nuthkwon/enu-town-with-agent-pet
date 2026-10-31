@@ -1,0 +1,26 @@
+{
+  "upstream": "https://github.com/patch-gg/pixelfx",
+  "commit": "fe7103c36d94e02f2d7df7d8f7a341e493837cde",
+  "license": "MIT",
+  "files": {
+    "LICENSE": "0a77565a50c3462831244452f129c38d2adc4fd07897cbeba8adc943f958604e",
+    "NOTICE.md": "e02278fe96d1a225fea8a61ce9816c7cbb431caa7c62c272610c2da616551ff9",
+    "README.md": "58bc81e67128a214f994f37f43664a25369e9347cca51081744eb0746584730d",
+    "docs/AUTHORING.md": "c2cc1f74af7474cfc00ea637800874e58d864066f643310aabd764c671abcab4",
+    "docs/CATALOG.md": "09d1f75f23554044c8d488830a82c73bd9709f7f5d47a9216ab150a828da0d2e",
+    "skills/pixelfx/SKILL.md": "d3f4a4fe0d452a7863abe0928af79e7f5b0e6eb973a933f7e1bc6cadfc32b39b",
+    "src/core/actor.js": "e3c58d382af9d213c0477cb79c12caac839058f74269ac4dc76b3e1357e979db",
+    "src/core/color.js": "4e63f3074df7c1e138f721959858d12e4f6ccc2bf4f8e98c576efbae51241e54",
+    "src/core/font.js": "c094f1d3a9f94478a255f1cc81aa7ccd2c2ba7a97fc1227a29d268acc1f2ec7c",
+    "src/core/fx.js": "a959c5f7b1c15ba8e07cb26e5b1ccc0bce0aef54ca14cf01f9d6e794cf4e5a0b",
+    "src/core/index.js": "b71af39b1da0fa7036b8e8727c76ee956d7e4c44e00fcfbc9f93ea9f011b3028",
+    "src/core/math.js": "da45e1ed43f7d119dd80fbe97c7de2b35b4ea95dea8781671c296ee5942ac0bc",
+    "src/core/painter.js": "5b8ada6a25cdf1e63ae3684cc56276c61306558dc0a3a827a6a39ab038f74681",
+    "src/core/particles.js": "867e58baf522278b4aad383c7224c599cff9ba93268b5eac9485a39a3809477b",
+    "src/core/scene.js": "520a465f771829162dde114880224eb30efbab3cff859cb8a24a28e49d8e198c",
+    "src/core/shapes.js": "3e28f77e25b3083949f083c74304ead6826b7b1da20a658ccb114ab531fc8898",
+    "src/core/sim.js": "517febe05b72de9d07e3596c019b9bb01e1f97a74089a30fa80e9e98849ba4b0",
+    "tools/lib/fxlib.mjs": "726db557ee5fa102724f6ea9e9836fe26d55cd7832aaa182ce73386deeeeb1a3",
+    "tools/lib/png.mjs": "19da8ce363e7a4722fa49f06dd9066e07e83262c24da14a496b39a793111ed7c"
+  }
+}

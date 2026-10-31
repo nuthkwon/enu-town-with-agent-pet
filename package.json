@@ -21,9 +21,15 @@
     "db:migrate": "pnpm --filter @enu/db migrate",
     "seed:seats": "pnpm --filter @enu/db seed:seats",
     "seed:dev": "pnpm --filter @enu/db seed:dev",
-    "sprites:build": "pnpm --filter @enu/sprites build",
+    "sprites:build": "pnpm --filter @enu/sprites build && pnpm --filter @enu/fx bake",
     "map:gen": "pnpm --filter @enu/map gen",
-    "map:check": "pnpm --filter @enu/map check"
+    "map:check": "pnpm --filter @enu/map check",
+    "fx": "pnpm --filter @enu/fx fx",
+    "fx:list": "pnpm --filter @enu/fx fx list",
+    "fx:library": "pnpm --filter @enu/fx fx library",
+    "fx:new": "pnpm --filter @enu/fx fx new",
+    "fx:render": "pnpm --filter @enu/fx fx render",
+    "fx:check": "pnpm --filter @enu/fx fx check"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",

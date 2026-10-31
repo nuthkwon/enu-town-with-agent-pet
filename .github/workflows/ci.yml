@@ -44,8 +44,8 @@ jobs:
       - run: pnpm test
       - name: Integration tests (Postgres)
         run: pnpm test:int
-      - name: Map and sprite assets are consistent
-        run: pnpm sprites:build && pnpm map:check && git diff --exit-code -- apps/web/public/assets
+      - name: Map, sprite and effect assets are consistent
+        run: pnpm sprites:build && pnpm map:check && git diff --exit-code -- apps/web/public/assets packages/fx/src/catalog.gen.ts
       - name: Migrations are up to date
         run: pnpm --filter @enu/db generate && git diff --exit-code -- packages/db/migrations
       - name: Pet channel plugin bundle is up to date

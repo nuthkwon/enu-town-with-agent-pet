@@ -13,8 +13,8 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS build-web
-# Static assets (sprites, map) are committed; regenerate to make sure they match the code.
-RUN pnpm --filter @enu/sprites build && pnpm --filter @enu/map check
+# Static assets (sprites, effect strips, map) are committed; regenerate to make sure they match the code.
+RUN pnpm sprites:build && pnpm --filter @enu/map check
 RUN SKIP_ENV_VALIDATION=1 pnpm --filter @enu/web build
 
 FROM deps AS build-services

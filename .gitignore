@@ -18,3 +18,7 @@ apps/e2e/screenshots/
 
 # demo video output (apps/e2e/demo)
 demo-output/
+
+# effect and sound renders to look at (pnpm fx:render, pnpm sfx:render); never committed
+records/
+.claude/settings.local.json

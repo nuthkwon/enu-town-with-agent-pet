@@ -25,6 +25,9 @@ const LLM_SDK_BAN = {
   ],
 };
 
+const EFFECT_MESSAGE =
+  'Effects are functions of t and the seeded Rng (o.seed): no clocks or Math.random (ADR 0008, den-fx skill).';
+
 const CLOCK_MESSAGE =
   'Pure town rules never read the clock or randomness: take `now` (and `nowMs`) as arguments ' +
   '(docs/design/town-visualization-spec.md §6.8).';
@@ -42,6 +45,8 @@ export default tseslint.config(
       '**/playwright-report/**',
       '**/test-results/**',
       'claude/plugins/*/server/**',
+      'packages/fx/vendor/**',
+      'records/**',
     ],
   },
   js.configs.recommended,
@@ -115,6 +120,27 @@ export default tseslint.config(
       'no-restricted-syntax': [
         'error',
         { selector: "NewExpression[callee.name='Date'][arguments.length=0]", message: CLOCK_MESSAGE },
+      ],
+    },
+  },
+  {
+    // Effects as code (pixelfx contract): deterministic, and no words drawn inside an effect.
+    files: ['packages/fx/effects/**/*.js'],
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        { object: 'Math', property: 'random', message: EFFECT_MESSAGE },
+        { object: 'Date', property: 'now', message: EFFECT_MESSAGE },
+        { object: 'performance', property: 'now', message: EFFECT_MESSAGE },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        { selector: "NewExpression[callee.name='Date']", message: EFFECT_MESSAGE },
+        {
+          selector: "CallExpression[callee.property.name='text']",
+          message:
+            'No text inside effects: words live in apps/web/src/i18n/ko.ts and are drawn outside (ADR 0008).',
+        },
       ],
     },
   },

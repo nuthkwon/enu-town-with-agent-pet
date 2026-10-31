@@ -1,0 +1,27 @@
+{
+  "name": "@enu/fx",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./catalog": "./src/catalog.gen.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run --passWithNoTests",
+    "fx": "tsx scripts/fx.ts",
+    "bake": "tsx scripts/fx.ts bake"
+  },
+  "dependencies": {
+    "@enu/shared": "workspace:*",
+    "@enu/sprites": "workspace:*"
+  },
+  "devDependencies": {
+    "@enu/config": "workspace:*",
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

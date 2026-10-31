@@ -13,3 +13,4 @@ apps/e2e/test-results
 apps/e2e/screenshots
 **/.env
 **/.env.*
+records
