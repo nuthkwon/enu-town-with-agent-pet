@@ -242,16 +242,19 @@ test('ENU Den demo: the wizard office', async ({ browser }) => {
     await pause(5500);
 
     /* -------------------------------------------------------------- 5. combo */
-    cc.say('하이파이브를 10초 안에 돌려주면 콤보! 그 순간의 연출일 뿐, 세거나 남기지 않아요.');
-    await focusOn(people.pal.id);
-    // 직원07 has the spellbook on 직원13 open already, so the high-five goes straight back.
-    const book = await myMenuOn(CAST.pal.name);
-    const back = book.getByRole('menuitem', { name: '하이파이브' });
-    await glideTo(page, back);
-    await castFrom(people.pal, me, '하이파이브');
-    await expect.poll(() => sfxPlayed(page), { timeout: 10_000 }).toContain('hit.highfive');
-    await pause(900);
-    await glideClick(page, back);
+    cc.say('하이파이브를 10초 안에 돌려받으면 콤보! 그 순간의 연출일 뿐, 세거나 남기지 않아요.');
+    await focusOn(people.boss.id);
+    // 직원03 (next to 직원07) has 직원07's spellbook open in the messenger, so the high-five comes straight back.
+    await openPerson(people.boss, me);
+    await people.boss.page.getByRole('button', { name: /마법/ }).click();
+    const back = people.boss.page
+      .getByRole('dialog', { name: `${me.name}님에게 마법 쓰기` })
+      .getByRole('button', { name: '하이파이브' });
+    await expect(back).toBeEnabled({ timeout: 20_000 });
+    await castMine(CAST.boss.name, '하이파이브');
+    await expect.poll(() => sfxPlayed(page), { timeout: 10_000 }).toContain('cast.highfive');
+    await pause(600);
+    await back.click();
     mark();
     await expect.poll(() => sfxPlayed(page), { timeout: 8_000 }).toContain('spell.combo');
     await pause(4500);
