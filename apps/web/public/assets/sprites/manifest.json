@@ -1,10 +1,11 @@
 {
   "generator": "@enu/sprites",
   "spec": {
+    "revision": 2,
     "avatar": {
       "frameWidth": 32,
       "frameHeight": 32,
-      "columns": 10,
+      "columns": 14,
       "rows": [
         "down",
         "left",
@@ -23,6 +24,12 @@
           "frames": 6,
           "frameRate": 12,
           "repeat": -1
+        },
+        "cast": {
+          "start": 10,
+          "frames": 4,
+          "frameRate": 10,
+          "repeat": 0
         }
       },
       "feetY": 31,
@@ -43,7 +50,26 @@
         0,
         0,
         4
-      ]
+      ],
+      "castFlashFrame": 1,
+      "wandTip": {
+        "down": {
+          "x": -10.5,
+          "y": -16.5
+        },
+        "left": {
+          "x": -9.5,
+          "y": -9.5
+        },
+        "right": {
+          "x": 9.5,
+          "y": -9.5
+        },
+        "up": {
+          "x": 10.5,
+          "y": -16.5
+        }
+      }
     },
     "pet": {
       "frameWidth": 24,
@@ -82,7 +108,7 @@
     "companion": {
       "frameWidth": 24,
       "frameHeight": 24,
-      "columns": 22,
+      "columns": 26,
       "expressions": {
         "idle": {
           "start": 0,
@@ -125,6 +151,18 @@
           "frames": 2,
           "frameRate": 2,
           "repeat": -1
+        },
+        "eat": {
+          "start": 22,
+          "frames": 2,
+          "frameRate": 5,
+          "repeat": -1
+        },
+        "cast": {
+          "start": 24,
+          "frames": 2,
+          "frameRate": 6,
+          "repeat": -1
         }
       }
     },
@@ -156,7 +194,15 @@
         "magnifier": 20,
         "link": 21,
         "clipboard": 22,
-        "plane": 23
+        "plane": 23,
+        "fireball": 24,
+        "coffee": 25,
+        "bolt": 26,
+        "potion": 27,
+        "palm": 28,
+        "firework": 29,
+        "shield": 30,
+        "scroll": 31
       },
       "anims": {
         "sparkle": {

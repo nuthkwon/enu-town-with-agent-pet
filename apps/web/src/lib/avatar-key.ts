@@ -7,6 +7,7 @@ import {
   avatarSpriteKey,
   type AvatarPreset,
 } from '@enu/shared';
+import { SPRITE_PATHS } from '@/game/spriteSpec';
 
 /** Browser-safe avatar key helpers (the key format is defined by avatarSpriteKey in @enu/shared). */
 
@@ -38,7 +39,7 @@ export function parseAvatarKey(key: string): AvatarPreset | null {
   return avatarSpriteKey(preset) === key ? preset : null;
 }
 
-/** URL of the generated sprite sheet for a preset (served by /api/sprites/avatar/[key]). */
+/** URL of the generated sprite sheet for a preset (served by /api/sprites/avatar/[key], with the revision). */
 export function avatarSheetUrl(preset: AvatarPreset): string {
-  return `/api/sprites/avatar/${avatarSpriteKey(preset)}`;
+  return SPRITE_PATHS.avatarApi(avatarSpriteKey(preset));
 }

@@ -6,13 +6,13 @@ import {
   COMPANION_EXPRESSIONS,
   COMPANION_FRAME,
   type CompanionExpression,
+  SPRITE_PATHS,
 } from '@/game/spriteSpec';
 import s from '../den.module.css';
 
+/** The companion sheet of a look (static file for base colours, the sprite API for tints; with the revision). */
 function companionUrl(species: string, tint: string): string {
-  return tint === 'base'
-    ? `/assets/sprites/companions/${encodeURIComponent(species)}.png`
-    : `/api/sprites/pet/pc-${encodeURIComponent(species)}-${encodeURIComponent(tint)}`;
+  return tint === 'base' ? SPRITE_PATHS.companion(species) : SPRITE_PATHS.petApi(`pc-${species}-${tint}`);
 }
 
 function usePrefersReducedMotion(): boolean {

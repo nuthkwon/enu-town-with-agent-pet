@@ -56,6 +56,22 @@ The living list of every effect and sound in ENU Den and who sees or hears it. T
 | `ui/send-sparkle`                          | messenger       | I send a message                          | me                        | me                    | fresh                                             |
 | `ui/quest-done`                            | messenger, town | I complete a to-do                        | owner                     | me                    | `ui/quest-complete` (no text)                     |
 
+## Sprite-sheet pieces
+
+Pictures drawn in `packages/sprites` (part of the regular sheets, not `packages/fx` strips). They follow the gate of
+whatever shows them; the art itself never implies activity. Bump `SPRITE_REVISION` (both spec copies) whenever this
+art changes, so cached sheets are fetched again.
+
+| piece                                                        | sheet     | shown when                              | gate                | seen by                 |
+| ------------------------------------------------------------ | --------- | --------------------------------------- | ------------------- | ----------------------- |
+| robe, wand and pointy hat (`hat`, on by default)             | avatar    | always                                  | the avatar is shown | whoever sees the avatar |
+| wand-tip twinkle (idle frames 1 and 3)                       | avatar    | always, as part of idle                 | the avatar is shown | whoever sees the avatar |
+| `cast` (raise, star flash at `AVATAR_WAND_TIP`, hold, lower) | avatar    | I cast a spell (cast pose, ADR 0008 §3) | spell gate          | all                     |
+| companion `eat` (munching a snack)                           | companion | 간식 주기                               | owner               | me                      |
+| companion `cast` (paws up with a sparkle)                    | companion | 마법 보여 줘                            | owner               | me                      |
+| `fireball` … `firework` (effects row 3, 24–29)               | effects   | the spell menu, spell toasts            | spell gate          | caster; target          |
+| `shield` (30), `scroll` (31)                                 | effects   | a blocked spell; 오늘의 퀘스트          | spell gate; owner   | caster; me              |
+
 ## Sounds
 
 | id                                                                    | category    | plays when                                        | who hears                             |

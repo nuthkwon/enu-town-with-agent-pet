@@ -1394,7 +1394,7 @@ describe('avatar sprites', () => {
     expect(ok.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
     const buf = Buffer.from(await ok.arrayBuffer());
     expect(buf.subarray(1, 4).toString('ascii')).toBe('PNG');
-    expect(buf.readUInt32BE(16)).toBe(320);
+    expect(buf.readUInt32BE(16)).toBe(448);
     expect(buf.readUInt32BE(20)).toBe(128);
   });
 });

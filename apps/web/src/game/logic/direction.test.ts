@@ -21,6 +21,10 @@ describe('sprite spec copy', () => {
     expect(spec.AVATAR_ANIMS).toEqual(source.AVATAR_ANIMS);
     expect(spec.AVATAR_ORIGIN).toEqual(source.AVATAR_ORIGIN);
     expect(spec.AVATAR_WALK_LIFT).toEqual(source.AVATAR_WALK_LIFT);
+    expect(spec.AVATAR_CAST_FLASH_FRAME).toBe(source.AVATAR_CAST_FLASH_FRAME);
+    expect(spec.AVATAR_WAND_TIP).toEqual(source.AVATAR_WAND_TIP);
+    expect(spec.AVATAR_COLUMNS).toBe(14);
+    expect(spec.AVATAR_ANIMS.cast).toEqual({ start: 10, frames: 4, frameRate: 10, repeat: 0 });
     expect(spec.PET_FRAME).toBe(source.PET_FRAME);
     expect(spec.PET_COLUMNS).toBe(source.PET_COLUMNS);
     expect(spec.PET_DIRECTIONS).toEqual(source.PET_DIRECTIONS);
@@ -29,13 +33,14 @@ describe('sprite spec copy', () => {
     expect(spec.COMPANION_FRAME).toBe(source.COMPANION_FRAME);
     expect(spec.COMPANION_COLUMNS).toBe(source.COMPANION_COLUMNS);
     expect(spec.COMPANION_EXPRESSIONS).toEqual(source.COMPANION_EXPRESSIONS);
+    expect(spec.COMPANION_COLUMNS).toBe(26);
     expect(spec.SPRITE_PATHS.companion('cat')).toBe(source.SPRITE_PATHS.companion('cat'));
     expect(spec.SPRITE_PATHS.petApi('pc-cat-mint')).toBe(source.SPRITE_PATHS.petApi('pc-cat-mint'));
     expect(spec.EFFECT_FRAME).toBe(source.EFFECT_FRAME);
     expect(spec.EFFECT_FRAMES).toEqual(source.EFFECT_FRAMES);
     expect(spec.EFFECT_COLUMNS).toBe(source.EFFECT_COLUMNS);
     expect(spec.EFFECT_ROWS).toBe(source.EFFECT_ROWS);
-    expect(spec.EFFECT_ROWS).toBe(3);
+    expect(spec.EFFECT_ROWS).toBe(4);
     expect(spec.EFFECT_FRAMES).toMatchObject({
       headset: 16,
       focus: 17,
@@ -45,11 +50,39 @@ describe('sprite spec copy', () => {
       link: 21,
       clipboard: 22,
       plane: 23,
+      fireball: 24,
+      coffee: 25,
+      bolt: 26,
+      potion: 27,
+      palm: 28,
+      firework: 29,
+      shield: 30,
+      scroll: 31,
     });
     expect(spec.SPRITE_PATHS.effects).toBe(source.SPRITE_PATHS.effects);
     expect(spec.SPRITE_PATHS.pet('cat')).toBe(source.SPRITE_PATHS.pet('cat'));
     expect(spec.SPRITE_PATHS.avatarStatic('av-m-short-black-sky-warm')).toBe(
       source.SPRITE_PATHS.avatar('av-m-short-black-sky-warm'),
+    );
+    expect(spec.SPRITE_PATHS.companion('cat')).toBe(source.SPRITE_PATHS.companion('cat'));
+    expect(spec.SPRITE_PATHS.manifest).toBe(source.SPRITE_PATHS.manifest);
+  });
+
+  it('puts the sprite revision on every sprite URL (immutable caching at stable URLs)', () => {
+    expect(spec.SPRITE_REVISION).toBe(source.SPRITE_REVISION);
+    const rev = `?r=${spec.SPRITE_REVISION}`;
+    for (const url of [
+      spec.SPRITE_PATHS.manifest,
+      spec.SPRITE_PATHS.effects,
+      spec.SPRITE_PATHS.pet('cat'),
+      spec.SPRITE_PATHS.companion('cat'),
+      spec.SPRITE_PATHS.petApi('pt-cat-mint'),
+      spec.SPRITE_PATHS.avatarStatic('av-m-short-black-sky-warm'),
+      spec.SPRITE_PATHS.avatarApi('av-m-short-black-sky-warm-n'),
+    ])
+      expect(url.endsWith(rev), url).toBe(true);
+    expect(spec.SPRITE_PATHS.avatarApi('av-m-short-black-sky-warm-n')).toBe(
+      `/api/sprites/avatar/av-m-short-black-sky-warm-n${rev}`,
     );
   });
 });
@@ -66,8 +99,10 @@ describe('direction <-> sprite rows', () => {
   it('computes avatar frame ranges per row', () => {
     expect(avatarFrames(Dir.Down, 'idle')).toEqual({ start: 0, end: 3 });
     expect(avatarFrames(Dir.Down, 'walk')).toEqual({ start: 4, end: 9 });
-    expect(avatarFrames(Dir.Left, 'idle')).toEqual({ start: 10, end: 13 });
-    expect(avatarFrames(Dir.Up, 'walk')).toEqual({ start: 34, end: 39 });
+    expect(avatarFrames(Dir.Down, 'cast')).toEqual({ start: 10, end: 13 });
+    expect(avatarFrames(Dir.Left, 'idle')).toEqual({ start: 14, end: 17 });
+    expect(avatarFrames(Dir.Right, 'cast')).toEqual({ start: 38, end: 41 });
+    expect(avatarFrames(Dir.Up, 'walk')).toEqual({ start: 46, end: 51 });
   });
 
   it('computes pet frame ranges for left/right rows', () => {

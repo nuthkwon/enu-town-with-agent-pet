@@ -25,9 +25,9 @@ describe('pet sheet keys', () => {
   });
 
   it('use the static files for the base look and the API for tints', () => {
-    expect(petSheetUrl('owl')).toBe('/assets/sprites/pets/owl.png');
-    expect(companionSheetUrl('owl')).toBe('/assets/sprites/companions/owl.png');
-    expect(petSheetUrl('owl', 'mint')).toBe('/api/sprites/pet/pt-owl-mint');
-    expect(companionSheetUrl('owl', 'sky')).toBe('/api/sprites/pet/pc-owl-sky');
+    expect(petSheetUrl('owl')).toBe('/assets/sprites/pets/owl.png?r=2');
+    expect(companionSheetUrl('owl')).toBe('/assets/sprites/companions/owl.png?r=2');
+    expect(petSheetUrl('owl', 'mint')).toBe('/api/sprites/pet/pt-owl-mint?r=2');
+    expect(companionSheetUrl('owl', 'sky')).toBe('/api/sprites/pet/pc-owl-sky?r=2');
   });
 });

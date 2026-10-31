@@ -372,6 +372,8 @@ export const ko = {
     hairColor: '머리 색',
     outfit: '옷 색',
     skin: '피부 톤',
+    hat: '마법사 모자',
+    hatHelp: '기본은 켜져 있어요. 끄면 모자를 벗고 머리 모양이 그대로 보여요.',
     wings: '요정 날개',
     wingsHelp: '기본은 꺼져 있어요. 날개는 원래 펫만 달아요.',
     bodyLabel: { f: '여성형', m: '남성형' } satisfies Record<BodyType, string>,

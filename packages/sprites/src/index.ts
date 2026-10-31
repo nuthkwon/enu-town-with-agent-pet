@@ -26,7 +26,7 @@ export { renderEffectsImage, renderEffectFrame } from './effects';
 export { paintTile } from './parts/tiles';
 export { AVATAR_SWATCHES } from './palette';
 
-/** Avatar sheet PNG: 10 columns (idle 4 + walk 6) x 4 rows (down, left, right, up) of 32x32. */
+/** Avatar sheet PNG: 14 columns (idle 4, walk 6, cast 4) x 4 rows (down, left, right, up) of 32x32. */
 export function renderAvatarSheet(preset: AvatarPreset): Buffer {
   return encodePng(renderAvatarImage(preset));
 }
@@ -36,7 +36,7 @@ export function renderPetSheet(species: PetSpecies, opts?: { sleeping?: boolean;
   return encodePng(renderPetImage(species, opts));
 }
 
-/** Companion sheet PNG: one row of 22 frames of 24x24 (COMPANION_EXPRESSIONS). */
+/** Companion sheet PNG: one row of 26 frames of 24x24 (COMPANION_EXPRESSIONS). */
 export function renderCompanionSheet(species: PetSpecies, tint: PetTint = 'base'): Buffer {
   return encodePng(renderCompanionImage(species, tint));
 }

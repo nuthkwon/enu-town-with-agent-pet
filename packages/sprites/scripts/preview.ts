@@ -5,15 +5,19 @@
  *   pnpm --filter @enu/sprites exec tsx scripts/preview.ts [outDir]
  *
  * Files: avatars-1.png / avatars-2.png (14 seat presets, x4), avatars-2x.png (all presets, x2),
- * hair-styles.png (8 styles x 4 directions, x6), avatar-anim.png (full sheets with shadows, x5),
- * pets.png (x4), pets-zoom.png (x6), tileset.png (x4), tiles-seamless.png (3x3 repeats, x2),
- * effects.png (x8), scene.png (the generated office map with every seat, x2) + zoomed crops.
+ * hair-styles.png (8 styles x 4 directions, x6), wizards.png (every hair style x both bodies, all outfits,
+ * all directions: idle, hop, cast, x2), wizards-1x.png (the same at actual size on the carpet),
+ * avatar-anim.png (full sheets with shadows, x5), pets.png (x4), pets-zoom.png (x6),
+ * companions.png (every species x every companion frame, x3), tileset.png (x4),
+ * tiles-seamless.png (3x3 repeats, x2), effects.png (x8), scene.png (the generated office map with every seat,
+ * x2) + zoomed crops.
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   type AvatarPreset,
+  BODY_TYPES,
   HAIR_COLORS,
   HAIR_STYLES,
   OUTFIT_COLORS,
@@ -24,6 +28,7 @@ import {
   type TileName,
 } from '@enu/shared';
 import { renderAvatarFrame, renderAvatarImage } from '../src/avatar';
+import { renderCompanionFrame } from '../src/companion';
 import { Canvas } from '../src/draw/canvas';
 import { hex } from '../src/draw/color';
 import { renderEffectFrame, renderEffectsImage } from '../src/effects';
@@ -37,6 +42,8 @@ import {
   AVATAR_FRAME,
   type AvatarAnim,
   type AvatarDirection,
+  COMPANION_EXPRESSIONS,
+  type CompanionExpression,
   PET_ANIMS,
   PET_FRAME,
   type PetAnim,
@@ -81,14 +88,18 @@ const FRAMES: [AvatarDirection, AvatarAnim, number][] = [
   ['down', 'walk', 0],
   ['down', 'walk', 1],
   ['down', 'walk', 2],
+  ['down', 'cast', 1],
   ['left', 'idle', 0],
   ['left', 'walk', 0],
   ['left', 'walk', 2],
   ['left', 'walk', 3],
+  ['left', 'cast', 1],
   ['right', 'idle', 0],
+  ['right', 'cast', 1],
   ['up', 'idle', 0],
   ['up', 'walk', 0],
   ['up', 'walk', 3],
+  ['up', 'cast', 1],
 ];
 
 function avatarSheet(list: AvatarPreset[]): Canvas {
@@ -135,6 +146,67 @@ save(
     return c;
   })(),
   6,
+);
+
+/* every hair style x both bodies (outfits, hair colours and skins cycle so all of them appear), all directions:
+   idle, the twinkle, a hop in the air, and the cast (wind-up, flash, lower) */
+const WIZARD_FRAMES: [AvatarAnim, number][] = [
+  ['idle', 0],
+  ['idle', 3],
+  ['walk', 2],
+  ['cast', 0],
+  ['cast', 1],
+  ['cast', 3],
+];
+const wizardPresets: AvatarPreset[] = HAIR_STYLES.flatMap((hair, i) =>
+  BODY_TYPES.map((body, b) => ({
+    body,
+    hair,
+    hairColor: HAIR_COLORS[(i * 3 + b) % HAIR_COLORS.length]!,
+    outfit: OUTFIT_COLORS[(i + b * 4) % OUTFIT_COLORS.length]!,
+    skin: SKIN_TONES[(i + b) % SKIN_TONES.length]!,
+    wings: i % 4 === 3 && b === 1,
+    hat: true,
+  })),
+);
+save(
+  'wizards.png',
+  (() => {
+    const cell = AVATAR_FRAME + 1;
+    const cols = AVATAR_DIRECTIONS.length * WIZARD_FRAMES.length;
+    const c = background(cols * cell + 1, wizardPresets.length * cell + 1);
+    wizardPresets.forEach((p, row) =>
+      AVATAR_DIRECTIONS.forEach((dir, d) =>
+        WIZARD_FRAMES.forEach(([anim, i], k) =>
+          c.blit(
+            renderAvatarFrame(p, dir, anim, i),
+            1 + (d * WIZARD_FRAMES.length + k) * cell,
+            1 + row * cell,
+          ),
+        ),
+      ),
+    );
+    return c;
+  })(),
+  2,
+);
+save(
+  'wizards-1x.png',
+  (() => {
+    const carpet = paintTile('floor_carpet');
+    const step = 22;
+    const c = new Canvas(wizardPresets.length * step + 12, AVATAR_DIRECTIONS.length * 30 + 8);
+    for (let y = 0; y < c.height; y += TILE) for (let x = 0; x < c.width; x += TILE) c.blit(carpet, x, y);
+    const shadow = renderEffectFrame('shadow');
+    AVATAR_DIRECTIONS.forEach((dir, r) =>
+      wizardPresets.forEach((p, k) => {
+        c.blit(shadow, k * step + 8, r * 30 + AVATAR_FEET_Y - 9);
+        c.blit(renderAvatarFrame(p, dir, 'idle', 0), k * step, r * 30);
+      }),
+    );
+    return c;
+  })(),
+  1,
 );
 
 /* full sheets (all frames) with the ground shadow, to judge the bounce */
@@ -193,6 +265,23 @@ for (const anim of ['idle', 'hop', 'sleep'] as const)
   for (let i = 0; i < PET_ANIMS[anim].frames; i++) allPetFrames.push(['left', anim, i]);
 allPetFrames.push(['right', 'idle', 0], ['right', 'hop', 2], ['right', 'sleep', 0]);
 save('pets.png', petSheet(allPetFrames), 4);
+
+/* the pet-room companion: every species x every frame (idle ... sleep, eat, cast) */
+save(
+  'companions.png',
+  (() => {
+    const frames = (Object.keys(COMPANION_EXPRESSIONS) as CompanionExpression[]).flatMap((e) =>
+      Array.from({ length: COMPANION_EXPRESSIONS[e].frames }, (_, i) => [e, i] as const),
+    );
+    const cell = PET_FRAME + 1;
+    const c = background(frames.length * cell + 1, PET_SPECIES.length * cell + 1);
+    PET_SPECIES.forEach((sp, row) =>
+      frames.forEach(([e, i], col) => c.blit(renderCompanionFrame(sp, e, i), 1 + col * cell, 1 + row * cell)),
+    );
+    return c;
+  })(),
+  3,
+);
 save(
   'pets-zoom.png',
   petSheet([

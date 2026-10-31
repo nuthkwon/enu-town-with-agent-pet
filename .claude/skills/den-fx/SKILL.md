@@ -99,6 +99,9 @@ one-shots ≤ 2.4 s, loops ≤ 4 s; one strip ≤ 48 KB, all strips ≤ 900 KB.
 - `pnpm sprites:build` bakes every effect into `apps/web/public/assets/sprites/fx/*.png` and
   `packages/fx/src/catalog.gen.ts`. Commit both with the effect. Never edit `packages/fx/vendor/pixelfx` (update
   with `pnpm fx vendor <sha>`).
+- Art in `packages/sprites` (avatars, pets, companions, effect icons) is cached `immutable` at stable URLs: bump
+  `SPRITE_REVISION` in `packages/sprites/src/spec.ts` and `apps/web/src/game/spriteSpec.ts` when it changes, and
+  look at it with `pnpm --filter @enu/sprites exec tsx scripts/preview.ts <dir outside the repo>`.
 
 ## 7. Wire it
 

@@ -76,15 +76,28 @@ export function petFrameColors(art: PetArt, tint: PetTint, asleep: boolean): Col
   return asleep ? { ...colors, w: colors.b, e: colors.b, E: INK, ...art.asleep } : colors;
 }
 
+/** Frame position of a body template's top-left cell for a pose (before squash and stretch). */
+export function petBodyOrigin(body: Template, pose: PetPose): [number, number] {
+  return [Math.floor((PET_FRAME - templateWidth(body)) / 2) - 1, pose.bottom - body.length + 1];
+}
+
+/**
+ * Where template row `row` ends up in a frame: squash (+1) drops the rows at and above `bendRow` by one, stretch
+ * (-1) lifts the rows above it (see `bend`).
+ */
+export function petRowY(art: PetArt, body: Template, pose: PetPose, row: number): number {
+  const y = petBodyOrigin(body, pose)[1] + row;
+  if (pose.squash > 0 && row <= art.bendRow) return y + 1;
+  if (pose.squash < 0 && row < art.bendRow) return y - 1;
+  return y;
+}
+
 /**
  * Draws one facing-left pet frame from an explicit template, colours and pose (the town sheet and the companion
  * expressions share it). The art's own template and colours give exactly the town sheet's pixels.
  */
 export function drawPet(art: PetArt, body: Template, colors: ColorMap, pose: PetPose): Canvas {
-  const w = templateWidth(body);
-  const h = body.length;
-  const x0 = Math.floor((PET_FRAME - w) / 2) - 1;
-  const y0 = pose.bottom - h + 1;
+  const [x0, y0] = petBodyOrigin(body, pose);
 
   let canvas = new Canvas(PET_FRAME, PET_FRAME);
   stamp(canvas, body, x0, y0, colors);
