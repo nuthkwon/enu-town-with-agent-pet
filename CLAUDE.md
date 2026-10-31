@@ -36,6 +36,14 @@ show.
   writes of authors who share activity; everything else one digest per person per day (no write counts or order).
   Owner edits and deletes remove entries; write times are kept for the current office day only; live pushes only in
   office hours. No presence, status or `now` entries, no rankings, no list of people without a log.
+- **Effects, spells and sound (ADR 0008).** Spells are public like a wave (office hours, both drawn) and never
+  stored, logged or audited; `accept_spells` (마법 받지 않기) is all colleagues learn. Sound plays only for what I did and
+  what was addressed to me (`decideSfx` in `apps/web/src/sound/policy.ts`): a third party sees a spell but hears
+  nothing, a shielded target hears nothing, pet bubbles are silent. No numbers, scores or tallies (combo and raid are
+  moments, never counted); floating words are onomatopoeia from `ko.ts`; no text inside an effect and no invented pet
+  text; the cast pose shows only a real cast; work is celebrated only on its owner's screen. Effects are
+  pixelfx-contract code baked to strips and sounds are synthesized recipes: no image or audio files. Make or change
+  either with the `den-fx` skill (render, LOOK at the picture, fix the worst thing, check).
 - **Avatars are never steered.** Every avatar state comes from `resolveActivity` + `projectForColleagues` over real
   inputs (the owner's status, an open town, their Claude's calendar blocks) — never fabricate motion or activity.
   Claude's `now` report and the work log only label an avatar or desk plate; people are grouped only when their own
@@ -70,6 +78,13 @@ show.
 - `packages/auth` — Better Auth configuration factory. `packages/mcp-tools` — the six MCP tools (+ `postPetReplies`, the reply core shared with the pet channel).
 - `packages/pet-channel` — the Claude Code channel plugin (stdio server `den`, tools `reply`/`status`, `enu-pet` CLI),
   bundled into `claude/plugins/enu-den-channel/server/den-channel.mjs`. Commit the bundle; CI checks that it is fresh.
+- `packages/fx` — effects as code: the vendored pixelfx runtime (never edited), `effects/<group>/<name>.js`, the
+  render/check/bake CLI and `catalog.gen.ts`. The web imports only `@enu/fx/catalog`; strips are baked into
+  `apps/web/public/assets/sprites/fx` (commit them; CI checks they are fresh). `records/` (gitignored) holds renders.
+- `packages/sfx` — sound effects as code: a deterministic synth with loudness normalisation, one recipe per sound in
+  `src/recipes`, and a render/check CLI that draws each sound (waveform, spectrogram, pitch track) to look at.
+- `.claude/skills/den-fx` — the effects and sound workflow; `.claude/hooks/fx-after-edit.mjs` (PostToolUse) renders and
+  checks an edited effect or recipe and points at the picture.
 - `claude/` — Claude org plugins: `enu-den` (skills `enu-den-checkin`, `enu-den-setup`) and `enu-den-channel`.
   `docs/` — runbooks (Korean).
 
@@ -94,7 +109,9 @@ pnpm install                      # pnpm 12 (see packageManager)
 pnpm check:policy && pnpm lint && pnpm typecheck && pnpm test
 pnpm test:int                     # needs Postgres; DATABASE_URL_TEST must end with _test
 pnpm --filter @enu/<pkg> test     # one package
-pnpm sprites:build && pnpm map:check
+pnpm sprites:build && pnpm map:check   # sprites:build also bakes the effects
+pnpm fx:list [words] | fx:new <group>/<name> [--from <lib id>] | fx:render <id> | fx:check [ids]
+pnpm sfx:list | sfx:render <id|prefix.*|all> | sfx:check [ids]
 pnpm --filter @enu/pet-channel bundle   # after changing packages/pet-channel (commit the bundle)
 pnpm db:generate && pnpm db:migrate && pnpm seed:seats
 pnpm dev                          # web :3000, realtime :2567, worker

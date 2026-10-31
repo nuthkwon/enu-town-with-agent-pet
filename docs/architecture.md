@@ -142,6 +142,8 @@ See `CLAUDE.md` for the package map. The key invariants live in pure functions w
 | `packages/domain/src/worklog-feed.ts`   | The work feed: `HH:MM` only for today's office-hours writes of authors who share activity; everything else one digest per person per day, ordered by team, desk and name                                                                                                              |
 | `packages/domain/src/link-state.ts`     | Not linked / linked / stale                                                                                                                                                                                                                                                           |
 | `packages/domain/src/pets.ts`           | Pet limits and looks; `decideReplyAdmission`: the first lane to answer wins, claims are 10-minute leases, the connector lane only in office hours                                                                                                                                     |
+| `packages/domain/src/spells.ts`         | `SpellMemory`: a spell bounces off a focus or meeting shield, a returned high-five within 10 s is a combo, the third distinct caster within 60 s a raid; nothing is counted or kept beyond those windows                                                                              |
+| `apps/web/src/sound/policy.ts`          | `decideSfx`: sound only for what I did and what was addressed to me; a third party, a shielded target and pet bubbles are silent; a background tab rings only for a call or a DM                                                                                                      |
 | `packages/map/src/spots.ts`             | Where the director may place people and pets; allocation is deterministic and never doubles up a tile                                                                                                                                                                                 |
 
 ## Map
@@ -158,6 +160,23 @@ It also writes the hash that realtime compares against.
 ## Art
 
 All art is original pixel art defined in code (`packages/sprites`): wizard avatars 32×32 in 4 directions (a robe in the outfit colours, a wand whose tip twinkles, a pointy hat unless the person takes it off) with idle-bounce, hop-walk and a 4-frame cast, fairy pets 24×24 with wings (every employee's default pet is a different species; extra pets use one of five tints, mixed into the species' own palette keys), companion expression sheets for the pet rooms (26 frames: idle, blink, listen, think, talk, happy, sleep, eat, cast), office tiles 32×32 and effects, including the activity icons shown over heads and desk plates and the spell, shield and quest-scroll icons. The web app renders avatar sheets and tinted pet and companion sheets on demand (`/api/sprites/avatar/:key`, `/api/sprites/pet/:key`). The build writes the pets, tiles and default avatars to `apps/web/public/assets`. Sheets are cached `immutable` at stable URLs, so every sprite URL carries `?r=<SPRITE_REVISION>` (bumped with the art; the routes ignore the query).
+
+## Effects and sound
+
+Effects are code in the pixelfx contract ([ADR 0008](adr/0008-wizard-office-effects-and-sound.md),
+`packages/fx/effects/<group>/<name>.js`): a pure `draw(p, t, o)` or a seeded `create(o)` over pixelfx's vendored
+runtime. `pnpm fx:render` draws them over our floors next to our own avatar for review and `pnpm sprites:build` bakes
+each into a one-row strip (`apps/web/public/assets/sprites/fx`, `?v=<hash>`) with `packages/fx/src/catalog.gen.ts`.
+The town plays strips with `FxPlayer` (world camera only; projectiles on a Bézier arc, loops that follow someone,
+floating onomatopoeia on the overlay camera); the messenger plays them as CSS `steps()` animations (`FxSprite`), never
+on a canvas. Spells travel as one public `spell` message, so every screen plays the same show; the cast pose is the
+caster's own sheet animation.
+
+Sounds are recipes in `packages/sfx` rendered by a small deterministic synthesizer and normalised to a loudness target
+per category (BS.1770). The browser renders them at the AudioContext's rate after the first gesture
+(`apps/web/src/sound`, the only place the Web Audio API is used); `pnpm sfx:render` writes the same samples as WAV and a
+picture for review. No image or audio files are added for either. Sound settings stay in the browser; only
+`accept_spells` is stored.
 
 ## Phase 2 seam
 

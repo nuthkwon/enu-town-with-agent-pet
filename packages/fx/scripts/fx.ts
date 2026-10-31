@@ -273,6 +273,10 @@ async function render(): Promise<number> {
 
 async function check(): Promise<number> {
   const ids = rest.length ? resolveEffectIds(rest) : effectIds();
+  if (ids.length === 0) {
+    console.log(`no effect matches ${rest.join(' ')} (try \`pnpm fx:list\`)`);
+    return 1;
+  }
   let fails = 0;
   for (const id of ids) {
     const c = checkEffect(await loadEffect(id));

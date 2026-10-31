@@ -286,6 +286,13 @@ recent[{author, sent_at, text}]}], items[{message_id, pet_id, sent_at, owner_tex
   always-visible visibility notice, per-message hide, composer with quick chips, wait hints.
 - Colleague room: read-only, dates only, REST only, no live region.
 - `DenLiveRegion` is the only `role=status` that may contain pet text, and only for the owner.
+- Wizard office ([ADR 0008](../adr/0008-wizard-office-effects-and-sound.md)): the pet room's familiar can be patted,
+  fed and asked for a little spell show (pictures only), hatches when the pet is new (`?hatch=1` after the wizard),
+  shows a summoning circle when my Claude's reply lands and zzz while it sleeps; my to-dos are 오늘의 퀘스트 and
+  completing one celebrates on my screen only. A colleague's page and our DM have a `마법` button (the town's
+  spellbook). Calls, waves, spells and DMs toast in the messenger too (`notices.ts`, shared with the town), with the
+  sounds of the gate table; the speaker button sits in the list's header. Clicking someone in the town panel opens
+  their page.
 
 ## 9. Privacy, logs, retention
 

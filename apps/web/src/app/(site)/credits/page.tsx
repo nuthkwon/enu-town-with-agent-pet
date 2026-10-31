@@ -11,6 +11,7 @@ export default function CreditsPage() {
   const groups: [string, readonly string[]][] = [
     [c.fontsTitle, c.fonts],
     [c.artTitle, c.art],
+    [c.effectsTitle, c.effects],
     [c.libsTitle, c.libs],
     [c.inspirationTitle, c.inspiration],
   ];

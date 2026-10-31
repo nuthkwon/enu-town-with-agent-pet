@@ -50,9 +50,9 @@ The living list of every effect and sound in ENU Den and who sees or hears it. T
 | `pet/zzz` (loop)                           | pet room        | companion asleep                          | —                         | whoever sees the room | `status/sleep`                                    |
 | `pet/munch`                                | pet room        | 간식 주기                                 | owner                     | me                    | fresh                                             |
 | `pet/mini-*`                               | pet room        | 마법 보여 줘                              | owner                     | me                    | fresh                                             |
-| `ui/summon-reply`                          | pet room        | my pet's reply arrives                    | owner                     | me                    | `arcane/rune-circle`                              |
-| `ui/heart-rise`                            | pet room        | my pet's reply arrives                    | owner                     | me                    | `status/charmed`                                  |
-| `ui/pat-heart`                             | pet room        | 쓰다듬기                                  | owner                     | me                    | `pickups/heart-pickup`                            |
+| `pet/summon-reply`                         | pet room        | my pet's reply arrives                    | owner                     | me                    | `arcane/rune-circle`                              |
+| `pet/heart-rise`                           | pet room        | my pet's reply arrives                    | owner                     | me                    | `status/charmed`                                  |
+| `pet/pat-heart`                            | pet room        | 쓰다듬기                                  | owner                     | me                    | `pickups/heart-pickup`                            |
 | `ui/send-sparkle`                          | messenger       | I send a message                          | me                        | me                    | fresh                                             |
 | `ui/quest-done`                            | messenger, town | I complete a to-do                        | owner                     | me                    | `ui/quest-complete` (no text)                     |
 

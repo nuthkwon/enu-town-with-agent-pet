@@ -1,6 +1,6 @@
 # ADR 0008 — The wizard office: spells, auras, familiars and quests, effects as code, synthesized sound
 
-Status: proposed (2026-10-31). Go-live is blocked on the "Review before rollout" list in
+Status: accepted (2026-10-31). Go-live is blocked on the "Review before rollout" list in
 [ADR 0004](0004-town-is-a-visualization.md#review-before-rollout), which this ADR extends.
 
 ## Context

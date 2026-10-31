@@ -105,30 +105,56 @@ one-shots ≤ 2.4 s, loops ≤ 4 s; one strip ≤ 48 KB, all strips ≤ 900 KB.
 
 ## 7. Wire it
 
-- Town (Phaser): `this.fx.play(id, at, opts)` in `apps/web/src/game/entities/Fx.ts` — it registers the sprite with
-  `stage.world()`, caps the count, skips hidden tabs and reduced motion. Never a bare `scene.add` for an effect. Add a
-  counter to `fxDrawn` for tests.
-- Messenger: `<FxSprite id … />` or `useFx().play(id, element)` (CSS `steps()` over the strip). Never a `<canvas>`:
-  the page has exactly one (Phaser's).
-- Floating words: the town's overlay text layer with a string from `ko.ts`.
+- Town (Phaser): `FxPlayer` in `apps/web/src/game/fx/FxPlayer.ts`, owned by `WorldScene` as `this.player`:
+  - `player.play(id, spotOn(id, feet), { groundY, flipX, delayMs, onDone })` — one pass, origin on the effect's
+    baked anchor (`spotOn` reads it from the catalog);
+  - `player.loop(id, at)` → `{ move, stop }` for auras that follow someone (move it every frame);
+  - `player.fly(id, from, to, { rotate | mirrorLeft, lift, onArrive })` for projectiles (strips drawn flying right);
+  - `player.shout(ko.magic…, at, colour)` for a floating word in the overlay layer;
+  - `player.chain(a, b, seed)` for a lightning link.
+
+  It registers every sprite with `stage.world()` (never a bare `scene.add`), caps the count, creates nothing in a
+  hidden tab and drops projectiles and loops with reduced motion. Add the id to `TOWN_FX`
+  (`apps/web/src/game/fx/strips.ts`, preloaded; a unit test checks it is baked) and choreograph spells in
+  `game/fx/spells.ts`. The debug hook counts strips (`fxStrips()`) and spells (`fxDrawn().spell`) for e2e.
+
+- Messenger and pet room: `<FxSprite id at scale />` or `useFxLayer().play(id, at, scale)`
+  (`apps/web/src/components/fx/FxSprite.tsx`, CSS `steps()` over the strip, put `layer` in a positioned box); the pet
+  room draws at the companion's 4×. `useQuestCelebration` is the quest seal + jingle. Never a `<canvas>` (ESLint).
+- Floating words come from `ko.ts` (`ko.magic`), never from the effect.
 
 ## 8. Sounds
 
-- Say it in one line: character, pitch contour, length, category (`ui` −24 LUFS, `notify` −20, `pet` −21).
-- One file per sound: `packages/sfx/src/recipes/<id>.ts`.
-- `pnpm sfx:render <id>` writes `records/sfx/<id>.wav` and `.png` (waveform, spectrogram, pitch track, metrics).
-  You cannot listen: open the PNG and read the note track and the numbers; fix the worst thing, three rounds.
-- Fix table: click at start → attack ≥ 3 ms; harsh → lowpass, less square; muddy → highpass 150 Hz; drags → shorter
-  release; too loud → the category target or `trimDb`, never the master.
-- `pnpm sfx:check`; wire it through `decideSfx` (`apps/web/src/sound/policy.ts`) so the gate table decides. Only
-  `apps/web/src/sound` touches audio (ESLint enforces it). No audio files (`scripts/verify-policy.sh`).
+- Say it in one line: character, pitch contour, length, category (`ui` −24 LUFS, `spell` −22, `notify` −20, `pet`
+  −21; the synth normalises to it).
+- One file per sound: `packages/sfx/src/recipes/<group>-<name>.ts` (id `<group>.<name>`), listed in
+  `recipes/index.ts`. A recipe is data: voices (sine, triangle, square, pulse, saw, noise) with envelopes, glides,
+  vibrato and filter sweeps, plus echo and master filters.
+- `pnpm sfx:render <id|prefix.*|all>` writes `records/sfx/<id>.wav` and `<id>.png` (waveform with the peak ceiling,
+  log-frequency spectrogram with a C-note grid and the 120 Hz / 10 kHz limits, pitch track, metrics, the notes
+  heard). You cannot listen: open the PNG, read the contour, the attack, the tail and the notes; fix the worst thing,
+  three rounds. `_sheet.png` puts every sound side by side so a family stays coherent.
+- Fix table: harsh → lowpass, triangle instead of square; muddy or boomy → highpass 150 Hz; drags → shorter decay;
+  the release does not finish → shorten the last voice's decay or quieten it; a late start → nothing before 30 ms;
+  two sounds alike → another key, contour or timbre (the quest jingle is C major, the heal A major).
+- `pnpm sfx:check` (silent ends, an immediate start, no chopped tail, a finished release, band shares, length,
+  loudness, peak, determinism at 44.1 and 48 kHz). Then wire it through the gate table `decideSfx`
+  (`apps/web/src/sound/policy.ts`, with a test row) or, for something I did myself, `playMine(id)`. Only
+  `apps/web/src/sound` touches the Web Audio API (ESLint); there are no audio files (`scripts/verify-policy.sh`).
+
+## 8½. The hook does the render for you
+
+`.claude/settings.json` runs `.claude/hooks/fx-after-edit.mjs` after every edit of an effect
+(`packages/fx/effects/<group>/<name>.js`) or a recipe (`packages/sfx/src/recipes/*.ts`): it renders it, runs its
+check and tells you which PNG to open. Open it and look before the next edit. It never blocks an edit.
 
 ## 9. Test checklist
 
 - The gate row in `effects-spec.md`; a `decideSfx` test row for every sound.
 - Unit: `pnpm --filter @enu/fx test`, `pnpm --filter @enu/sfx test`, the web unit tests.
-- e2e: a counter for the new effect (`fxDrawn`) and for its sound (`__ENU_DEN_SFX__`), including **a third party
-  who must see the public effect and hear nothing**; still exactly one `<canvas>`.
+- e2e: a counter for the new effect (`fxStrips()` / `fxDrawn()`) and for its sound (`sfxPlayed(page)`, after
+  `wakeSound(page)`), including **a third party who must see the public effect and hear nothing**
+  (`apps/e2e/tests/spells.spec.ts` is the model); still exactly one `<canvas>`.
 
 ## 10. Demo
 

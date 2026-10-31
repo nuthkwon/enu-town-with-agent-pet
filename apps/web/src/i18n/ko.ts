@@ -801,6 +801,14 @@ export const ko = {
     artTitle: '픽셀 아트',
     art: [
       '아바타, 펫, 사무실 타일은 이 저장소에서 코드로 직접 그린 오리지널 픽셀 아트입니다. 외부 에셋을 쓰지 않았습니다.',
+      '마법사 로브·지팡이·뾰족 모자는 특정 작품이 아닌 일반적인 마법사 모티프로 그렸습니다.',
+    ],
+    effectsTitle: '이펙트와 효과음',
+    effects: [
+      'pixelfx — Patch, MIT License. 이펙트를 코드로 그리고 렌더해서 보며 다듬는 도구와 방법(packages/fx/vendor/pixelfx).',
+      'Sprite Fusion VFX — Hugo Duprez, MIT License. pixelfx가 일부 이펙트를 각색해 온 원작(각 파일 머리말에 표기).',
+      '이펙트는 모두 pixelfx 규약의 코드로 이 저장소에서 새로 그렸거나 각색했고, 각색한 파일에는 출처를 적었습니다.',
+      '효과음은 녹음이나 음원 파일 없이 이 저장소의 코드(packages/sfx)로 합성합니다.',
     ],
     libsTitle: '오픈소스 라이브러리',
     libs: [
