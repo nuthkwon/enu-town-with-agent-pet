@@ -124,12 +124,20 @@ export function sfxPlayed(page: Page): Promise<string[]> {
   );
 }
 
-/** Browsers start audio only after a gesture: a harmless key press wakes this page's sound. */
+/**
+ * Browsers start audio only after a gesture: a harmless key press wakes this page's sound (pressed again until
+ * the page has hydrated and its sound engine listens).
+ */
 export async function wakeSound(page: Page): Promise<void> {
-  await page.keyboard.press('Shift');
   await expect
-    .poll(() =>
-      page.evaluate(() => (window as unknown as { __ENU_DEN_SFX__?: SfxHook }).__ENU_DEN_SFX__?.state()),
+    .poll(
+      async () => {
+        await page.keyboard.press('Shift');
+        return page.evaluate(
+          () => (window as unknown as { __ENU_DEN_SFX__?: SfxHook }).__ENU_DEN_SFX__?.state() ?? null,
+        );
+      },
+      { timeout: 30_000 },
     )
     .toBe('on');
 }
