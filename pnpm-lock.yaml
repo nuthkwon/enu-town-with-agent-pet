@@ -343,9 +343,15 @@ importers:
       '@enu/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@enu/fx':
+        specifier: workspace:*
+        version: link:../../packages/fx
       '@enu/sfx':
         specifier: workspace:*
         version: link:../../packages/sfx
+      '@enu/sprites':
+        specifier: workspace:*
+        version: link:../../packages/sprites
       '@modelcontextprotocol/client':
         specifier: 'catalog:'
         version: 2.4.0
@@ -355,6 +361,12 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.2
+      galmuri:
+        specifier: 'catalog:'
+        version: 2.40.3
+      tsx:
+        specifier: 'catalog:'
+        version: 4.23.15
       typescript:
         specifier: 'catalog:'
         version: 6.0.3

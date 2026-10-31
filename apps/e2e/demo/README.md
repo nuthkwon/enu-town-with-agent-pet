@@ -1,6 +1,7 @@
 # 시연 동영상 만들기 (apps/e2e/demo)
 
-ENU Den의 사용 시연 동영상(약 6분, 1920×1080, H.264)과 마법 사무소 시연(약 4분, 효과음 포함)을 자동으로 녹화합니다. 예시 명단의 가명 직원들이
+ENU Den의 사용 시연 동영상(약 6분, 1920×1080, H.264), 마법 사무소 시연(약 4분, 효과음 포함), 그리고 게임 소개 페이지에
+올릴 만한 게임플레이 트레일러(약 1분, 비트에 맞춘 컷·클로즈업·콜아웃, 합성 음악)를 자동으로 만듭니다. 예시 명단의 가명 직원들이
 펫을 만들고 관리하며, 각자의 Claude(Claude Code 펫 채널, Cowork 예약 체크인)와 함께 CSMS 업무를 처리하는
 장면입니다. 업무 내용은 예시이고, 펫의 답은 시나리오에 적힌 "그 직원의 Claude가 쓴 글"을 그대로 재생합니다.
 ENU Den 서버는 답을 쓰지 않습니다.
@@ -27,9 +28,28 @@ E2E_WEB_PORT=3200 pnpm --filter @enu/e2e demo
 #      (effects-raw.mp4, effects-captions.ass, mix.wav, verify/ 의 프레임·파형도 남음)
 E2E_WEB_PORT=3200 pnpm --filter @enu/e2e demo:effects
 
+# 2-2. 게임플레이 트레일러: 촬영(타운 960×540 줌 1 + 펫 방 2배 밀도, 순간마다 시각·위치 기록) 후 편집
+#      DEMO_QUIET_DESKS=1로 띄운 새 스택에서 촬영하면 책상 명패가 이름만 보여 화면이 깔끔합니다.
+bash apps/e2e/demo/stack.sh stop && DEMO_CLOCK=09:50 DEMO_QUIET_DESKS=1 bash apps/e2e/demo/stack.sh
+E2E_WEB_PORT=3200 pnpm --filter @enu/e2e demo:trailer       # → demo-output/trailer/capture-*.mp4, moments.json, taps.json
+pnpm --filter @enu/e2e demo:trailer:edit                    # → demo-output/trailer/enu-den-trailer.mp4 (+ verify/sheet-*.png)
+
 # 3. 정리
 bash apps/e2e/demo/stack.sh stop
 ```
+
+### 트레일러 편집 (`demo/trailer/`)
+
+- 장면 순서는 `trailer/storyboard.json`(샷마다 순간·박자 수·프레이밍·속도·히트스톱·전환·콜아웃)에 있습니다. 편집만
+  다시 하려면 이 파일을 고치고 `demo:trailer:edit`만 다시 돌리면 됩니다(촬영은 그대로).
+- 템포는 30fps에서 한 박이 정수 프레임이 되도록 맞춥니다(120, 128.57, 138.46 BPM). 컷은 박자에 정확히 떨어지고,
+  이펙트가 터지는 프레임(장면의 이펙트 카운터에서 읽은 시각)이 박자 위에 오도록 샷을 고릅니다.
+- 화면은 정수 배율 최근접 확대만 씁니다(픽셀 아트가 흐려지지 않게). 타운: 와이드 ×2, 미디엄 ×4, 클로즈 ×6,
+  익스트림 ×8. 펫 방: ×2, ×3.
+- 글자는 Galmuri BDF 비트맵을 픽셀 단위로 그립니다. 숫자·점수·횟수는 넣지 않습니다(콤보와 단체 응원은 그 순간의
+  연출일 뿐). 타이틀 카드는 `@enu/sprites`의 실제 마법사·사역마 스프라이트와 `@enu/fx` 스트립으로 그립니다.
+- 소리는 화면 속 직원07의 화면이 실제로 낸 효과음만, 그 샷이 놓인 자리로 옮겨 씁니다. 음악(`trailer/music.ts`)은
+  코드로 합성합니다(D 장조, 드롭마다 라이저와 임팩트, 큰 타격에 맞춘 임팩트). 전체 약 −14 LUFS, 피크 −2 dBFS 아래.
 
 `faketime`이 없으면 실제 시각으로 돌기 때문에 근무 시간(평일 08:30–19:30) 안에 녹화해야 커넥터 답장·타운
 표시가 동작합니다.
@@ -47,3 +67,6 @@ bash apps/e2e/demo/stack.sh stop
 | `effects.demo.ts` | 마법 사무소 시나리오(ADR 0008): 마법, 오라, 콤보·결계·단체 응원, 사역마, 퀘스트, 부화, 설정                                                                                                                  |
 | `audio.ts`        | 소리: 녹화하는 화면이 실제로 낸 효과음의 시각을 받아(`__enuSfxTap`) 같은 레시피를 그 시각에 섞음(효과음 −16 LUFS). 합성한 잔잔한 배경음은 그보다 14 LU 낮게 깔리고 효과음이 나면 줄어듦. 피크는 −2 dBFS 아래 |
 | `verify.ts`       | 완성본 검사: H.264·AAC, 통합 라우드니스와 트루 피크, 장면 프레임과 파형 그림(눈으로 확인)                                                                                                                    |
+| `colleagues.ts`   | 가명 동료 창(작은 메신저 창, 타운 캔버스 없음): 로그인, 등장, 상태, 마법 쓰기                                                                                                                                |
+| `trailer.demo.ts` | 트레일러 촬영: 크롬을 숨긴 타운(960×540, 줌 1)에서 동료들이 각자 화면으로 마법·출입·회의, 이어서 펫 방(2배 밀도). 순간마다 시각·이펙트가 터진 프레임·화면 위치를 `moments.json`에 기록                       |
+| `trailer/`        | 트레일러 편집: `storyboard.json`, `edit.ts`(박자 격자·샷 계획), `render.ts`(ffmpeg 컷·크롭·히트스톱·콜아웃·믹스), `music.ts`(합성 음악), `title.ts`(픽셀 타이틀), `pixelfont.ts`(Galmuri BDF), `build.ts`    |

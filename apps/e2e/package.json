@@ -7,14 +7,20 @@
     "test": "playwright test",
     "typecheck": "tsc -p .",
     "demo": "playwright test -c demo/playwright.demo.config.ts demo/csms.demo.ts",
-    "demo:effects": "playwright test -c demo/playwright.demo.config.ts demo/effects.demo.ts"
+    "demo:effects": "playwright test -c demo/playwright.demo.config.ts demo/effects.demo.ts",
+    "demo:trailer": "playwright test -c demo/playwright.demo.config.ts demo/trailer.demo.ts",
+    "demo:trailer:edit": "tsx demo/trailer/build.ts"
   },
   "devDependencies": {
     "@enu/config": "workspace:*",
+    "@enu/fx": "workspace:*",
     "@enu/sfx": "workspace:*",
+    "@enu/sprites": "workspace:*",
     "@modelcontextprotocol/client": "catalog:",
     "@playwright/test": "catalog:",
     "@types/node": "catalog:",
+    "galmuri": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:"
   }
 }

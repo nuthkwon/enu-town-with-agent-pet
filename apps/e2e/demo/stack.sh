@@ -65,6 +65,8 @@ with cast_members as (select user_id from profiles where display_name in ('ÏßÅÏõ
 , c as (delete from pet_nudges where user_id in (select user_id from cast_members))
 delete from todos where user_id in (select user_id from cast_members);
 SQL
+# DEMO_QUIET_DESKS=1 (the trailer): nobody's seeded work log, so desk plates show just names until a Claude writes.
+if [ -n "${DEMO_QUIET_DESKS:-}" ]; then "$PGBIN/psql" "$DATABASE_URL" -qc "delete from work_logs"; fi
 
 TICKET=demo-ticket-secret-0123456789abcdef0123456789
 REALTIME_PORT=$RT_PORT REALTIME_TICKET_SECRET=$TICKET MAPS_DIR="$ROOT/apps/web/public/assets/maps" \

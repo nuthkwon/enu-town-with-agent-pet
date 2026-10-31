@@ -17,9 +17,27 @@ export interface Recording {
   stop(): Promise<void>;
 }
 
-export async function startRecording(page: Page, outFile: string, fps = 30): Promise<Recording> {
+export interface RecordingOptions {
+  /** Screencast JPEG quality (default 95). */
+  quality?: number;
+  /** x264 CRF (default 16). */
+  crf?: number;
+  /** Output pixel format (default yuv420p; yuv444p keeps pixel-art colour edges for close crops). */
+  pixFmt?: string;
+  /** x264 preset (default medium; ultrafast leaves the CPU to the page being recorded). */
+  preset?: string;
+  /** Frame size in device pixels (default the viewport: set it for a page with a device scale factor). */
+  size?: { width: number; height: number };
+}
+
+export async function startRecording(
+  page: Page,
+  outFile: string,
+  fps = 30,
+  opts: RecordingOptions = {},
+): Promise<Recording> {
   const cdp = await page.context().newCDPSession(page);
-  const viewport = page.viewportSize() ?? { width: 1920, height: 1080 };
+  const viewport = opts.size ?? page.viewportSize() ?? { width: 1920, height: 1080 };
   const ffmpeg: ChildProcess = spawn(
     'ffmpeg',
     [
@@ -35,13 +53,13 @@ export async function startRecording(page: Page, outFile: string, fps = 30): Pro
       '-i',
       '-',
       '-vf',
-      `scale=${viewport.width}:${viewport.height}:flags=lanczos,format=yuv420p`,
+      `scale=${viewport.width}:${viewport.height}:flags=lanczos,format=${opts.pixFmt ?? 'yuv420p'}`,
       '-c:v',
       'libx264',
       '-preset',
-      'medium',
+      opts.preset ?? 'medium',
       '-crf',
-      '16',
+      String(opts.crf ?? 16),
       '-movflags',
       '+faststart',
       outFile,
@@ -60,7 +78,7 @@ export async function startRecording(page: Page, outFile: string, fps = 30): Pro
   });
   await cdp.send('Page.startScreencast', {
     format: 'jpeg',
-    quality: 95,
+    quality: opts.quality ?? 95,
     maxWidth: viewport.width,
     maxHeight: viewport.height,
     everyNthFrame: 1,

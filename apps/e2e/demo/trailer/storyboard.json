@@ -1,0 +1,414 @@
+{
+  "concept": "Sell it like a spell-combat action game. There is no intro. The first frame is a lightning strike frozen on a hit-stop, two more hits land on the beat, and a white flash slams the logo in before 5 s. A fast office reveal ('모두가 마법사!') and the spellbook UI ('마법을 골라라!') charge into the first drop. There the arsenal plays one spell per beat cluster, each named by a small HUD tag and frozen on impact, and the drop ends on a focus-barrier bounce. The familiar breakdown keeps cutting on the beat: hatch, pat, snack, the little familiar spells, the reply summoning circle and the quest scroll. A party circle and a '!' alert wind up the riser. The final drop opens on the high-five combo and rips through extreme close-ups. It then slows to a 0.5x wand charge in the half-beat of silence and releases into the group cheer: three hits, then the golden pillar, then a white flash to the logo. There is no caption band and no explainer card. On-screen text is only short Korean shouts and HUD tags, and the game's own words (화르륵!, 찌릿!, 튕!, 콤보!, 전설의 응원!) do the rest. Section names and moods are written so that the trailer music engine (apps/e2e/demo/trailer/music.ts, sectionKind) reads them this way: hook as a drop that opens on an impact, title as a logo sting (impact plus a ringing chord, with a riser and gap before it), riser as a build, and climax as a second final. Every drop, the climax and the end card start on a riser and a gap.",
+  "bpm": 128,
+  "sections": [
+    {
+      "name": "hook",
+      "bars": 2,
+      "mood": "cold open at full tilt: impact on the very first frame, pounding four-on-the-floor kick, crunchy square-wave lead, a noise riser climbing under both bars and a half-beat of silence before the title slam"
+    },
+    {
+      "name": "title",
+      "bars": 1,
+      "mood": "logo slam: one huge sub boom and crash, a ringing D major chord with a quick arpeggio flourish, no drums"
+    },
+    {
+      "name": "build",
+      "bars": 6,
+      "mood": "groove kicks in under the office reveal: kick on one and three, then on every beat, bouncy octave pulse bass with the filter opening, bright arps; a snare roll and noise riser climb through the last two bars to a half-beat of silence"
+    },
+    {
+      "name": "drop",
+      "bars": 6,
+      "mood": "first drop, the spell arsenal: impact on the downbeat, pounding kick with sidechain pump, clap backbeat, the square-lead hook over D A Bm G, a snare fill every fourth bar; every spell hit lands on the beat"
+    },
+    {
+      "name": "break",
+      "bars": 8,
+      "mood": "familiar breakdown: drums fall away, soft triangle bass, warm pads, twinkly arps and a gentle triangle echo of the melody; cute and playful, a light snare build in its last bar"
+    },
+    {
+      "name": "riser",
+      "bars": 2,
+      "mood": "tension climb as the party gathers: kick on one and three, then on every beat, filtered bass opening up, a snare roll into sixteenths and a noise riser that stops dead on a half-beat of silence"
+    },
+    {
+      "name": "final",
+      "bars": 4,
+      "mood": "last-act drop at full power: impact on the downbeat, crashes every other bar, the lead doubled an octave up, hit-stops on every spell; a riser over the last two bars into a half-beat of silence for the slow-motion charge"
+    },
+    {
+      "name": "climax",
+      "bars": 2,
+      "mood": "the raid: impact on the downbeat, everything at maximum, a golden choir-like pad swelling under the pillar of light, then a riser and a half-beat of silence"
+    },
+    {
+      "name": "outro",
+      "bars": 4,
+      "mood": "logo end card: a last impact and a ringing D major chord with a sparkling arpeggio flourish, fading out"
+    }
+  ],
+  "shots": [
+    {
+      "moment": "zap",
+      "beats": 2,
+      "framing": "extreme",
+      "speed": 1,
+      "freeze_frames": 6,
+      "transition_in": "cut"
+    },
+    {
+      "moment": "fireball",
+      "beats": 3,
+      "framing": "medium",
+      "speed": 1,
+      "freeze_frames": 4,
+      "transition_in": "cut"
+    },
+    {
+      "moment": "coffee",
+      "beats": 3,
+      "framing": "close",
+      "speed": 1,
+      "freeze_frames": 4,
+      "transition_in": "cut"
+    },
+    {
+      "moment": "title_intro",
+      "beats": 4,
+      "framing": "wide",
+      "speed": 1,
+      "freeze_frames": 0,
+      "transition_in": "flash"
+    },
+    {
+      "moment": "establish",
+      "beats": 4,
+      "framing": "wide",
+      "speed": 1,
+      "freeze_frames": 0,
+      "transition_in": "cut"
+    },
+    {
+      "moment": "establish",
+      "beats": 3,
+      "framing": "medium",
+      "speed": 1,
+      "freeze_frames": 0,
+      "transition_in": "cut",
+      "callout": {
+        "text": "모두가 마법사!",
+        "kind": "big",
+        "at_beat": 0
+      }
+    },
+    {
+      "moment": "arrive",
+      "beats": 3,
+      "framing": "medium",
+      "speed": 1,
+      "freeze_frames": 2,
+      "transition_in": "cut"
+    },
+    {
+      "moment": "dm",
+      "beats": 4,
+      "framing": "wide",
+      "speed": 1,
+      "freeze_frames": 0,
+      "transition_in": "cut"
+    },
+    {
+      "moment": "rune",
+      "beats": 2,
+      "framing": "close",
+      "speed": 1,
+      "freeze_frames": 0,
+      "transition_in": "cut"
+    },
+    {
+      "moment": "spellbook",
+      "beats": 6,
+      "framing": "medium",
+      "speed": 1,
+      "freeze_frames": 0,
+      "transition_in": "cut",
+      "callout": {
+        "text": "마법을 골라라!",
+        "kind": "big",
+        "at_beat": 2
+      }
+    },
+    {
+      "moment": "cast",
+      "beats": 2,
+      "framing": "extreme",
+      "speed": 1,
+      "freeze_frames": 0,
+      "transition_in": "cut"
+    },
+    {
+      "moment": "fireball",
+      "beats": 4,
+      "framing": "wide",
+      "speed": 1,
+      "freeze_frames": 4,
+      "transition_in": "flash",
+      "callout": {
+        "text": "마법 · 응원 파이어볼",
+        "kind": "tag",
+        "at_beat": 0
+      }
+    },
+    {
+      "moment": "coffee",
+      "beats": 4,
+      "framing": "medium",
+      "speed": 1,
+      "freeze_frames": 4,
+      "transition_in": "cut",
+      "callout": {
+        "text": "마법 · 커피 메테오",
+        "kind": "tag",
+        "at_beat": 0
+      }
+    },
+    {
+      "moment": "zap",
+      "beats": 3,
+      "framing": "close",
+      "speed": 1,
+      "freeze_frames": 6,
+      "transition_in": "cut",
+      "callout": {
+        "text": "마법 · 칭찬 번개",
+        "kind": "tag",
+        "at_beat": 0
+      }
+    },
+    {
+      "moment": "potion",
+      "beats": 4,
+      "framing": "medium",
+      "speed": 1,
+      "freeze_frames": 2,
+      "transition_in": "cut",
+      "callout": {
+        "text": "마법 · 힐링 포션",
+        "kind": "tag",
+        "at_beat": 0
+      }
+    },
+    {
+      "moment": "fireworks",
+      "beats": 5,
+      "framing": "medium",
+      "speed": 1,
+      "freeze_frames": 4,
+      "transition_in": "cut",
+      "callout": {
+        "text": "마법 · 축하 폭죽",
+        "kind": "tag",
+        "at_beat": 0
+      }
+    },
+    {
+      "moment": "shield",
+      "beats": 4,
+      "framing": "close",
+      "speed": 1,
+      "freeze_frames": 6,
+      "transition_in": "cut",
+      "callout": {
+        "text": "결계 · 집중하는 중",
+        "kind": "tag",
+        "at_beat": 0
+      }
+    },
+    {
+      "moment": "hatch",
+      "beats": 6,
+      "framing": "medium",
+      "speed": 1,
+      "freeze_frames": 3,
+      "transition_in": "cut",
+      "callout": {
+        "text": "사역마 탄생!",
+        "kind": "big",
+        "at_beat": 3
+      }
+    },
+    {
+      "moment": "pat",
+      "beats": 3,
+      "framing": "medium",
+      "speed": 1,
+      "freeze_frames": 0,
+      "transition_in": "cut"
+    },
+    {
+      "moment": "snack",
+      "beats": 4,
+      "framing": "medium",
+      "speed": 1,
+      "freeze_frames": 0,
+      "transition_in": "cut"
+    },
+    {
+      "moment": "petshow_star",
+      "beats": 3,
+      "framing": "close",
+      "speed": 1,
+      "freeze_frames": 2,
+      "transition_in": "cut",
+      "callout": {
+        "text": "사역마 · 작은 마법",
+        "kind": "tag",
+        "at_beat": 0
+      }
+    },
+    {
+      "moment": "petshow_fire",
+      "beats": 2,
+      "framing": "close",
+      "speed": 1,
+      "freeze_frames": 2,
+      "transition_in": "cut"
+    },
+    {
+      "moment": "petshow_ice",
+      "beats": 2,
+      "framing": "close",
+      "speed": 1,
+      "freeze_frames": 2,
+      "transition_in": "cut"
+    },
+    {
+      "moment": "petshow_zap",
+      "beats": 2,
+      "framing": "close",
+      "speed": 1,
+      "freeze_frames": 2,
+      "transition_in": "cut"
+    },
+    {
+      "moment": "reply",
+      "beats": 5,
+      "framing": "medium",
+      "speed": 1,
+      "freeze_frames": 0,
+      "transition_in": "cut",
+      "callout": {
+        "text": "소환진 · 답장 도착",
+        "kind": "tag",
+        "at_beat": 0
+      }
+    },
+    {
+      "moment": "quest",
+      "beats": 5,
+      "framing": "medium",
+      "speed": 1,
+      "freeze_frames": 3,
+      "transition_in": "cut"
+    },
+    {
+      "moment": "party",
+      "beats": 6,
+      "framing": "medium",
+      "speed": 1,
+      "freeze_frames": 0,
+      "transition_in": "cut",
+      "callout": {
+        "text": "파티 결성!",
+        "kind": "big",
+        "at_beat": 2
+      }
+    },
+    {
+      "moment": "ping",
+      "beats": 2,
+      "framing": "close",
+      "speed": 1,
+      "freeze_frames": 2,
+      "transition_in": "cut"
+    },
+    {
+      "moment": "combo",
+      "beats": 4,
+      "framing": "medium",
+      "speed": 1,
+      "freeze_frames": 6,
+      "transition_in": "flash",
+      "callout": {
+        "text": "협동 · 하이파이브 콤보",
+        "kind": "tag",
+        "at_beat": 0
+      }
+    },
+    {
+      "moment": "fireworks",
+      "beats": 3,
+      "framing": "wide",
+      "speed": 1,
+      "freeze_frames": 4,
+      "transition_in": "cut"
+    },
+    {
+      "moment": "zap",
+      "beats": 2,
+      "framing": "extreme",
+      "speed": 1,
+      "freeze_frames": 6,
+      "transition_in": "cut"
+    },
+    {
+      "moment": "coffee",
+      "beats": 3,
+      "framing": "close",
+      "speed": 1,
+      "freeze_frames": 4,
+      "transition_in": "cut"
+    },
+    {
+      "moment": "shield",
+      "beats": 2,
+      "framing": "extreme",
+      "speed": 1,
+      "freeze_frames": 6,
+      "transition_in": "cut"
+    },
+    {
+      "moment": "cast",
+      "beats": 2,
+      "framing": "extreme",
+      "speed": 0.5,
+      "freeze_frames": 0,
+      "transition_in": "cut"
+    },
+    {
+      "moment": "raid",
+      "beats": 8,
+      "framing": "medium",
+      "speed": 1,
+      "freeze_frames": 6,
+      "transition_in": "flash",
+      "callout": {
+        "text": "협동 · 단체 응원",
+        "kind": "tag",
+        "at_beat": 0
+      }
+    },
+    {
+      "moment": "title_outro",
+      "beats": 16,
+      "framing": "wide",
+      "speed": 1,
+      "freeze_frames": 0,
+      "transition_in": "flash"
+    }
+  ],
+  "title_intro": "ENU DEN · 마법 사무소",
+  "title_tagline": "응원을 날려라!",
+  "title_outro": "마법 사무소에서 만나요!"
+}

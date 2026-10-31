@@ -1,13 +1,14 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
-import { BASE_URL, ROOT, devEmail } from '../env';
+import { expect, test } from '@playwright/test';
+import { ROOT, devEmail } from '../env';
 import { devLogin, userIdOf } from '../support/auth';
 import { connectClaude, mcpClient, structured } from '../support/claude';
-import { fxStrips, railRow, setMyStatus, sfxPlayed, wakeSound } from '../support/town';
+import { fxStrips, railRow, sfxPlayed, wakeSound } from '../support/town';
 import { listenForSounds, muxAudio, type Tap } from './audio';
 import { Captions, VIDEO } from './captions';
+import { castFrom, colleague, followServerClock, openPerson, shifted, statusOf } from './colleagues';
 import { glideClick, glideTo, hideCard, installOverlay, showCard, typeInto } from './overlay';
 import { startRecording, type Recording } from './recorder';
 import { verifyVideo } from './verify';
@@ -43,72 +44,11 @@ const ASK = '오늘 남은 퀘스트 알려 줘';
 const REPLY =
   '남은 퀘스트는 하나예요: 릴리스 노트 초안 쓰기. 오후 3시 전에 끝내면 리뷰 일정과 겹치지 않아요.';
 
-let clockOffsetMs = 0;
-async function shifted(page: Page): Promise<void> {
-  if (clockOffsetMs) await page.clock.setSystemTime(new Date(Date.now() + clockOffsetMs));
-}
-
-interface Colleague {
-  ctx: BrowserContext;
-  page: Page;
-  name: string;
-  id: string;
-}
-
-/**
- * A colleague with ENU Den open in a small window: below 1280 px the messenger mounts no town canvas, so a dozen
- * colleagues cost the machine nothing while still being drawn in 직원07's town.
- */
-async function colleague(browser: Browser, desk: string, name: string): Promise<Colleague> {
-  const ctx = await browser.newContext({ viewport: { width: 1000, height: 700 } });
-  await devLogin(ctx, devEmail(desk));
-  const id = await userIdOf(ctx);
-  const page = await ctx.newPage();
-  page.setDefaultTimeout(30_000);
-  await shifted(page);
-  await page.goto('/all');
-  await expect(page.getByRole('navigation', { name: '대화 목록' })).toBeVisible({ timeout: 90_000 });
-  return { ctx, page, name, id };
-}
-
-/** Sets a colleague's own status in the town's status menu (off camera), then back to the messenger. */
-async function statusOf(c: Colleague, option: string, duration: string): Promise<void> {
-  await c.page.goto('/town');
-  await expect(c.page.locator('canvas').first()).toBeVisible({ timeout: 90_000 });
-  await setMyStatus(c.page, option, duration);
-  await c.page.goto('/all');
-  await expect(c.page.getByRole('navigation', { name: '대화 목록' })).toBeVisible({ timeout: 90_000 });
-}
-
-/** Opens someone's page in a colleague's messenger (a client-side move: the session stays connected). */
-async function openPerson(c: Colleague, to: { id: string; name: string }): Promise<void> {
-  if (c.page.url().endsWith(`/people/${to.id}`)) return;
-  await c.page
-    .getByRole('navigation', { name: '대화 목록' })
-    .getByRole('link', { name: new RegExp(`^${to.name}`) })
-    .first()
-    .click();
-  await expect(c.page).toHaveURL(new RegExp(`/people/${to.id}$`));
-}
-
-/** A colleague casts from their own screen: the 마법 button on the target's page in the messenger. */
-async function castFrom(from: Colleague, to: { id: string; name: string }, spell: string): Promise<void> {
-  await openPerson(from, to);
-  await from.page.getByRole('button', { name: /마법/ }).click();
-  const button = from.page
-    .getByRole('dialog', { name: `${to.name}님에게 마법 쓰기` })
-    .getByRole('button', { name: spell });
-  await expect(button).toBeEnabled({ timeout: 20_000 });
-  await button.click();
-}
-
 test('ENU Den demo: the wizard office', async ({ browser }) => {
   test.setTimeout(30 * 60_000);
   mkdirSync(OUT, { recursive: true });
 
-  const health = await fetch(`${BASE_URL}/api/healthz`);
-  clockOffsetMs = new Date(health.headers.get('date') ?? Date.now()).getTime() - Date.now();
-  if (Math.abs(clockOffsetMs) < 120_000) clockOffsetMs = 0;
+  await followServerClock();
 
   /* ---------------------------------------------------------------- pre-roll (not recorded) */
   const people = {
