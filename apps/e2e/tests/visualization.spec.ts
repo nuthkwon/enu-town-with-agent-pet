@@ -31,6 +31,7 @@ const CLIENT_MESSAGES = new Set([
   'dm:read',
   'social:wave',
   'social:ping',
+  'social:cast',
   'pet:bubble-seen',
 ]);
 
@@ -123,7 +124,8 @@ test('a click inside a menu that lies over the map never reaches the map', async
 
 test('no walking to people and no nearby chat', async () => {
   const menu = await openMenuFromRail(a.page, '직원12');
-  await expect(menu.getByRole('menuitem')).toHaveCount(8);
+  // 8 items, then the spellbook's six spells (ADR 0008).
+  await expect(menu.getByRole('menuitem')).toHaveCount(14);
   await expect(menu.getByText('옆으로 가기')).toHaveCount(0);
   await a.page.keyboard.press('Escape');
   await expect(a.page.getByRole('menu')).toHaveCount(0);

@@ -39,7 +39,9 @@ interface DebugHook {
   fitZoom(): number;
   officeOpen(): boolean | null;
   avatarCount(): number;
-  fxDrawn(): { wave: number; plane: number };
+  fxDrawn(): { wave: number; plane: number; spell: number };
+  fxStrips(): Record<string, number>;
+  unregisteredObjects(): number;
   petBubble(): PetBubbleState | null;
   petState(ownerId: string): PetState | null;
 }
@@ -99,8 +101,37 @@ export function zoom(page: Page): Promise<number> {
   return page.evaluate(() => window.__ENU_DEN_DEBUG__?.zoom() ?? 0);
 }
 
-export function fxDrawn(page: Page): Promise<{ wave: number; plane: number }> {
-  return page.evaluate(() => window.__ENU_DEN_DEBUG__?.fxDrawn() ?? { wave: 0, plane: 0 });
+export function fxDrawn(page: Page): Promise<{ wave: number; plane: number; spell: number }> {
+  return page.evaluate(() => window.__ENU_DEN_DEBUG__?.fxDrawn() ?? { wave: 0, plane: 0, spell: 0 });
+}
+
+/** Every pixelfx strip this screen started, by effect id. */
+export function fxStrips(page: Page): Promise<Record<string, number>> {
+  return page.evaluate(() => window.__ENU_DEN_DEBUG__?.fxStrips() ?? {});
+}
+
+interface SfxHook {
+  played(): string[];
+  dropped(): string[];
+  clear(): void;
+  state(): 'locked' | 'on' | 'off' | undefined;
+}
+
+/** The sounds this page played so far (ids from @enu/sfx), from the dev/e2e sound hook. */
+export function sfxPlayed(page: Page): Promise<string[]> {
+  return page.evaluate(
+    () => (window as unknown as { __ENU_DEN_SFX__?: SfxHook }).__ENU_DEN_SFX__?.played() ?? [],
+  );
+}
+
+/** Browsers start audio only after a gesture: a harmless key press wakes this page's sound. */
+export async function wakeSound(page: Page): Promise<void> {
+  await page.keyboard.press('Shift');
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as unknown as { __ENU_DEN_SFX__?: SfxHook }).__ENU_DEN_SFX__?.state()),
+    )
+    .toBe('on');
 }
 
 /** Clicks a map tile (screen position from the debug hook). */
