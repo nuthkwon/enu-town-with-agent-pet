@@ -149,7 +149,7 @@ function ffmpeg(args: string[]): string {
 }
 
 /**
- * Writes the mix as WAV, normalises it to −16 LUFS / −1.5 dBTP (two-pass loudnorm) and puts it under the video
+ * Writes the mix as WAV, normalises it to −16 LUFS / −2 dBTP (two-pass loudnorm; AAC adds a little on top) and puts it under the video
  * (AAC 192 kb/s). Returns the final file.
  */
 export function muxAudio(video: string, taps: Tap[], seconds: number, outDir: string, final: string): string {
@@ -162,7 +162,7 @@ export function muxAudio(video: string, taps: Tap[], seconds: number, outDir: st
     '-i',
     raw,
     '-af',
-    `${limit},loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json`,
+    `${limit},loudnorm=I=-16:TP=-2:LRA=11:print_format=json`,
     '-f',
     'null',
     '-',
@@ -175,7 +175,7 @@ export function muxAudio(video: string, taps: Tap[], seconds: number, outDir: st
     '-i',
     raw,
     '-af',
-    `${limit},loudnorm=I=-16:TP=-1.5:LRA=11:measured_I=${json.input_i}:measured_TP=${json.input_tp}:` +
+    `${limit},loudnorm=I=-16:TP=-2:LRA=11:measured_I=${json.input_i}:measured_TP=${json.input_tp}:` +
       `measured_LRA=${json.input_lra}:measured_thresh=${json.input_thresh}:offset=${json.target_offset}:linear=true`,
     '-ar',
     String(FS),

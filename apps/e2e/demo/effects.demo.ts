@@ -184,6 +184,17 @@ test('ENU Den demo: the wizard office', async ({ browser }) => {
     await pause(500);
     await glideClick(page, button);
   };
+  /** Double-clicks someone's avatar: 이 사람 보기 (zoom 2, centred on them), the way a person looks closer. */
+  const focusOn = async (userId: string) => {
+    const box = await page.locator('canvas').first().boundingBox();
+    const at = await page.evaluate((id) => window.__ENU_DEN_DEBUG__?.avatarScreen(id) ?? null, userId);
+    if (!box || !at) return;
+    await page.mouse.move(box.x + at.x, box.y + at.y, { steps: 26 });
+    await pause(300);
+    await page.mouse.dblclick(box.x + at.x, box.y + at.y);
+    await pause(1200);
+    await page.mouse.move(box.x + box.width - 40, box.y + box.height - 40, { steps: 18 });
+  };
   const overview = async () => {
     const all = page.getByRole('button', { name: '전체 보기' });
     if (await all.isEnabled()) await glideClick(page, all);
@@ -212,12 +223,14 @@ test('ENU Den demo: the wizard office', async ({ browser }) => {
     const menu = await myMenuOn(CAST.qa.name);
     await glideClick(page, menu.getByRole('menuitem', { name: '이 사람 보기' }));
     mark();
-    await pause(5000);
-    await overview();
-    await pause(1500);
+    await pause(4000);
+    await focusOn(people.dev.id);
+    mark();
+    await pause(3500);
 
     /* -------------------------------------------------------------- 3. a fireball for me */
     cc.say('직원11이 나에게 응원 파이어볼! 마법은 모두에게 보이지만, 소리는 쓴 사람과 받은 사람만 들어요.');
+    await focusOn(me.id);
     await castFrom(people.dev, me, '응원 파이어볼');
     mark();
     await pause(5500);
@@ -230,6 +243,7 @@ test('ENU Den demo: the wizard office', async ({ browser }) => {
 
     /* -------------------------------------------------------------- 5. combo */
     cc.say('하이파이브를 10초 안에 돌려주면 콤보! 그 순간의 연출일 뿐, 세거나 남기지 않아요.');
+    await focusOn(people.pal.id);
     await castFrom(people.pal, me, '하이파이브');
     await pause(2200);
     await castMine(CAST.pal.name, '하이파이브');
@@ -238,12 +252,14 @@ test('ENU Den demo: the wizard office', async ({ browser }) => {
 
     /* -------------------------------------------------------------- 6. a shield */
     cc.say('집중 중인 직원04에게 칭찬 번개를 쓰면 결계에 튕겨요. 직원04에게는 알림도 소리도 가지 않아요.');
+    await focusOn(people.qa.id);
     await castMine(CAST.qa.name, '칭찬 번개');
     mark();
     await pause(5000);
 
     /* -------------------------------------------------------------- 7. raid */
     cc.say('1분 안에 세 명이 한 사람을 응원하면 전설의 응원! 지켜보는 나에게는 소리가 나지 않아요.');
+    await focusOn(people.dev.id);
     await castFrom(people.boss, people.dev, '축하 폭죽');
     await pause(1600);
     await castFrom(people.sec, people.dev, '힐링 포션');
@@ -254,6 +270,7 @@ test('ENU Den demo: the wizard office', async ({ browser }) => {
 
     /* -------------------------------------------------------------- 8. potion and fireworks */
     cc.say('힐링 포션은 포물선을 그리며 날아가고, 축하 폭죽은 하늘에서 터져요.');
+    await focusOn(people.boss.id);
     await castMine(CAST.boss.name, '힐링 포션');
     mark();
     await pause(4000);
@@ -263,6 +280,7 @@ test('ENU Den demo: the wizard office', async ({ browser }) => {
 
     /* -------------------------------------------------------------- 9. a call and a log rune */
     cc.say('DM은 종이비행기로 날아와요. 비행기는 주고받는 두 사람의 화면에만, 소리는 받은 나에게만.');
+    await overview();
     await openPerson(people.sec, me);
     await people.sec.page.getByRole('link', { name: 'DM 보내기' }).click();
     const dm = people.sec.page.getByRole('textbox', { name: '메시지를 입력하세요' });
@@ -271,6 +289,7 @@ test('ENU Den demo: the wizard office', async ({ browser }) => {
     mark();
     await pause(5000);
     cc.say('동료의 Claude가 업무 로그를 쓰면 머리 위에 룬이 반짝여요. 축하가 아닌 중립적인 표시예요.');
+    await focusOn(people.pal.id);
     await palClaude.callTool({
       name: 'post_work_log',
       arguments: {
