@@ -8,12 +8,19 @@ import type { Recording } from './recorder';
  * The demo's sound track. Screencast frames carry no audio, so the recorded page reports every sound its engine
  * starts (`window.__enuSfxTap`, dev builds only) and the same @enu/sfx recipes are mixed here at those moments on
  * the video clock: the viewer hears exactly what the person on screen heard, never another screen's sounds. Under
- * it runs a quiet synthesized bed (84 BPM) that ducks whenever an effect sounds; the mix is normalised to −16 LUFS.
+ * it runs a quiet synthesized bed (84 BPM) that ducks whenever an effect sounds. The effects are set to −16 LUFS (the
+ * loudness of the sounds themselves) and the bed 14 LU below them, so the effects stand out; with sparse effects over
+ * a quiet bed the whole video measures around −25 LUFS integrated, and peaks stay under −2 dBFS.
  */
 
 export const FS = 48_000;
 /** Seconds from the engine starting a sound to its frame reaching the video (screencast latency). */
 const AV_OFFSET = 0.06;
+/** Loudness of the effects themselves (gated: silence between them does not count) and of the bed. */
+export const FX_LUFS = -16;
+export const BED_LUFS = -30;
+/** Peaks are softly bent under this (dBFS), leaving room for the AAC encoder. */
+const CEILING = 10 ** (-2 / 20);
 
 export interface Tap {
   id: SfxId;
@@ -111,16 +118,16 @@ export function renderBed(seconds: number): Float32Array {
     const fade = Math.min(1, i / (2 * FS), (out.length - 1 - i) / (3 * FS));
     out[i] = y * Math.max(0, fade);
   }
-  // Sit the bed far under the effects (they are −20 to −24 LUFS each).
+  // The bed sits 14 LU under the effects.
   const lufs = measureLufs(out, FS);
-  const k = Number.isFinite(lufs) ? 10 ** ((-36 - lufs) / 20) : 1;
+  const k = Number.isFinite(lufs) ? 10 ** ((BED_LUFS - lufs) / 20) : 1;
   for (let i = 0; i < out.length; i++) out[i] = out[i]! * k;
   return out;
 }
 
 /* ------------------------------------------------------------------ the mix */
 
-/** The heard sounds at their times, plus the bed ducked under them (fast attack, slow release). */
+/** The heard sounds at their times (−16 LUFS), plus the bed ducked under them (fast attack, slow release). */
 export function mixTrack(taps: Tap[], seconds: number): Float32Array {
   const fx = new Float32Array(Math.ceil(seconds * FS));
   for (const tap of taps) {
@@ -128,16 +135,24 @@ export function mixTrack(taps: Tap[], seconds: number): Float32Array {
     const at = Math.round((tap.t + AV_OFFSET) * FS);
     for (let i = 0; i < samples.length && at + i < fx.length; i++) fx[at + i]! += samples[i]!;
   }
+  const fxLufs = measureLufs(fx, FS);
+  const g = Number.isFinite(fxLufs) ? 10 ** ((FX_LUFS - fxLufs) / 20) : 1;
   const bed = renderBed(seconds);
   const out = new Float32Array(fx.length);
   const att = Math.exp(-1 / (0.005 * FS));
   const rel = Math.exp(-1 / (0.45 * FS));
+  const knee = CEILING * 0.8;
   let env = 0;
   for (let i = 0; i < out.length; i++) {
-    const level = Math.abs(fx[i]!);
+    const f = fx[i]! * g;
+    const level = Math.abs(f);
     env = level > env ? att * env + (1 - att) * level : rel * env + (1 - rel) * level;
-    const duck = 1 - 0.65 * Math.min(1, env / 0.05);
-    out[i] = fx[i]! + bed[i]! * duck;
+    const duck = 1 - 0.6 * Math.min(1, env / 0.08);
+    const x = f + bed[i]! * duck;
+    // A soft ceiling: untouched below the knee, bent smoothly towards the ceiling above it.
+    const a = Math.abs(x);
+    out[i] =
+      a <= knee ? x : Math.sign(x) * (knee + (CEILING - knee) * Math.tanh((a - knee) / (CEILING - knee)));
   }
   return out;
 }
@@ -148,44 +163,15 @@ function ffmpeg(args: string[]): string {
   return r.stderr;
 }
 
-/**
- * Writes the mix as WAV, normalises it to −16 LUFS / −2 dBTP (two-pass loudnorm; AAC adds a little on top) and puts it under the video
- * (AAC 192 kb/s). Returns the final file.
- */
+/** Writes the mix as WAV and puts it under the video (AAC 192 kb/s). Returns the final file. */
 export function muxAudio(video: string, taps: Tap[], seconds: number, outDir: string, final: string): string {
-  const raw = `${outDir}/mix-raw.wav`;
-  const norm = `${outDir}/mix.wav`;
-  writeFileSync(raw, encodeWav(mixTrack(taps, seconds), FS));
-  // A gentle limiter first takes the effects' peaks down, so the mix can reach the target under the peak ceiling.
-  const limit = 'alimiter=limit=0.2:attack=2:release=60:level=disabled';
-  const measure = ffmpeg([
-    '-i',
-    raw,
-    '-af',
-    `${limit},loudnorm=I=-16:TP=-2:LRA=11:print_format=json`,
-    '-f',
-    'null',
-    '-',
-  ]);
-  const json = JSON.parse(measure.slice(measure.lastIndexOf('{'), measure.lastIndexOf('}') + 1)) as Record<
-    string,
-    string
-  >;
-  ffmpeg([
-    '-i',
-    raw,
-    '-af',
-    `${limit},loudnorm=I=-16:TP=-2:LRA=11:measured_I=${json.input_i}:measured_TP=${json.input_tp}:` +
-      `measured_LRA=${json.input_lra}:measured_thresh=${json.input_thresh}:offset=${json.target_offset}:linear=true`,
-    '-ar',
-    String(FS),
-    norm,
-  ]);
+  const wav = `${outDir}/mix.wav`;
+  writeFileSync(wav, encodeWav(mixTrack(taps, seconds), FS));
   ffmpeg([
     '-i',
     video,
     '-i',
-    norm,
+    wav,
     '-map',
     '0:v',
     '-map',
