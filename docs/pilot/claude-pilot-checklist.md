@@ -11,7 +11,9 @@ Record results in a copy of this file per pilot. Plan: ____ (Team / Enterprise)
 - [ ] HR/legal reviewed the pet chat defaults (company by default, colleagues see it the same day with dates only) and
       the Claude Code pet channel (local token, terminal confirmation)
 - [ ] HR/legal reviewed the work overview (ADR 0007: feed times for today's office-hours writes of sharers only, team
-      totals, the blockers board, what untimed and weekend entries reveal); privacy notice 2027-01 accepted
+      totals, the blockers board, what untimed and weekend entries reveal)
+- [ ] HR reviewed spells (ADR 0008: public who-cast-what-at-whom, combo and raid moments, 마법 받지 않기); privacy
+      notice 2027-02 accepted
 
 ## Connect (each person)
 
