@@ -1,5 +1,12 @@
 import * as z from 'zod';
-import { LIMITS, MANUAL_DURATIONS, MANUAL_STATUSES } from '@enu/shared';
+import {
+  LIMITS,
+  MANUAL_DURATIONS,
+  MANUAL_STATUSES,
+  SPELLS,
+  type Spell,
+  type SpellOutcome,
+} from '@enu/shared';
 import { PROTOCOL_VERSION } from './constants';
 
 /**
@@ -51,6 +58,8 @@ export const C2S = {
   dmRead: z.object({ peerUserId: z.string().min(1).max(64), lastMessageId: z.string().min(1).max(64) }),
   wave: z.object({ toUserId: z.string().min(1).max(64) }),
   ping: z.object({ toUserId: z.string().min(1).max(64) }),
+  /** A spell at a colleague (ADR 0008): public like the wave. */
+  cast: z.object({ toUserId: z.string().min(1).max(64), spell: z.enum(SPELLS) }),
   bubbleSeen: z.object({ bubbleId: z.string().min(1).max(64) }),
 } as const;
 
@@ -63,6 +72,7 @@ export const MSG = {
   dmRead: 'dm:read',
   wave: 'social:wave',
   ping: 'social:ping',
+  cast: 'social:cast',
   bubbleSeen: 'pet:bubble-seen',
   // server -> client
   chatMsg: 'chat:msg',
@@ -73,6 +83,7 @@ export const MSG = {
   pinged: 'social:pinged',
   notice: 'notice',
   petChanged: 'pet:changed',
+  spell: 'spell',
   overviewChanged: 'overview:changed',
   error: 'error',
 } as const;
@@ -81,6 +92,7 @@ export type StatusSetMsg = z.infer<typeof C2S.statusSet>;
 export type ChatSendMsg = z.infer<typeof C2S.chatSend>;
 export type DmSendMsg = z.infer<typeof C2S.dmSend>;
 export type WaveMsg = z.infer<typeof C2S.wave>;
+export type CastMsg = z.infer<typeof C2S.cast>;
 
 /** Server -> client payloads. */
 export interface ChatMsg {
@@ -124,6 +136,17 @@ export interface PingedMsg {
   fromName: string;
 }
 
+/**
+ * A spell, broadcast to every client (ADR 0008): who cast what at whom and what became of it. Nothing about it is
+ * stored or counted; `combo` and `raid` are moments only.
+ */
+export interface SpellMsg {
+  fromUserId: string;
+  toUserId: string;
+  spell: Spell;
+  outcome: SpellOutcome;
+}
+
 /** System notices are ENU Den UI text (never presented as the pet speaking). */
 export interface NoticeMsg {
   kind: 'work_log_published' | 'link_state' | 'info';
@@ -148,8 +171,8 @@ export type OverviewChangedMsg = Record<string, never>;
 
 /**
  * Payload of the server -> client `error` message (MSG.error). The connection stays open.
- * NOT_SHOWN: a wave to or from someone hidden, or while the office is closed. A ping answers only
- * NOT_ONLINE (for every failure) or RATE_LIMITED.
+ * NOT_SHOWN: a wave or spell to or from someone hidden, or while the office is closed. A ping answers only
+ * NOT_ONLINE (for every failure) or RATE_LIMITED. NOT_ACCEPTED: the target turned spells off (마법 받지 않기).
  */
 export interface ErrorMsg {
   code:
@@ -159,6 +182,7 @@ export interface ErrorMsg {
     | 'NOT_FOUND'
     | 'NOT_ONLINE'
     | 'NOT_SHOWN'
+    | 'NOT_ACCEPTED'
     | 'INTERNAL';
   /** The client message type that caused it. */
   type: string;

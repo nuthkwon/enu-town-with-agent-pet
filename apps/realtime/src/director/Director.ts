@@ -77,6 +77,8 @@ export interface ActorSnapshot {
   statusText: string;
   shareActivity: boolean | null;
   showLive: boolean;
+  /** 마법 받지 않기 when false (ADR 0008). */
+  acceptSpells: boolean;
   manual: ManualIn | null;
 }
 
@@ -353,6 +355,11 @@ export class Director {
 
   resolved(userId: string): ResolvedActivity | null {
     return this.actors.get(userId)?.resolved ?? null;
+  }
+
+  /** False when the member turned spells off (마법 받지 않기) or is not on the roster. */
+  acceptsSpells(userId: string): boolean {
+    return this.actors.get(userId)?.snap.acceptSpells === true;
   }
 
   projected(userId: string): ColleagueProjection | null {

@@ -1,0 +1,1 @@
+ALTER TABLE "profiles" ADD COLUMN "accept_spells" boolean DEFAULT true NOT NULL;

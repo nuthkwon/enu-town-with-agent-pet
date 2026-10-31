@@ -73,6 +73,8 @@ export const profiles = pgTable(
     shareActivity: boolean('share_activity'),
     /** 접속 표시: having the town open may draw the owner and their online dot. */
     showLive: boolean('show_live').notNull().default(true),
+    /** 마법 받지 않기 when false (ADR 0008): nobody can cast spells at this person. */
+    acceptSpells: boolean('accept_spells').notNull().default(true),
     /** The owner's own status (MANUAL_STATUSES) and its expiry; set and cleared together. */
     manualStatus: text('manual_status'),
     manualStatusUntil: tstz('manual_status_until'),

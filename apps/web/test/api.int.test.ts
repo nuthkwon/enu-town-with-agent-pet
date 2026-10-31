@@ -964,6 +964,30 @@ describe('활동 공유, 접속 표시 and pets', () => {
     expect(p?.showLive).toBe(false);
   });
 
+  it('PATCH accept_spells turns 마법 받지 않기 on and off; colleagues see only whether spells are accepted', async () => {
+    const me = await userWithSession();
+    const other = await userWithSession();
+    const res = await call(profileRoute.PATCH, '/api/v1/me/profile', {
+      method: 'PATCH',
+      cookie: me.cookie,
+      body: { accept_spells: false },
+    });
+    expect((await jsonOf<MeDto>(res)).acceptSpells).toBe(false);
+    const people = await jsonOf<PersonDto[]>(
+      await call(peopleRoute.GET, '/api/v1/people', { cookie: other.cookie }),
+    );
+    const mine = people.find((p) => p.userId === me.id);
+    expect(mine?.acceptsSpells).toBe(false);
+    expect(mine).not.toHaveProperty('acceptSpells');
+    await call(profileRoute.PATCH, '/api/v1/me/profile', {
+      method: 'PATCH',
+      cookie: me.cookie,
+      body: { accept_spells: true },
+    });
+    const [p] = await h.db.select().from(profiles).where(eq(profiles.userId, me.id));
+    expect(p?.acceptSpells).toBe(true);
+  });
+
   it('keeps every active member’s pet different', async () => {
     const [first, second, third, fourth] = PET_SPECIES as unknown as [
       PetSpecies,

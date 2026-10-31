@@ -64,6 +64,13 @@
       "when": 1793318198659,
       "tag": "0008_work_log_entries",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793420963485,
+      "tag": "0009_accept_spells",
+      "breakpoints": true
     }
   ]
 }

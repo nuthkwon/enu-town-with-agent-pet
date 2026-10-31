@@ -13,6 +13,9 @@ export interface ClientLimits {
   ping: TokenBucket;
   /** One ping per target per 30 s. */
   pingTarget: KeyedLimiter;
+  /** Spells (ADR 0008): 4 per 20 s, one per target per 15 s (the room also caps what one person receives). */
+  cast: TokenBucket;
+  castTarget: KeyedLimiter;
   bubbleSeen: TokenBucket;
 }
 
@@ -27,6 +30,8 @@ export function createClientLimits(): ClientLimits {
     waveTarget: new KeyedLimiter(() => new TokenBucket(1, 10_000)),
     ping: perWindow(5, 30_000),
     pingTarget: new KeyedLimiter(() => new TokenBucket(1, 30_000)),
+    cast: perWindow(4, 20_000),
+    castTarget: new KeyedLimiter(() => new TokenBucket(1, 15_000)),
     bubbleSeen: perWindow(10, 10_000),
   };
 }

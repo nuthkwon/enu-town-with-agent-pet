@@ -150,6 +150,7 @@ export async function patchProfile(
     set.petChatDefaultVisibility = patch.pet_chat_default_visibility;
   if (patch.share_activity !== undefined) set.shareActivity = patch.share_activity;
   if (patch.show_live !== undefined) set.showLive = patch.show_live;
+  if (patch.accept_spells !== undefined) set.acceptSpells = patch.accept_spells;
   if (patch.nudges_enabled !== undefined) set.nudgesEnabled = patch.nudges_enabled;
   if (patch.nudge_min_interval_min !== undefined) set.nudgeMinIntervalMin = patch.nudge_min_interval_min;
   if (patch.max_bubbles_per_day !== undefined) set.maxBubblesPerDay = patch.max_bubbles_per_day;
@@ -245,7 +246,7 @@ export async function patchProfile(
         targetId: viewer.userId,
       });
     }
-    // Also covers 접속 표시 (show_live) and 활동 공유: realtime reloads the snapshot.
+    // Also covers 접속 표시 (show_live), 활동 공유 and 마법 받지 않기: realtime reloads the snapshot.
     await notifyTown(tx, { v: 1, type: 'profile_changed', user_id: viewer.userId });
   });
 }

@@ -64,6 +64,8 @@ export interface TestUserInput {
   shareActivity?: boolean | null;
   /** 접속 표시 (`profiles.show_live`). Default: the column default, true. */
   showLive?: boolean;
+  /** `profiles.accept_spells` (마법 받지 않기 when false). Default: the column default, true. */
+  acceptSpells?: boolean;
   /** Sets `onboarding_completed_at` (default true; the town roster only holds onboarded users). */
   onboarded?: boolean;
   /**
@@ -105,6 +107,7 @@ export async function createTestUser(
     linkState: input.linkState ?? 'not_linked',
     shareActivity: input.shareActivity ?? null,
     showLive: input.showLive ?? true,
+    acceptSpells: input.acceptSpells ?? true,
     onboardingCompletedAt: input.onboarded === false ? null : new Date(),
   });
   await insertDefaultPet(db, {

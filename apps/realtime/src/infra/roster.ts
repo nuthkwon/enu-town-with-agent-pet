@@ -59,6 +59,7 @@ function toActorSnapshot(r: PersonRow, petsOf: Map<string, TownPetSnap[]>): Acto
     statusText: r.statusText ?? '',
     shareActivity: r.shareActivity,
     showLive: r.showLive,
+    acceptSpells: r.acceptSpells,
     manual: status && r.manualStatusUntil ? { status, until: r.manualStatusUntil } : null,
   };
 }

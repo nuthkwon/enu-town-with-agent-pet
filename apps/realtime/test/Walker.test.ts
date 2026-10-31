@@ -118,6 +118,7 @@ describe('Walker in the director: arrival anim and facing', () => {
       statusText: '',
       shareActivity: null,
       showLive: true,
+      acceptSpells: true,
       manual: { status: 'break', until: new Date(now.getTime() + 3_600_000) },
     });
     d.evaluate(now, 0, { snap: true });

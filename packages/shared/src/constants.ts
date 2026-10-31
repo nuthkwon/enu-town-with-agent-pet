@@ -108,6 +108,28 @@ export const TOWN_TIMING = {
   workGroupGatherMax: 3,
 } as const;
 
+/**
+ * Spells (ADR 0008): friendly magic one person casts on another in the town, public like the wave. They look like
+ * combat magic and mean encouragement. Order is the order of the spell bar.
+ */
+export const SPELLS = ['fireball', 'coffee', 'zap', 'potion', 'highfive', 'fireworks'] as const;
+export type Spell = (typeof SPELLS)[number];
+
+/** hit: it landed; blocked: the target's shield (focus or meeting); combo: a returned high-five; raid: 단체 응원. */
+export const SPELL_OUTCOMES = ['hit', 'blocked', 'combo', 'raid'] as const;
+export type SpellOutcome = (typeof SPELL_OUTCOMES)[number];
+
+/** Spell timing and limits (server memory only: nothing about spells is stored or counted). */
+export const SPELL_TIMING = {
+  /** A high-five returned within this window is a combo. */
+  comboWindowMs: 10_000,
+  /** This many different casters on one person within `raidWindowMs` is a raid, at most once per window. */
+  raidCasters: 3,
+  raidWindowMs: 60_000,
+  /** Spells one person can receive from the whole room per minute (nobody gets piled on). */
+  targetPerMinute: 6,
+} as const;
+
 /** Limits enforced identically by zod schemas, DB CHECKs and UI counters. */
 export const LIMITS = {
   chatMaxLen: 500,

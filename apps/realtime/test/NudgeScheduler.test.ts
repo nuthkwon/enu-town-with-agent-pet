@@ -305,6 +305,7 @@ describe('NudgeScheduler hooks from the director', () => {
       statusText: '',
       shareActivity: true,
       showLive: true,
+      acceptSpells: true,
       manual,
     });
     director.setSession('u1', 'open', at);

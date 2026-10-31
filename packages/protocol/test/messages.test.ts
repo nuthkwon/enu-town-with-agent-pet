@@ -42,4 +42,13 @@ describe('protocol messages', () => {
     expect(C2S.wave.safeParse({}).success).toBe(false);
     expect(C2S.wave.parse({ toUserId: 'u1' })).toEqual({ toUserId: 'u1' });
   });
+
+  it('a spell names its target and one of the six spells', () => {
+    expect(C2S.cast.safeParse({ toUserId: 'u1' }).success).toBe(false);
+    expect(C2S.cast.safeParse({ toUserId: 'u1', spell: 'meteor' }).success).toBe(false);
+    expect(C2S.cast.parse({ toUserId: 'u1', spell: 'fireball', extra: 1 })).toEqual({
+      toUserId: 'u1',
+      spell: 'fireball',
+    });
+  });
 });

@@ -11,7 +11,7 @@ import {
 } from '@colyseus/core';
 import { StateView } from '@colyseus/schema';
 import { loadHolidays, profiles } from '@enu/db';
-import { DEFAULT_TIMING, manualStatusUntil, type PolicyTiming } from '@enu/domain';
+import { DEFAULT_TIMING, SpellMemory, manualStatusUntil, type PolicyTiming } from '@enu/domain';
 import {
   C2S,
   CloseCodes,
@@ -27,6 +27,7 @@ import {
   type OverviewChangedMsg,
   type PetChangedMsg,
   type PingedMsg,
+  type SpellMsg,
   type StatusSetMsg,
 } from '@enu/protocol';
 import {
@@ -37,6 +38,7 @@ import {
   localDateKey,
   normalizeLine,
   type LinkState,
+  type Spell,
   type TownEvent,
 } from '@enu/shared';
 import { eq } from 'drizzle-orm';
@@ -137,6 +139,8 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
   private overviewSentAt = Number.NEGATIVE_INFINITY;
   private overviewTrailing: Delayed | null = null;
   private overviewDirty = false;
+  /** Spell combos, raids and per-target limits (ADR 0008): short-lived memory, never stored. */
+  private readonly spells = new SpellMemory();
   /** Per-key load sequence, so a slow, stale load never overwrites a newer one. */
   private readonly seqs = new Map<string, number>();
   /** This instance holds `officeRoomClaimed`. */
@@ -446,6 +450,7 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
     this.on(MSG.dmRead, C2S.dmRead, (s, m) => this.handleDmRead(s, m.peerUserId, m.lastMessageId));
     this.on(MSG.wave, C2S.wave, (s, m) => this.handleWave(s, m.toUserId));
     this.on(MSG.ping, C2S.ping, (s, m) => this.handlePing(s, m.toUserId));
+    this.on(MSG.cast, C2S.cast, (s, m) => this.handleCast(s, m.toUserId, m.spell));
     this.on(MSG.bubbleSeen, C2S.bubbleSeen, (s, m) => {
       if (!s.limits.bubbleSeen.take(monotonicMs())) return;
       this.scheduler.seen(s.userId, m.bubbleId);
@@ -601,6 +606,27 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
   }
 
   /**
+   * A spell (ADR 0008): public like the wave (office open, both shown), refused when the target turned spells off,
+   * bounced off a shield when the target's projected state is focus or meeting (already public). Combos and raids
+   * live in short-lived memory only; nothing is stored or logged.
+   */
+  private handleCast(s: Session, toUserId: string, spell: Spell): void {
+    const nowMs = monotonicMs();
+    if (!s.limits.cast.take(nowMs) || !s.limits.castTarget.take(toUserId, nowMs)) {
+      return this.sendError(s, MSG.cast, 'RATE_LIMITED');
+    }
+    if (toUserId === s.userId) return this.sendError(s, MSG.cast, 'INVALID_PAYLOAD');
+    const from = this.director.projected(s.userId);
+    const to = this.director.projected(toUserId);
+    if (!this.state.officeOpen || !from?.shown || !to?.shown) return this.sendError(s, MSG.cast, 'NOT_SHOWN');
+    if (!this.director.acceptsSpells(toUserId)) return this.sendError(s, MSG.cast, 'NOT_ACCEPTED');
+    if (!this.spells.allowTarget(toUserId, nowMs)) return this.sendError(s, MSG.cast, 'RATE_LIMITED');
+    const blocked = to.activity === 'focus' || to.activity === 'meeting';
+    const outcome = this.spells.cast({ from: s.userId, to: toUserId, spell, atMs: nowMs }, blocked);
+    this.broadcast(MSG.spell, { fromUserId: s.userId, toUserId, spell, outcome } satisfies SpellMsg);
+  }
+
+  /**
    * Reaches only someone `online` (connected now, 접속 표시 on, shown, office open). Every failure
    * answers the same NOT_ONLINE, so a crafted ping cannot tell hidden-but-connected from offline.
    */
@@ -729,6 +755,7 @@ export class OfficeRoom extends Room<{ state: OfficeState; client: OfficeClient 
   private removeFromTown(userId: string): void {
     this.kickUser(userId, CloseCodes.Forbidden);
     this.director.removeActor(userId);
+    this.spells.forget(userId);
   }
 
   private applyLinkState(userId: string, linkState: LinkState): void {

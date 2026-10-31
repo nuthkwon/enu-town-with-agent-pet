@@ -136,6 +136,8 @@ export interface MeDto {
   shareActivity: boolean | null;
   /** 접속 표시: having the town open may draw me and my online dot. */
   showLive: boolean;
+  /** false = 마법 받지 않기: nobody can cast spells at me (ADR 0008). */
+  acceptSpells: boolean;
   /** APP_TIMEZONE: the office day of every town rule; the client formats `~HH:MM` with it. */
   officeTimeZone: string;
   manualStatus: ManualStatusDto | null;
@@ -168,6 +170,8 @@ export interface PersonDto {
   title: string | null;
   roleNote: string | null;
   linkState: LinkState;
+  /** Whether spells can be cast at this person (마법 받지 않기 off). The only thing colleagues learn of it. */
+  acceptsSpells: boolean;
 }
 
 export interface DeskDto {

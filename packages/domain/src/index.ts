@@ -11,3 +11,4 @@ export * from './activity';
 export * from './groups';
 export * from './hash';
 export * from './pets';
+export * from './spells';

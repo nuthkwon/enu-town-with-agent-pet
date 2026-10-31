@@ -157,6 +157,7 @@ export function toMeDto(p: ProfileRow, viewer: Viewer, ctx: MeContext, now: Date
     },
     shareActivity: p.shareActivity,
     showLive: p.showLive,
+    acceptSpells: p.acceptSpells,
     officeTimeZone: ctx.officeTimeZone,
     manualStatus: activeManualStatus(p, now),
     activityToday: ctx.activityToday,

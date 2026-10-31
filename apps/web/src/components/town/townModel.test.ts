@@ -64,6 +64,7 @@ const person = (
   title: null,
   roleNote: null,
   linkState: 'linked',
+  acceptsSpells: true,
 });
 
 describe('접속 N명', () => {

@@ -115,6 +115,7 @@ export function toPersonDto(
     title: p.title ?? null,
     roleNote: p.roleNote ?? null,
     linkState: asLinkState(p.linkState),
+    acceptsSpells: p.acceptSpells !== false,
   };
 }
 

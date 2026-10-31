@@ -71,6 +71,7 @@ export const personColumns = {
   statusText: profiles.statusText,
   shareActivity: profiles.shareActivity,
   showLive: profiles.showLive,
+  acceptSpells: profiles.acceptSpells,
   manualStatus: profiles.manualStatus,
   manualStatusUntil: profiles.manualStatusUntil,
   onboardingCompletedAt: profiles.onboardingCompletedAt,

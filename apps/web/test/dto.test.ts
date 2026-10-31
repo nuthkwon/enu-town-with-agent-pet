@@ -132,6 +132,7 @@ describe('people and desks', () => {
     statusText: '외근 중',
     shareActivity: true,
     showLive: true,
+    acceptSpells: false,
     manualStatus: 'away',
     manualStatusUntil: now,
     timezone: 'Asia/Seoul',
@@ -152,6 +153,12 @@ describe('people and desks', () => {
     updatedAt: now,
   } as ProfileRow;
   const pet = { species: 'bunny', name: '몽실' };
+
+  it('tells colleagues only whether spells can be cast at the person', () => {
+    expect(toPersonDto(profile, 'L4a', pet).acceptsSpells).toBe(false);
+    expect(toPersonDto({ ...profile, acceptSpells: true }, 'L4a', pet).acceptsSpells).toBe(true);
+    expect(toPersonDto(profile, 'L4a', pet)).not.toHaveProperty('acceptSpells');
+  });
 
   it('maps avatar key and team label', () => {
     const p = toPersonDto(profile, 'L4a', pet);

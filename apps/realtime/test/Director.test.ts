@@ -37,6 +37,7 @@ function snap(userId: string, deskId: string | null, over: Partial<ActorSnapshot
     statusText: '',
     shareActivity: true,
     showLive: true,
+    acceptSpells: true,
     manual: null,
     ...over,
   };
