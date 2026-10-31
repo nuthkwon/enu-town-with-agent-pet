@@ -1,0 +1,34 @@
+/* Baked pixelfx strips in the messenger (ADR 0008): CSS steps, nearest-neighbour, no canvas. */
+.layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.strip {
+  position: absolute;
+  display: block;
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  image-rendering: pixelated;
+  pointer-events: none;
+  animation: fx-strip var(--fx-dur) steps(var(--fx-frames)) var(--fx-iter, 1) forwards;
+}
+
+@keyframes fx-strip {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: var(--fx-end) 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .strip {
+    animation-duration: 0.01s;
+    animation-iteration-count: 1;
+    opacity: 0;
+  }
+}

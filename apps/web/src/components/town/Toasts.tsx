@@ -62,14 +62,17 @@ export function Toasts({
   toasts,
   onClose,
   docked = false,
+  className = '',
 }: {
   toasts: ToastItem[];
   onClose: (id: number) => void;
   docked?: boolean;
+  /** Placement override (the messenger shows them at the top centre of the page). */
+  className?: string;
 }) {
   if (toasts.length === 0) return null;
   return (
-    <div className={`${s.toasts} ${docked ? s.toastsDocked : ''}`} aria-live="polite">
+    <div className={`${s.toasts} ${docked ? s.toastsDocked : ''} ${className}`} aria-live="polite">
       {toasts.map((t) => (
         <ToastView key={t.id} toast={t} onClose={() => onClose(t.id)} />
       ))}

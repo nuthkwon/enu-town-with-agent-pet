@@ -98,6 +98,31 @@ export interface MenuState {
   hint: string | null;
 }
 
+/* ------------------------------------------------------------------ spells (ADR 0008) */
+
+export interface CastState {
+  /** A spell can be cast at this person now (the server checks the same and answers with an error otherwise). */
+  canCast: boolean;
+  /** Why not, or null. */
+  reason: string | null;
+}
+
+/**
+ * Spells follow the wave's rule (both drawn, the office open) plus the target's 마법 받지 않기, the only thing
+ * colleagues learn of it.
+ */
+export function castState(
+  target: PlayerSnap | null | undefined,
+  me: PlayerSnap | null | undefined,
+  officeOpen: boolean | null,
+  person: Pick<PersonDto, 'acceptsSpells'> | null | undefined,
+): CastState {
+  if (person && person.acceptsSpells === false) return { canCast: false, reason: ko.magic.notAccepted };
+  if (officeOpen !== true || target?.shown !== true || me?.shown !== true)
+    return { canCast: false, reason: ko.magic.needsTown };
+  return { canCast: true, reason: null };
+}
+
 export function menuState(
   target: PlayerSnap | null | undefined,
   me: PlayerSnap | null | undefined,

@@ -5,6 +5,7 @@ import { formatLocalHm } from '@enu/shared';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { SoundToggle } from '@/components/SoundToggle';
 import { AvatarSprite } from '@/components/sprites';
 import type { TownDirectory } from '@/game/directory';
 import type { EventBus } from '@/game/EventBus';
@@ -13,6 +14,7 @@ import { ko } from '@/i18n/ko';
 import type { RealtimeSession } from '@/realtime/RealtimeSession';
 import type { ConnectionStatus } from '@/realtime/types';
 import { useDmUnread, useOfficeOpen, usePet, useRoster } from '@/realtime/useRealtime';
+import { useSessionSfx } from '@/sound/useSessionSfx';
 import { api, sendJson } from './api';
 import { AvatarContextMenu } from './AvatarContextMenu';
 import { ChatDock } from './ChatDock';
@@ -23,6 +25,7 @@ import { useNow, useTextFocus } from './hooks';
 import { HoverCard } from './HoverCard';
 import { Legend } from './Legend';
 import { MyPetPanel } from './MyPetPanel';
+import { useSessionNotices, type NoticeCtx } from './notices';
 import { PastChatsPanel } from './PastChatsPanel';
 import { PeopleDirectory } from './PeopleDirectory';
 import { PetBubbleActions, PetBubbleLiveRegion } from './PetBubble';
@@ -263,71 +266,26 @@ export function TownShell({
     return () => offs.forEach((off) => off());
   }, [bus, ui, me.userId]);
 
-  // Realtime notices -> toasts
-  useEffect(() => {
-    const t = ko.townUi.toast;
-    const nameOf = (id: string) => session.getPlayer(id)?.name || directory.person(id)?.displayName || '';
-    const offs = [
-      session.on('notice', (m) => {
-        if (m.kind === 'work_log_published' && m.logId) {
-          const logId = m.logId;
-          toast({
-            text: t.workLogPublished,
-            ttlMs: 15_000,
-            actions: [
-              { label: t.view, onClick: () => router.push(`/me?log=${encodeURIComponent(logId)}`) },
-              {
-                label: t.makePrivate,
-                onClick: async () => {
-                  await sendJson('PATCH', api.myWorkLog(logId), { visibility: 'private' });
-                  toast({ text: t.madePrivate, ttlMs: 3000, tone: 'success' });
-                },
-              },
-            ],
-          });
-        } else if (m.text) {
-          toast({ text: m.text, ttlMs: 8000 });
-        }
-      }),
-      session.on('pinged', (m) => {
-        toast({
-          text: t.pinged(m.fromName),
-          ttlMs: 12_000,
-          actions: [{ label: t.openDm, onClick: () => ui.openDm(m.fromUserId) }],
-        });
-      }),
-      // Everyone sees a wave's arc on the map; only its target also gets a toast.
-      session.on('emote', (m) => {
-        if (m.kind !== 'wave' || m.toUserId !== me.userId || m.fromUserId === me.userId) return;
-        toast({ text: t.waved(nameOf(m.fromUserId)), ttlMs: 3500 });
-      }),
-      session.on('server:error', (e) => {
-        if (
-          e.code === 'RATE_LIMITED' &&
-          (e.type === 'social:ping' || e.type === 'social:wave' || e.type === 'status:set')
-        ) {
-          toast({ text: t.rateLimited, ttlMs: 3000, tone: 'warn' });
-        } else if (e.type === 'social:ping' && e.code === 'NOT_ONLINE') {
-          toast({ text: t.notOnline, ttlMs: 3000, tone: 'warn' });
-        } else if (e.type === 'social:wave' && e.code === 'NOT_SHOWN') {
-          toast({ text: t.notShown, ttlMs: 3000, tone: 'warn' });
-        } else if (e.type === 'status:set' && e.code === 'INTERNAL') {
-          toast({ text: t.statusFailed, ttlMs: 4000, tone: 'warn' });
-        }
-      }),
-      session.on('dm:msg', (m) => {
-        if (m.fromUserId === me.userId) return;
+  // Realtime notices -> toasts (shared with the messenger) and sounds.
+  const noticeCtx: NoticeCtx = useMemo(
+    () => ({
+      meId: me.userId,
+      nameOf: (id) => session.getPlayer(id)?.name || directory.person(id)?.displayName || '',
+      viewingDm: (peerId) => {
         const open = sheetRef.current;
-        if (open?.kind === 'dm' && open.peerId === m.fromUserId) return;
-        toast({
-          text: t.dmFrom(m.fromName),
-          ttlMs: 8000,
-          actions: [{ label: t.open, onClick: () => ui.openDm(m.fromUserId) }],
-        });
-      }),
-    ];
-    return () => offs.forEach((off) => off());
-  }, [session, toast, ui, me.userId, directory, router]);
+        return open?.kind === 'dm' && open.peerId === peerId;
+      },
+      openDm: (peerId) => ui.openDm(peerId),
+      openLog: (logId) => router.push(`/me?log=${encodeURIComponent(logId)}`),
+      makeLogPrivate: async (logId) => {
+        await sendJson('PATCH', api.myWorkLog(logId), { visibility: 'private' });
+        toast({ text: ko.townUi.toast.madePrivate, ttlMs: 3000, tone: 'success' });
+      },
+    }),
+    [me.userId, session, directory, ui, router, toast],
+  );
+  useSessionNotices(session, noticeCtx, toast);
+  useSessionSfx(session, me.userId);
 
   // Presence: busy while a panel/menu is open or the user is typing (nudges wait).
   const uiBusy = sheet !== null || popover !== null || textFocused;
@@ -409,6 +367,7 @@ export function TownShell({
               </span>
               <span className={s.hideSm}>{tb.statusChip(chip)}</span>
             </button>
+            <SoundToggle className={`${s.pill} ${s.iconPill}`} />
             <Link className={s.pill} href="/me">
               <span className={s.hideXs}>{tb.me}</span>
               <span className={s.showXs} aria-hidden="true">

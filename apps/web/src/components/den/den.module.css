@@ -768,3 +768,140 @@
   color: var(--c-lavender-deep);
   font-weight: 700;
 }
+
+/* Toasts in the messenger: top centre, over the page (ADR 0008: calls, waves and spells reach the messenger). */
+.denToasts.denToasts {
+  position: fixed;
+  top: 12px;
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  width: min(360px, calc(100vw - 24px));
+}
+
+/* The speaker button in the list's header. */
+.soundButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid var(--c-line);
+  background: var(--c-surface, #fff);
+  color: var(--c-ink, #3b2f4a);
+  cursor: pointer;
+}
+
+.soundButton[data-sound-state='off'] {
+  opacity: 0.6;
+}
+
+.soundButton:focus-visible {
+  outline: 2px solid var(--c-focus, #8a6ee0);
+  outline-offset: 2px;
+}
+
+/* `마법` in the messenger: the spellbook drops down under the button. */
+.magic {
+  position: relative;
+  display: inline-flex;
+}
+
+.magicPanel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  width: 280px;
+  padding: 8px;
+  border-radius: 14px;
+  border: 1px solid var(--c-line);
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(59, 42, 82, 0.18);
+}
+
+/* My familiar (ADR 0008): click to pat; snack and a spell show under it. */
+.familiar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+
+.companionButton {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: transform 0.12s ease-out;
+}
+
+.companionButton:hover {
+  transform: translateY(-2px);
+}
+
+.companionButton:active {
+  transform: scale(0.96);
+}
+
+.companionButton:focus-visible {
+  outline: 2px solid #8a6ee0;
+  outline-offset: 2px;
+}
+
+.familiarBar {
+  display: flex;
+  gap: 2px;
+}
+
+/* 오늘의 퀘스트: my to-dos as quests (only I see them and their celebration). */
+.quests {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--c-line);
+  background: var(--c-card-soft);
+  font-size: 13px;
+}
+
+.questsTitle {
+  font-weight: 700;
+  color: var(--c-ink-soft);
+}
+
+.quest {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--c-line);
+  background: var(--c-card);
+}
+
+.questDone {
+  padding: 2px 8px;
+  border: 1px solid var(--c-line-strong);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.questDone:hover:not(:disabled) {
+  background: #f6f0ff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .companionButton {
+    transition: none;
+  }
+}

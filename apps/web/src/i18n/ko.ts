@@ -1156,6 +1156,71 @@ export const ko = {
     loadFailed: '불러오지 못했어요.',
   },
 
+  /** ADR 0008: spells between colleagues (public, like a wave), my familiar's play and today's quests. */
+  magic: {
+    spells: {
+      fireball: { name: '응원 파이어볼', shout: '화르륵!', hint: '하트 불꽃으로 응원해요' },
+      coffee: { name: '커피 메테오', shout: '카페인 충전!', hint: '하늘에서 커피 한 잔' },
+      zap: { name: '칭찬 번개', shout: '찌릿!', hint: '짜릿한 칭찬 한 번' },
+      potion: { name: '힐링 포션', shout: '회복!', hint: '지친 동료에게 회복을' },
+      highfive: { name: '하이파이브', shout: '짝!', hint: '10초 안에 돌려받으면 콤보' },
+      fireworks: { name: '축하 폭죽', shout: '축하해요!', hint: '좋은 일에 폭죽을' },
+    },
+    /** Floating words for what became of a spell (onomatopoeia only: never a number). */
+    outcome: { blocked: '튕!', combo: '콤보!', raid: '전설의 응원!' },
+    menuTitle: '마법 쓰기',
+    menuNote: '모두에게 보여요',
+    button: '마법',
+    dialogTitle: (name: string) => `${name}님에게 마법 쓰기`,
+    notAccepted: '마법을 받지 않아요',
+    needsTown: '근무 시간에 두 사람이 모두 타운에 보일 때만 쓸 수 있어요',
+    cooling: '마나 회복 중',
+    toast: {
+      cast: (name: string, spell: string) => `${name}님에게 ${spell}!`,
+      got: (name: string, spell: string) => `${name}님의 ${spell}!`,
+      blocked: (name: string) => `${name}님의 결계에 튕겨 나갔어요 (집중·회의 중)`,
+      combo: (name: string) => `${name}님과 하이파이브 콤보!`,
+      raid: '동료들의 전설의 응원을 받았어요!',
+      notAccepted: '이 동료는 마법을 받지 않아요.',
+      notShown: '근무 시간에 두 사람이 모두 타운에 보일 때만 마법을 쓸 수 있어요.',
+      rateLimited: '마나 회복 중이에요. 잠시 후에 다시 써 주세요.',
+    },
+    familiar: {
+      pat: '쓰다듬기',
+      patLabel: (name: string) => `${name} 쓰다듬기`,
+      snack: '간식 주기',
+      show: '마법 보여 줘',
+      playLabel: '사역마와 놀기',
+      hatched: (name: string) => `${name} 탄생!`,
+    },
+    quests: {
+      title: '오늘의 퀘스트',
+      done: '완료',
+      doneLabel: (title: string) => `${title} 완료하기`,
+      cleared: '퀘스트 완료!',
+      failed: '퀘스트를 완료하지 못했어요. 잠시 후 다시 해 주세요.',
+    },
+  },
+
+  /** Sound effects (ADR 0008): settings live only in this browser. */
+  sound: {
+    on: '효과음 끄기',
+    off: '효과음 켜기',
+    wake: '효과음 켜기 (눌러서 소리 깨우기)',
+    title: '효과음',
+    enabled: '효과음 켜기',
+    help: '내가 한 일과 나에게 온 일에만 작게 소리가 나요. 동료끼리 주고받는 마법은 소리 없이 보이기만 해요. 이 설정은 이 브라우저에만 저장돼요.',
+    level: '크기',
+    levels: { low: '작게', mid: '보통', high: '크게' },
+    test: '들어 보기',
+    background: '다른 탭을 보고 있을 때는 부르기와 DM만 울려요.',
+    motion: '움직임을 줄이도록 기기를 설정했다면 이펙트도 짧고 조용하게 보여요.',
+    spellsTitle: '마법',
+    refuseSpells: '마법 받지 않기',
+    refuseSpellsHelp:
+      '켜면 아무도 나에게 마법을 걸 수 없어요. 동료의 메뉴에는 "마법을 받지 않아요"로 보여요. 마법은 저장되지 않아요.',
+  },
+
   /** The messenger shell (ADR 0005): pet rooms, 전체 방, DMs, people, and the town panel. */
   den: {
     title: 'ENU Den',

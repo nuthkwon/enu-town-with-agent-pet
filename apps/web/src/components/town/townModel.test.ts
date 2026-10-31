@@ -2,8 +2,10 @@ import { ActivityCode, PlateNote, SourceCode } from '@enu/protocol';
 import type { PersonDto } from '@enu/shared';
 import { describe, expect, it } from 'vitest';
 import type { PlayerSnap } from '@/realtime/types';
+import { ko } from '@/i18n/ko';
 import {
   activeManual,
+  castState,
   currentChoice,
   menuState,
   onlineCount,
@@ -301,6 +303,25 @@ describe('ProfileCard status line', () => {
     expect(profileStatus(player({ online: true }), false, TZ)).toEqual({
       online: false,
       text: '근무 시간이 아니에요',
+    });
+  });
+});
+
+describe('spellbook (ADR 0008)', () => {
+  const shown = player({ shown: true });
+  it('works like the wave: both drawn and the office open', () => {
+    expect(castState(shown, shown, true, { acceptsSpells: true })).toEqual({ canCast: true, reason: null });
+    expect(castState(player({ shown: false }), shown, true, { acceptsSpells: true }).reason).toBe(
+      ko.magic.needsTown,
+    );
+    expect(castState(shown, player({ shown: false }), true, { acceptsSpells: true }).canCast).toBe(false);
+    expect(castState(shown, shown, false, { acceptsSpells: true }).canCast).toBe(false);
+  });
+
+  it('respects 마법 받지 않기 whatever else holds', () => {
+    expect(castState(shown, shown, true, { acceptsSpells: false })).toEqual({
+      canCast: false,
+      reason: ko.magic.notAccepted,
     });
   });
 });

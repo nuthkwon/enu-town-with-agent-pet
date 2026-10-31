@@ -108,6 +108,43 @@ export default tseslint.config(
     },
   },
   {
+    // Sound is made only in apps/web/src/sound (one engine, the gate table, the user's settings; ADR 0008).
+    files: ['apps/web/src/**/*.{ts,tsx}'],
+    ignores: ['apps/web/src/sound/**'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        ...['AudioContext', 'webkitAudioContext', 'OfflineAudioContext', 'Audio'].map((name) => ({
+          name,
+          message:
+            'Play sounds through @/sound (soundEngine / playMine): the gate table decides who hears what.',
+        })),
+      ],
+      'no-restricted-properties': [
+        'error',
+        ...['AudioContext', 'webkitAudioContext', 'OfflineAudioContext', 'Audio'].map((property) => ({
+          object: 'window',
+          property,
+          message:
+            'Play sounds through @/sound (soundEngine / playMine): the gate table decides who hears what.',
+        })),
+      ],
+    },
+  },
+  {
+    // The messenger draws effects as CSS strips (FxSprite); the town has its one Phaser canvas.
+    files: ['apps/web/src/components/**/*.tsx', 'apps/web/src/app/**/*.tsx'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "JSXOpeningElement[name.name='canvas']",
+          message: 'No <canvas> in the messenger: play effects with FxSprite / useFxLayer (ADR 0008).',
+        },
+      ],
+    },
+  },
+  {
     // Business rules and the town director are pure functions of (inputs, now): the caller passes the clock.
     files: ['packages/domain/src/**/*.ts', 'apps/realtime/src/director/**/*.ts'],
     rules: {

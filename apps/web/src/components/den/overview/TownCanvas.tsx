@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui';
 import { ko } from '@/i18n/ko';
@@ -15,8 +16,18 @@ const PhaserGame = dynamic(() => import('@/game/PhaserGame'), { ssr: false, load
  * shows the town, the panel shows a placeholder instead (one Phaser game per tab).
  */
 export function TownCanvas() {
-  const { bridge, bus, mapError, retryMap } = useDen();
+  const { me, bridge, bus, mapError, retryMap } = useDen();
+  const router = useRouter();
   const t = ko.den.town;
+
+  // A click on someone in the panel opens their page (spells, DM, pets); on myself, my settings.
+  useEffect(
+    () =>
+      bus.on('entity:clicked', ({ userId }) =>
+        router.push(userId === me.userId ? '/me' : `/people/${encodeURIComponent(userId)}`),
+      ),
+    [bus, router, me.userId],
+  );
 
   // Whatever surrounds the canvas sits outside it: the camera fits the whole canvas (compact below 704 px).
   useEffect(() => {

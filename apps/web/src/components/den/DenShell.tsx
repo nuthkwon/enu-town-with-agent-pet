@@ -2,15 +2,20 @@
 
 import type { DmThreadDto } from '@enu/shared';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { SoundToggle } from '@/components/SoundToggle';
 import { PetSprite } from '@/components/sprites';
 import { ConnectionBanner } from '@/components/town/ConnectionBanner';
 import { useDirectory, useTextFocus } from '@/components/town/hooks';
+import { useSessionNotices, type NoticeCtx } from '@/components/town/notices';
+import { Toasts, type ToastItem } from '@/components/town/Toasts';
+import type { ToastInput } from '@/components/town/TownContext';
 import { Button, cx } from '@/components/ui';
 import { ko } from '@/i18n/ko';
 import { apiFetch } from '@/lib/api';
 import { useDmUnread, useRoster } from '@/realtime/useRealtime';
+import { useSessionSfx } from '@/sound/useSessionSfx';
 import { useDen } from './DenProvider';
 import s from './den.module.css';
 import { OverviewDialog } from './overview/OverviewDialog';
@@ -38,8 +43,9 @@ type Drawer = 'nav' | 'town' | null;
  * overview popup. The town canvas is mounted only while it is visible, and in one place at a time.
  */
 export function DenShell({ children }: { children: ReactNode }) {
-  const { session, status } = useDen();
+  const { me, session, status, directory } = useDen();
   const pathname = usePathname();
+  const router = useRouter();
   const wide = useWide(1280);
   const [drawer, setDrawer] = useState<Drawer>(null);
   const [overviewOpen, setOverviewOpen] = useState(false);
@@ -57,6 +63,33 @@ export function DenShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     session.setPresence({ uiBusy: typing || overviewOpen });
   }, [session, typing, overviewOpen]);
+
+  // Calls, waves, spells and DMs reach someone who keeps only the messenger open too (toasts and sounds).
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const toastSeq = useRef(0);
+  const toast = useCallback((t: ToastInput) => {
+    const id = ++toastSeq.current;
+    setToasts((prev) => [...prev.slice(-3), { ...t, id }]);
+  }, []);
+  const noticeCtx: NoticeCtx = useMemo(
+    () => ({
+      meId: me.userId,
+      nameOf: (id) => session.getPlayer(id)?.name || directory.person(id)?.displayName || '',
+      viewingDm: (peerId) => session.getActiveDmPeer() === peerId,
+      openDm: (peerId) => router.push(`/dm/${encodeURIComponent(peerId)}`),
+      openLog: (logId) => router.push(`/me?log=${encodeURIComponent(logId)}`),
+      makeLogPrivate: async (logId) => {
+        await apiFetch(`/api/v1/me/work-logs/${encodeURIComponent(logId)}`, {
+          method: 'PATCH',
+          body: { visibility: 'private' },
+        });
+        toast({ text: ko.townUi.toast.madePrivate, ttlMs: 3000, tone: 'success' });
+      },
+    }),
+    [me.userId, session, directory, router, toast],
+  );
+  useSessionNotices(session, noticeCtx, toast);
+  useSessionSfx(session, me.userId);
 
   const townVisible = wide || drawer === 'town';
   const overview = useOverview(session, townVisible || overviewOpen);
@@ -92,6 +125,11 @@ export function DenShell({ children }: { children: ReactNode }) {
         )}
       </aside>
       {overviewOpen && <OverviewDialog overview={overview} onClose={() => setOverviewOpen(false)} />}
+      <Toasts
+        toasts={toasts}
+        className={s.denToasts}
+        onClose={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))}
+      />
       <nav className={s.tabbar} aria-label={t.nav.tabsLabel}>
         <button
           type="button"
@@ -210,6 +248,7 @@ function DenNav({ open }: { open: boolean }) {
         <Link href="/" className={s.brand}>
           {ko.den.title}
         </Link>
+        <SoundToggle className={s.soundButton} />
       </div>
       <div className={s.navScroll}>
         <section className={s.navSection} aria-labelledby="den-nav-pets">

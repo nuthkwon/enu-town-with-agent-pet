@@ -7,6 +7,7 @@ import { api } from '@/components/town/api';
 import { useDirectory, usePaged } from '@/components/town/hooks';
 import { ko } from '@/i18n/ko';
 import { useDen } from '../DenProvider';
+import { MagicButton } from '../MagicButton';
 import { ChatRoom, mergeRoomLines, usePendingLines, type RoomLine } from './ChatRoom';
 
 /** A 1:1 DM page: history over REST, live messages over the session; opening it marks the thread read. */
@@ -98,7 +99,12 @@ export function DmRoom({ peerId }: { peerId: string }) {
       onOlder={paged.loadMore}
       onSend={send}
       disabled={status.kind !== 'connected' || peerId === me.userId}
-      headExtra={<Link href={`/people/${peerId}`}>{ko.den.room.profile}</Link>}
+      headExtra={
+        <>
+          <MagicButton peerId={peerId} />
+          <Link href={`/people/${peerId}`}>{ko.den.room.profile}</Link>
+        </>
+      }
     />
   );
 }

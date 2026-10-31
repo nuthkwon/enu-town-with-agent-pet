@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { Button, Card, Field, Notice, Segmented, Toggle, inputClass } from '@/components/ui';
 import { ko } from '@/i18n/ko';
 import { apiFetch, describeError } from '@/lib/api';
+import { playMine, soundEngine } from '@/sound/engine';
+import { SOUND_LEVELS, setSoundPrefs, useSoundPrefs, type SoundLevel } from '@/sound/prefs';
 import s from './me.module.css';
 
 const t = ko.me.settings;
@@ -28,6 +30,7 @@ export function SettingsTab({ me, onSaved }: { me: MeDto; onSaved: (me: MeDto) =
   // 활동 공유: null = never chosen (off). Only an actual change is sent (false deletes today's report).
   const [shareActivity, setShareActivity] = useState(me.shareActivity === true);
   const [showLive, setShowLive] = useState(me.showLive);
+  const [refuseSpells, setRefuseSpells] = useState(!me.acceptSpells);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
 
@@ -52,6 +55,7 @@ export function SettingsTab({ me, onSaved }: { me: MeDto; onSaved: (me: MeDto) =
           share_dms_with_my_claude: shareDms,
           ...(shareActivity !== (me.shareActivity === true) ? { share_activity: shareActivity } : {}),
           ...(showLive !== me.showLive ? { show_live: showLive } : {}),
+          ...(refuseSpells === me.acceptSpells ? { accept_spells: !refuseSpells } : {}),
         },
       });
       onSaved(next);
@@ -83,6 +87,18 @@ export function SettingsTab({ me, onSaved }: { me: MeDto; onSaved: (me: MeDto) =
             help={t.showLiveHelp}
           />
         </div>
+      </Card>
+
+      <SoundCard />
+
+      <Card title={ko.sound.spellsTitle}>
+        <Toggle
+          id="refuse-spells"
+          checked={refuseSpells}
+          onChange={setRefuseSpells}
+          label={ko.sound.refuseSpells}
+          help={ko.sound.refuseSpellsHelp}
+        />
       </Card>
 
       <Card title={t.nudgesTitle}>
@@ -175,5 +191,47 @@ export function SettingsTab({ me, onSaved }: { me: MeDto; onSaved: (me: MeDto) =
         </Button>
       </div>
     </>
+  );
+}
+
+/** Sound settings apply at once and stay in this browser (nothing is sent). */
+function SoundCard() {
+  const prefs = useSoundPrefs();
+  const levels = SOUND_LEVELS.map((value) => ({ value, label: ko.sound.levels[value] }));
+  return (
+    <Card title={ko.sound.title}>
+      <Toggle
+        id="sound-on"
+        checked={prefs.on}
+        onChange={(on) => setSoundPrefs({ on })}
+        label={ko.sound.enabled}
+        help={ko.sound.help}
+      />
+      <div className={s.formGrid} style={{ marginTop: 14, alignItems: 'end' }}>
+        <Field label={ko.sound.level}>
+          <Segmented<SoundLevel>
+            label={ko.sound.level}
+            value={prefs.level}
+            options={levels}
+            onChange={(level) => setSoundPrefs({ level })}
+          />
+        </Field>
+        <div>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={!prefs.on}
+            onClick={() => {
+              soundEngine().unlock();
+              playMine('hit.fireball');
+            }}
+          >
+            {ko.sound.test}
+          </Button>
+        </div>
+      </div>
+      <p className={s.footNote}>{ko.sound.background}</p>
+      <p className={s.footNote}>{ko.sound.motion}</p>
+    </Card>
   );
 }

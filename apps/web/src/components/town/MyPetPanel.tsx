@@ -21,6 +21,7 @@ import { useFetch, useNow } from './hooks';
 import { LinkBadge } from './ProfileCard';
 import { useTown } from './TownContext';
 import s from './town.module.css';
+import { useFxLayer, useQuestCelebration } from '@/components/fx/FxSprite';
 
 const OPEN_NUDGE = new Set(['pending', 'shown', 'snoozed']);
 
@@ -35,16 +36,20 @@ export function MyPetPanel() {
   const { data, loading, error, reload } = useFetch<MyPetDto>(api.myPet());
   const [busy, setBusy] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const fx = useFxLayer();
+  const { attach: questBox, celebrate } = useQuestCelebration(fx.play);
   const t = ko.townUi.pet;
 
-  const act = async (key: string, fn: () => Promise<unknown>) => {
+  const act = async (key: string, fn: () => Promise<unknown>): Promise<boolean> => {
     setBusy(key);
     setFailed(false);
     try {
       await fn();
       reload();
+      return true;
     } catch {
       setFailed(true);
+      return false;
     } finally {
       setBusy(null);
     }
@@ -56,6 +61,10 @@ export function MyPetPanel() {
     );
   const todoPatch = (todo: TodoDto, key: string, body: Record<string, unknown>) =>
     act(`t:${todo.id}:${key}`, () => sendJson('PATCH', api.myTodo(todo.id), body));
+  /** 퀘스트 완료: the seal and the jingle on my screen only, then the usual refresh. */
+  const finishQuest = async (todo: TodoDto, el: HTMLElement) => {
+    if (await todoPatch(todo, 'done', { status: 'done' })) celebrate(el);
+  };
 
   const link = data?.linkState ?? me.linkState;
   const species = (data?.pet.species ?? me.pet.species) as PetSpecies;
@@ -136,7 +145,8 @@ export function MyPetPanel() {
         ))}
       </div>
 
-      <div className={s.section}>
+      <div className={s.section} style={{ position: 'relative' }} ref={questBox}>
+        {fx.layer}
         <h3 className={s.sectionTitle}>{t.todos}</h3>
         {data && todos.length === 0 && <div className={s.empty}>{t.todosEmpty}</div>}
         {todos.map((td) => (
@@ -155,7 +165,7 @@ export function MyPetPanel() {
               <Button
                 size="sm"
                 disabled={busy !== null}
-                onClick={() => todoPatch(td, 'done', { status: 'done' })}
+                onClick={(e) => void finishQuest(td, e.currentTarget)}
               >
                 {t.done}
               </Button>

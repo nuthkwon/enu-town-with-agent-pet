@@ -10,6 +10,7 @@ import {
   type Visibility,
 } from '@enu/shared';
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   useCallback,
   useEffect,
@@ -19,16 +20,18 @@ import {
   useState,
   type KeyboardEvent,
 } from 'react';
+import { useFxLayer } from '@/components/fx/FxSprite';
 import { Badge, Button, cx } from '@/components/ui';
 import { formatHm } from '@/components/town/format';
 import { ko } from '@/i18n/ko';
 import { ApiRequestError, apiFetch, describeError } from '@/lib/api';
 import { useOfficeOpen } from '@/realtime/useRealtime';
+import { playMine } from '@/sound/engine';
 import { useDen } from '../DenProvider';
-import { COMPANION_SPRITE, companionState, type CompanionExpr } from '../model/companionState';
+import { companionState, type CompanionExpr } from '../model/companionState';
 import { buildTimeline, lastUnreadReply, mergeLogs, prependPage } from '../model/timeline';
 import { waitHint } from '../model/waitHint';
-import { CompanionSprite } from './CompanionSprite';
+import { FamiliarStage } from './FamiliarStage';
 import { Timeline } from './Timeline';
 import s from '../den.module.css';
 
@@ -44,6 +47,11 @@ function useDocumentVisible(): boolean {
     return () => document.removeEventListener('visibilitychange', on);
   }, []);
   return visible;
+}
+
+/** When a moment of joy ends (the companion is happy until then). */
+function happyFor(ms: number): number {
+  return Date.now() + ms;
 }
 
 function newClientId(): string {
@@ -86,6 +94,13 @@ export function OwnerPetRoom({ pet }: { pet: OwnerPetDto }) {
   const prependFrom = useRef<number | null>(null);
   const visible = useDocumentVisible();
   const t = ko.den.pet;
+  const router = useRouter();
+  const pathname = usePathname();
+  const hatch = useSearchParams().get('hatch') === '1';
+  const [replySignal, setReplySignal] = useState(0);
+  const [questBusy, setQuestBusy] = useState<string | null>(null);
+  const questFx = useFxLayer();
+  const questsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => setVisibility(pet.effectiveDefaultVisibility), [pet.id, pet.effectiveDefaultVisibility]);
 
@@ -101,6 +116,7 @@ export function OwnerPetRoom({ pet }: { pet: OwnerPetDto }) {
       if (newest) {
         setLastReply({ at: Date.now(), length: newest.text.length });
         setAnnounce(`${pet.name}: ${newest.text}`);
+        setReplySignal((n) => n + 1);
       }
     }
     seenReplies.current = new Set([...(seenReplies.current ?? []), ...replies.map((m) => m.id)]);
@@ -190,6 +206,7 @@ export function OwnerPetRoom({ pet }: { pet: OwnerPetDto }) {
       stick.current = true;
       setItems((shown) => [...shown.filter((m) => m.id !== message.id), message]);
       setDraft('');
+      playMine('msg.send');
       setPiiText(null);
       setHappyUntil(Date.now() + 1600);
       reloadPets();
@@ -237,6 +254,33 @@ export function OwnerPetRoom({ pet }: { pet: OwnerPetDto }) {
     await reload();
   };
 
+  /** 오늘의 퀘스트: completing a to-do celebrates on my screen only (the same PATCH as /me). */
+  const completeQuest = async (todoId: string, el: HTMLElement) => {
+    setQuestBusy(todoId);
+    setError(null);
+    try {
+      await apiFetch(`/api/v1/me/todos/${encodeURIComponent(todoId)}`, {
+        method: 'PATCH',
+        body: { status: 'done' },
+      });
+      const box = questsRef.current?.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      if (box)
+        questFx.play('ui/quest-done', {
+          x: r.left - box.left + r.width / 2,
+          y: r.top - box.top + r.height / 2,
+        });
+      playMine('quest.done');
+      setAnnounce(ko.magic.quests.cleared);
+      setHappyUntil(happyFor(1600));
+      setPinned((p) => (p ? { ...p, todos: p.todos.filter((x) => x.id !== todoId) } : p));
+    } catch {
+      setError(ko.magic.quests.failed);
+    } finally {
+      setQuestBusy(null);
+    }
+  };
+
   const pending = items.filter((m) => m.author === 'owner' && m.answerState !== 'answered');
   const hint = waitHint({
     route: pet.replyRoute,
@@ -270,15 +314,14 @@ export function OwnerPetRoom({ pet }: { pet: OwnerPetDto }) {
   return (
     <>
       <header className={s.roomHead}>
-        <span className={s.companionStage} style={{ width: 112, height: 112 }}>
-          <CompanionSprite
-            species={pet.species}
-            tint={pet.tint}
-            expression={COMPANION_SPRITE[expr]}
-            scale={4}
-            label={ko.den.companion.img(pet.name, ko.den.companion.expr[expr])}
-          />
-        </span>
+        <FamiliarStage
+          pet={pet}
+          expr={expr}
+          replySignal={replySignal}
+          hatch={hatch}
+          onHatched={() => router.replace(pathname)}
+          onPlayed={() => setHappyUntil(happyFor(1200))}
+        />
         <div>
           <h1 className={s.roomTitle} tabIndex={-1} data-companion-expr={expr}>
             {pet.name}
@@ -305,7 +348,7 @@ export function OwnerPetRoom({ pet }: { pet: OwnerPetDto }) {
           ? t.visibilityNotice.privateWithShared
           : t.visibilityNotice[notice]}
       </p>
-      {pet.isDefault && (nudges.length > 0 || todos.length > 0) && (
+      {pet.isDefault && nudges.length > 0 && (
         <div className={s.pinned} aria-label={t.pinned}>
           {nudges.map((n) => (
             <span key={n.id} className={s.pinnedItem}>
@@ -313,13 +356,28 @@ export function OwnerPetRoom({ pet }: { pet: OwnerPetDto }) {
               {n.text}
             </span>
           ))}
+        </div>
+      )}
+      {pet.isDefault && todos.length > 0 && (
+        <div className={s.quests} ref={questsRef} aria-label={ko.magic.quests.title}>
+          <span className={s.questsTitle}>{ko.magic.quests.title}</span>
           {todos.slice(0, 5).map((x) => (
-            <span key={x.id} className={s.pinnedItem}>
+            <span key={x.id} className={s.quest}>
               <span aria-hidden="true">☐</span>
               {x.title}
               {x.dueAt && <span className={s.meta}>{t.due(formatHm(x.dueAt))}</span>}
+              <button
+                type="button"
+                className={s.questDone}
+                disabled={questBusy === x.id}
+                aria-label={ko.magic.quests.doneLabel(x.title)}
+                onClick={(e) => void completeQuest(x.id, e.currentTarget)}
+              >
+                {ko.magic.quests.done}
+              </button>
             </span>
           ))}
+          {questFx.layer}
         </div>
       )}
       <div

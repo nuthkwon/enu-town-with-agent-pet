@@ -10,12 +10,14 @@ import { Popover, onMenuKeyDown } from './Chrome';
 import { EffectIcon } from './EffectIcon';
 import { useDirectory } from './hooks';
 import { useTown } from './TownContext';
-import { menuState } from './townModel';
+import { SpellBar } from './SpellBar';
+import { castState, menuState } from './townModel';
 import s from './town.module.css';
 
 /**
  * Menu for a colleague (clicked avatar, desk plate or team-rail row; spec §5.3):
- * 프로필 · 지금 하는 일 · 지난 대화 · 업무 요청 · DM 보내기 · ─ · 손 흔들기 (모두에게 보여요) · 부르기 · 이 사람 보기.
+ * 프로필 · 지금 하는 일 · 지난 대화 · 업무 요청 · DM 보내기 · ─ · 손 흔들기 (모두에게 보여요) · 부르기 · 이 사람 보기,
+ * then the spellbook (마법 쓰기, public like the wave; ADR 0008).
  * Every roster member is always in the state: what is enabled depends on `shown`/`online`, never on
  * "a Player exists".
  */
@@ -29,6 +31,7 @@ export function AvatarContextMenu({ userId, x, y }: { userId: string; x: number;
   const mine = roster.find((p) => p.id === me.userId);
   const name = player?.name || person?.displayName || '';
   const state = menuState(player, mine, officeOpen, me.officeTimeZone);
+  const cast = castState(player, mine, officeOpen, person);
   const icon = player && player.note === PlateNote.None ? activityIcon(player.activity) : null;
   const t = ko.townUi.menu;
 
@@ -161,6 +164,17 @@ export function AvatarContextMenu({ userId, x, y }: { userId: string; x: number;
           {t.view}
         </button>
         {state.hint && <div className={s.menuHint}>{state.hint}</div>}
+        <div className={s.menuSep} role="separator" />
+        <div className={s.menuSection} aria-hidden="true">
+          {ko.magic.menuTitle}
+        </div>
+        <SpellBar
+          session={session}
+          targetId={userId}
+          disabledReason={cast.reason}
+          onCast={() => ui.closePopover()}
+          asMenuItems
+        />
       </div>
     </Popover>
   );

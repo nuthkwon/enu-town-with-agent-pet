@@ -4,7 +4,7 @@ import { TEX } from '../assets';
 import { avatarAnimKey, avatarFrames, toDir, walkFrameIndex, walkLift } from '../logic/direction';
 import { TileInterpolator, hopOffset } from '../logic/interpolation';
 import type { TagPlacement } from '../logic/tags';
-import { AVATAR_ORIGIN, EFFECT_FRAMES } from '../spriteSpec';
+import { AVATAR_ANIMS, AVATAR_COLUMNS, AVATAR_ORIGIN, EFFECT_FRAMES } from '../spriteSpec';
 import { COLORS, DEPTH, avatarFeetY, tileCenterX, type Stage } from '../stage';
 import { ChatBubble } from './ChatBubble';
 import { NameTag } from './NameTag';
@@ -38,6 +38,18 @@ export const HOP_TWEEN_PX = 2;
 /** Head height above the feet (world px) used to place the name tag. */
 const HEAD_ABOVE_FEET = 27;
 const SCALE_IN_MS = 600;
+/** How long the wand stays raised after a real cast. */
+const CAST_MS = 650;
+/**
+ * Wand tip relative to the feet per facing (world px; down, left, right, up), where a spell charges and leaves.
+ * Matches the wand drawn in the avatar sheets.
+ */
+const WAND_TIP: Record<number, { x: number; y: number }> = {
+  0: { x: 8, y: -12 },
+  1: { x: -10, y: -13 },
+  2: { x: 10, y: -13 },
+  3: { x: -8, y: -15 },
+};
 const FADE_OUT_MS = 320;
 const PULSE_PERIOD_MS = 700;
 
@@ -85,6 +97,8 @@ export class AvatarView {
   private headY = 0;
   private feetSY = 0;
   private onScreen = false;
+  private castUntil = 0;
+  private castDir: Dir = 0 as Dir;
 
   constructor(
     private readonly stage: Stage,
@@ -277,6 +291,48 @@ export class AvatarView {
     return this.interp.target;
   }
 
+  /**
+   * Raises the wand towards `dir` for a moment: only ever called when this person really cast a spell (the
+   * server's `spell` message), never to fake activity. Sheets without cast frames simply stay idle.
+   */
+  playCast(dir: Dir, now: number): void {
+    if (!this.shown) return;
+    this.castDir = dir;
+    this.castUntil = now + CAST_MS;
+  }
+
+  /** Where the wand tip is now (world px). */
+  get wandTip(): { x: number; y: number } {
+    const facing = this.castUntil > this.stage.scene.time.now ? this.castDir : this.interp.dir;
+    const o = WAND_TIP[facing] ?? WAND_TIP[0]!;
+    return { x: this.feetX + o.x, y: this.feetY + o.y };
+  }
+
+  private castKey(dir: Dir): string {
+    return `${this.texKey}:cast:${dir}`;
+  }
+
+  /** Creates the cast animation for this sheet once, if the sheet has the frames. */
+  private ensureCastAnim(dir: Dir): boolean {
+    const def = (
+      AVATAR_ANIMS as Record<string, { start: number; frames: number; frameRate: number } | undefined>
+    ).cast;
+    const scene = this.stage.scene;
+    if (!def || !this.texKey) return false;
+    const key = this.castKey(dir);
+    if (scene.anims.exists(key)) return true;
+    const start = dir * AVATAR_COLUMNS + def.start;
+    const end = start + def.frames - 1;
+    if (scene.textures.get(this.texKey).frameTotal - 1 <= end) return false;
+    scene.anims.create({
+      key,
+      frames: scene.anims.generateFrameNumbers(this.texKey, { start, end }),
+      frameRate: def.frameRate,
+      repeat: 0,
+    });
+    return true;
+  }
+
   private place(sample: ReturnType<TileInterpolator['update']>): void {
     this.feetX = Math.round(tileCenterX(sample.x));
     this.feetY = Math.round(avatarFeetY(sample.y));
@@ -300,6 +356,9 @@ export class AvatarView {
         this.sprite.anims.stop();
         this.sprite.setFrame(avatarFrames(dir, 'walk').start + idx);
         frameLift = walkLift(idx);
+      } else if (now < this.castUntil && this.ensureCastAnim(this.castDir)) {
+        const key = this.castKey(this.castDir);
+        if (this.sprite.anims.currentAnim?.key !== key) this.sprite.play({ key, startFrame: 0 }, true);
       } else {
         const key = avatarAnimKey(this.texKey, dir, 'idle');
         if (this.sprite.anims.currentAnim?.key !== key || !this.sprite.anims.isPlaying) {

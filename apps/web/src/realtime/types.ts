@@ -8,6 +8,7 @@ import type {
   NoticeMsg,
   PetChangedMsg,
   PingedMsg,
+  SpellMsg,
 } from '@enu/protocol';
 
 /**
@@ -117,6 +118,8 @@ export interface SessionEvents {
   'dm:msg': DmMsg;
   'dm:unread': DmUnreadMsg;
   emote: EmoteMsg;
+  /** A spell between two colleagues (everyone gets it, like a wave). */
+  spell: SpellMsg;
   pinged: PingedMsg;
   notice: NoticeMsg;
   /** My pets (`petId: null`) or one of my pet rooms changed: refetch it over REST (owner only). */

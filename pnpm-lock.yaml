@@ -455,6 +455,9 @@ importers:
       '@enu/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@enu/fx':
+        specifier: workspace:*
+        version: link:../../packages/fx
       '@enu/map':
         specifier: workspace:*
         version: link:../../packages/map
@@ -464,6 +467,9 @@ importers:
       '@enu/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
+      '@enu/sfx':
+        specifier: workspace:*
+        version: link:../../packages/sfx
       '@enu/shared':
         specifier: workspace:*
         version: link:../../packages/shared

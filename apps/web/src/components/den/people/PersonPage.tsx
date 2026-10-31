@@ -9,6 +9,7 @@ import { ko } from '@/i18n/ko';
 import { apiFetch } from '@/lib/api';
 import { useDen } from '../DenProvider';
 import s from '../den.module.css';
+import { MagicButton } from '../MagicButton';
 
 /** A colleague: who they are, their pets (each a read-only room) and a way to write to them. */
 export function PersonPage({ person }: { person: PersonDto }) {
@@ -42,6 +43,7 @@ export function PersonPage({ person }: { person: PersonDto }) {
               <Link className={buttonClass('primary', 'sm')} href={`/dm/${person.userId}`}>
                 {t.dm}
               </Link>
+              <MagicButton peerId={person.userId} />
             </div>
           )}
         </header>

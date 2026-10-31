@@ -13,8 +13,10 @@ import {
   type OfficeState,
   type PetChangedMsg,
   type PingedMsg,
+  type SpellMsg,
   type StatusSetMsg,
 } from '@enu/protocol';
+import type { Spell } from '@enu/shared';
 import { OFFICE_ROOM_NAME, type RealtimeTicketDto } from '@enu/shared';
 import { TypedEmitter } from '../game/emitter';
 import { leaveAction, sdkWillAutoReconnect } from './closeCodes';
@@ -405,6 +407,9 @@ export class RealtimeSession extends TypedEmitter<SessionEvents> {
     });
     on<EmoteMsg>(MSG.emote, (m) => this.emit('emote', m));
     on<PingedMsg>(MSG.pinged, (m) => this.emit('pinged', m));
+    on<SpellMsg>(MSG.spell, (m) => {
+      if (m && typeof m.fromUserId === 'string' && typeof m.toUserId === 'string') this.emit('spell', m);
+    });
     on<NoticeMsg>(MSG.notice, (m) => this.emit('notice', m));
     on<PetChangedMsg>(MSG.petChanged, (m) => {
       this.emit('pet:refetch', { petId: typeof m?.petId === 'string' ? m.petId : null });
@@ -749,6 +754,10 @@ export class RealtimeSession extends TypedEmitter<SessionEvents> {
     this.activeDmPeer = peerUserId;
   }
 
+  getActiveDmPeer(): string | null {
+    return this.activeDmPeer;
+  }
+
   /** A public wave at a colleague (everyone sees the arc; the server checks both are shown). */
   wave(toUserId: string): boolean {
     return toUserId ? this.send(MSG.wave, { toUserId }) : false;
@@ -756,6 +765,11 @@ export class RealtimeSession extends TypedEmitter<SessionEvents> {
 
   ping(toUserId: string): boolean {
     return this.send(MSG.ping, { toUserId });
+  }
+
+  /** A spell at a colleague (ADR 0008): public like the wave; the server answers everyone with `spell`. */
+  cast(toUserId: string, spell: Spell): boolean {
+    return toUserId ? this.send(MSG.cast, { toUserId, spell }) : false;
   }
 
   /** `status:set`: `auto` clears the manual status (상태 문구 stays); `text`, when sent, is written for any status. */

@@ -6,6 +6,7 @@
 #  4. Local only (config/seats.local.json present): no roster name appears in any tracked file.
 #     Only file paths are reported, never the names.
 #  5. The product is ENU Den: the previous brand may appear only in this script and the cutover runbook.
+#  6. No audio files (ADR 0008): every sound is a recipe in packages/sfx, synthesized at runtime.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 fail=0
@@ -50,6 +51,10 @@ if git grep -qIiE "$legacy" -- . "${legacy_allow[@]}"; then
 fi
 if git ls-files | grep -qiE 'enu[-_]?town'; then
   echo "✗ previous brand in a tracked path:"; git ls-files | grep -iE 'enu[-_]?town'; fail=1
+fi
+audio='\.(wav|mp3|ogg|oga|m4a|aac|flac|opus|weba|mid|midi)$'
+if git ls-files | grep -qiE "$audio"; then
+  echo "✗ audio file committed (sounds are code: packages/sfx recipes):"; git ls-files | grep -iE "$audio"; fail=1
 fi
 if [ "$fail" -eq 0 ]; then echo "✓ policy checks passed"; fi
 exit "$fail"

@@ -50,7 +50,7 @@ export function NewPetWizard() {
       });
       // The room finds the pet in the shell's list: refresh it first (no "not found" flash).
       await reloadPets();
-      router.push(`/pets/${pet.id}`);
+      router.push(`/pets/${pet.id}?hatch=1`);
     } catch (e) {
       setError(describeError(e));
       setBusy(false);

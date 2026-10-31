@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { FX_SPARKLE_ANIM, TEX } from '../assets';
 import { EFFECT_FRAMES } from '../spriteSpec';
+import type { FxPlayer } from '../fx/FxPlayer';
 import { COLORS, DEPTH, type Stage } from '../stage';
 
 export interface WorldPoint {
@@ -26,11 +27,14 @@ export function arcControl(a: WorldPoint, b: WorldPoint): WorldPoint {
 }
 
 /**
- * One-shot effects in world space (they scale with the map and never carry text): arrival sparkles,
- * the log sparkle, the public wave arc and the participant-only DM paper plane.
+ * One-shot effects in world space (they scale with the map and never carry text): the sparkle, the public
+ * wave arc (landing in a burst of hearts) and the participant-only DM paper plane (landing in a puff).
  */
 export class Fx {
-  constructor(private readonly stage: Stage) {}
+  constructor(
+    private readonly stage: Stage,
+    private readonly player: FxPlayer | null = null,
+  ) {}
 
   private get scene(): Phaser.Scene {
     return this.stage.scene;
@@ -115,7 +119,9 @@ export class Fx {
         },
         onComplete: () => {
           heart.destroy();
-          if (i === 2) this.sparkle({ x: to.x, y: to.y - 4 });
+          if (i !== 2) return;
+          if (this.player) this.player.play('town/heart-burst', to);
+          else this.sparkle({ x: to.x, y: to.y - 4 });
         },
       });
     }
@@ -161,7 +167,8 @@ export class Fx {
       },
       onComplete: () => {
         plane.destroy();
-        this.sparkle({ x: to.x, y: to.y });
+        if (this.player) this.player.play('town/plane-puff', to);
+        else this.sparkle({ x: to.x, y: to.y });
         this.scene.tweens.add({ targets: trail, alpha: 0, duration: 500, onComplete: () => trail.destroy() });
       },
     });

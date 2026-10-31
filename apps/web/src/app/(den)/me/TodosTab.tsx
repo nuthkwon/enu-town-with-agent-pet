@@ -2,6 +2,7 @@
 
 import type { TodoDto } from '@enu/shared';
 import { useState } from 'react';
+import { useFxLayer, useQuestCelebration } from '@/components/fx/FxSprite';
 import { Badge, Button, Card, Empty, Notice, cx } from '@/components/ui';
 import { ko } from '@/i18n/ko';
 import { apiFetch, describeError } from '@/lib/api';
@@ -15,16 +16,21 @@ export function TodosTab({ initial, timezone }: { initial: TodoDto[]; timezone: 
   const [todos, setTodos] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const fx = useFxLayer();
+  const { attach: questBox, celebrate } = useQuestCelebration(fx.play);
 
   async function patch(
     id: string,
     body: { status?: 'open' | 'done' | 'dismissed'; snoozed_until?: string | null },
+    from?: HTMLElement,
   ) {
     setBusy(id);
     setError(null);
     try {
       const updated = await apiFetch<TodoDto>(`/api/v1/me/todos/${id}`, { method: 'PATCH', body });
       setTodos((list) => list.map((x) => (x.id === id ? updated : x)));
+      // 퀘스트 완료 (my screen only).
+      if (body.status === 'done' && from) celebrate(from);
     } catch (e) {
       setError(describeError(e));
     } finally {
@@ -42,7 +48,7 @@ export function TodosTab({ initial, timezone }: { initial: TodoDto[]; timezone: 
       {todos.length === 0 ? (
         <Empty>{t.empty}</Empty>
       ) : (
-        <ul className={s.list}>
+        <ul className={s.list} style={{ position: 'relative' }} ref={questBox}>
           {todos.map((todo) => {
             const closed = todo.status === 'done' || todo.status === 'dismissed';
             const due = todo.dueAt
@@ -82,7 +88,7 @@ export function TodosTab({ initial, timezone }: { initial: TodoDto[]; timezone: 
                       <Button
                         size="sm"
                         disabled={busy === todo.id}
-                        onClick={() => patch(todo.id, { status: 'done' })}
+                        onClick={(e) => patch(todo.id, { status: 'done' }, e.currentTarget)}
                       >
                         {t.done}
                       </Button>
@@ -118,6 +124,7 @@ export function TodosTab({ initial, timezone }: { initial: TodoDto[]; timezone: 
               </li>
             );
           })}
+          {fx.layer}
         </ul>
       )}
     </Card>

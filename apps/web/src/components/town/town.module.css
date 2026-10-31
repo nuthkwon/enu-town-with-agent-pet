@@ -1654,3 +1654,112 @@
     scrollbar-width: none;
   }
 }
+
+/* ---- the spellbook (ADR 0008) ---- */
+.spellBar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 6px 2px;
+}
+
+.spellGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.spellButton {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 7px 4px 6px;
+  border: 1px solid var(--c-line-strong, #d9cdee);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #fffaff 0%, #f3ecff 100%);
+  color: var(--c-ink);
+  font-size: 11px;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    transform 0.12s ease-out,
+    box-shadow 0.12s ease-out;
+}
+
+.spellButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 0 rgba(138, 110, 224, 0.25);
+}
+
+.spellButton:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97);
+}
+
+.spellButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.spellButton:focus-visible {
+  outline: 2px solid #8a6ee0;
+  outline-offset: 2px;
+}
+
+/* Cooldown ring: a conic sweep that empties as the per-person limit runs out. */
+.spellCooling::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 10px;
+  background: conic-gradient(rgba(59, 42, 82, 0.28) var(--cool-left, 100%), transparent 0);
+  animation: spell-cool var(--cool-ms, 15000ms) linear var(--cool-delay, 0ms) forwards;
+  pointer-events: none;
+}
+
+@property --cool-left {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 100%;
+}
+
+@keyframes spell-cool {
+  from {
+    --cool-left: 100%;
+  }
+  to {
+    --cool-left: 0%;
+  }
+}
+
+.spellName {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.spellNote {
+  margin: 0;
+  font-size: 11px;
+  color: var(--c-ink-soft, #6a5a84);
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spellButton {
+    transition: none;
+  }
+  .spellCooling::after {
+    animation: none;
+    background: rgba(59, 42, 82, 0.18);
+  }
+}
+
+.menuSection {
+  padding: 4px 10px 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c-ink-soft, #6a5a84);
+}

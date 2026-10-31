@@ -24,7 +24,7 @@ export const TEX = {
 export const FX_SPARKLE_ANIM = 'fx:sparkle';
 export const FX_DOTS_ANIM = 'fx:dots';
 
-const AVATAR_KEY_RE = /^av-[a-z]+(-[a-z]+){4}(-w)?$/;
+const AVATAR_KEY_RE = /^av-[a-z]+(-[a-z]+){4}(-w)?(-n)?$/;
 const SPECIES_RE = /^[a-z]{2,16}$/;
 
 export function isAvatarKey(key: string): boolean {

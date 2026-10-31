@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { MAP_LAYERS, type DeskInfo, type OfficeWorld } from '@enu/map';
-import { PlateNote, type ChatMsg, type DmMsg, type EmoteMsg } from '@enu/protocol';
+import { PlateNote, type ChatMsg, type DmMsg, type EmoteMsg, type SpellMsg } from '@enu/protocol';
 import type { PetSnap, PlayerSnap } from '../../realtime/types';
 import { AvatarSheetLoader, PetSheetLoader, TEX, ensurePetAnims } from '../assets';
 import { BRIDGE_REGISTRY_KEY, FONT_REGISTRY_KEY, type GameBridge } from '../bridge';
@@ -8,6 +8,10 @@ import { teamColorNumber } from '../directory';
 import { AvatarView } from '../entities/AvatarView';
 import { DeskPlate, type PlateModel } from '../entities/DeskPlate';
 import { Fx, type WorldPoint } from '../entities/Fx';
+import { FxPlayer, type FxLoop } from '../fx/FxPlayer';
+import { GatheringWatch, PresenceFxGate, auraFor } from '../fx/gate';
+import { playSpell, spotOn } from '../fx/spells';
+import { TOWN_FX } from '../fx/strips';
 import { GroupLayer, type GroupDraw } from '../entities/GroupLayer';
 import { PetView, type PetBubbleClick } from '../entities/PetView';
 import { PIXEL_FONT_SIZE, SMALL_PIXEL_FONT, SMALL_PIXEL_FONT_SIZE } from '../font';
@@ -29,6 +33,7 @@ import {
   type Insets,
   type Point,
 } from '../logic/camera';
+import { dirFromDelta } from '../logic/direction';
 import { petLook } from '../logic/petCluster';
 import { plateLayout } from '../logic/plates';
 import { activityIcon, groupChipText, groupsOf, hiddenPlate, type GroupView } from '../logic/presence';
@@ -77,6 +82,13 @@ export class WorldScene extends Phaser.Scene {
   private readonly plateByDesk = new Map<string, DeskPlate>();
   private groups!: GroupLayer;
   private fx!: Fx;
+  private player!: FxPlayer;
+  private readonly presenceGate = new PresenceFxGate();
+  private readonly gatherings = new GatheringWatch();
+  /** Auras by user id (focus shield, mana motes) and the meeting table's rune ring. */
+  private readonly auras = new Map<string, { id: string; loop: FxLoop }>();
+  private meetingRing: FxLoop | null = null;
+  private myBubbleId: string | null = null;
   private night!: Phaser.GameObjects.Rectangle;
   private meetingSeats = new Set<string>();
   /** Middle of the meeting table (the chip of a gathered meeting sits there, clear of everyone's tags). */
@@ -86,7 +98,7 @@ export class WorldScene extends Phaser.Scene {
   private dirty = true;
   private officeOpen: boolean | null = null;
   /** How many waves and paper planes this screen has drawn (read by the dev/e2e debug hook only). */
-  private readonly fxDrawn = { wave: 0, plane: 0 };
+  private readonly fxDrawn = { wave: 0, plane: 0, spell: 0 };
 
   private font = 'Galmuri11, sans-serif';
   private measure: Measure = (t) => t.length * PIXEL_FONT_SIZE;
@@ -224,7 +236,10 @@ export class WorldScene extends Phaser.Scene {
     this.groups = new GroupLayer(this.stage, (groupId, pointer) =>
       this.bridge.bus.emit('group:clicked', { groupId, screenX: pointer.x, screenY: pointer.y }),
     );
-    this.fx = new Fx(this.stage);
+    this.player = new FxPlayer(this.stage);
+    this.fx = new Fx(this.stage, this.player);
+    // The town's strips load in the background once the map is up (the first spell rarely waits).
+    this.time.delayedCall(300, () => this.player.preload(TOWN_FX));
     const { w, h } = this.mapSize;
     this.night = this.world(this.add.rectangle(0, 0, w, h, COLORS.night, 0.4).setOrigin(0, 0));
     this.night.setDepth(DEPTH.night).setVisible(false).setAlpha(0);
@@ -391,6 +406,8 @@ export class WorldScene extends Phaser.Scene {
       session.on('office', (open) => this.setOfficeOpen(open)),
       session.on('chat:msg', (m) => this.onChat(m)),
       session.on('emote', (m) => this.onEmote(m)),
+      session.on('spell', (m) => this.onSpell(m)),
+      session.on('pinged', () => this.onPinged()),
       session.on('dm:msg', (m) => this.onDm(m)),
       directory.on('change', () => {
         for (const [id, view] of this.avatars) view.setTeamColor(this.teamColorOf(id));
@@ -407,6 +424,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private setOfficeOpen(open: boolean | null): void {
+    if (open !== this.officeOpen) this.presenceGate.officeChanged(this.time.now);
     this.officeOpen = open;
     const closed = open === false;
     this.tweens.killTweensOf(this.night);
@@ -425,6 +443,8 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private clearEntities(): void {
+    this.stopAuras();
+    this.gatherings.reset();
     for (const v of this.avatars.values()) v.destroy();
     for (const v of this.pets.values()) v.destroy();
     this.avatars.clear();
@@ -470,15 +490,19 @@ export class WorldScene extends Phaser.Scene {
       this.sheetLoader.request(p.avatar, () => view.setAvatarKey(p.avatar));
     view.setName(p.name || this.bridge.directory.person(p.id)?.displayName || '');
     if (p.shown !== view.isShown) {
-      if (!p.shown) this.fx.sparkle({ x: view.feet.x, y: view.feet.y - 10 });
+      // Arrivals and departures: a warp beam in, a blink out (office hours, a few per second, not at the
+      // moment the office opens or closes, when everyone appears or fades together).
+      const draw = prev !== null && this.presenceGate.allow(this.time.now, this.officeOpen);
+      if (!p.shown && draw) this.player.play('town/blink-out', spotOn('town/blink-out', view.feet));
       view.setShown(p.shown, p.x, p.y, p.dir, prev !== null);
-      if (p.shown && prev !== null) this.fx.sparkle({ x: view.feet.x, y: view.feet.y - 10 });
+      if (p.shown && draw) this.player.play('town/warp-in', spotOn('town/warp-in', view.feet));
     } else if (p.shown && (!prev || prev.x !== p.x || prev.y !== p.y)) {
       view.moveTo(p.x, p.y);
     }
     view.setServerDir(p.dir);
     if (prev && p.logPulse !== prev.logPulse && p.shown && this.officeOpen === true) {
-      this.fx.logPulse({ x: view.feet.x, y: view.feet.y - 36 });
+      // Someone's Claude wrote their work log: a neutral rune over the head (never a celebration).
+      this.player.play('town/rune-spark', spotOn('town/rune-spark', view.feet));
     }
     this.dirty = true;
   }
@@ -561,6 +585,31 @@ export class WorldScene extends Phaser.Scene {
     if (!from?.isShown || !to?.isShown) return;
     this.fx.wave(from.chest, to.chest);
     this.fxDrawn.wave++;
+  }
+
+  /**
+   * A spell (public like a wave; the server checked both are shown in office hours): the caster raises the wand
+   * and the same show plays on every screen. Sounds are decided elsewhere (only the two people involved hear it).
+   */
+  private onSpell(m: SpellMsg): void {
+    if (this.officeOpen !== true) return;
+    const from = this.avatars.get(m.fromUserId);
+    const to = this.avatars.get(m.toUserId);
+    if (!to?.isShown) return;
+    const caster = from?.isShown ? from : null;
+    if (caster) {
+      const d = dirFromDelta(to.feet.x - caster.feet.x, to.feet.y - caster.feet.y);
+      if (d !== null) caster.playCast(d, this.time.now);
+    }
+    playSpell(this.player, m, caster ? { feet: caster.feet, wand: caster.wandTip } : null, { feet: to.feet });
+    this.fxDrawn.spell++;
+  }
+
+  /** Someone called me (`pinged` reaches only its target): a comic "!" over my own head, on my screen. */
+  private onPinged(): void {
+    const me = this.avatars.get(this.bridge.me.userId);
+    if (this.officeOpen === true && me?.isShown)
+      this.player.play('town/ping-bang', spotOn('town/ping-bang', me.feet));
   }
 
   /** DMs reach only their two participants, so the paper plane is drawn only on their screens. */
@@ -665,8 +714,66 @@ export class WorldScene extends Phaser.Scene {
       const owner = session.getPlayer(pet.ownerId);
       pet.setHidden(!owner || (!owner.shown && !owner.deskId));
     }
+    this.refreshAuras();
     this.applyPulse();
     this.dirty = false;
+  }
+
+  /**
+   * Auras from what is already public (focus mode, a break) and the meeting table's rune ring while a meeting
+   * is gathered; a meeting that just gathered first draws its party circle. Office hours only.
+   */
+  private refreshAuras(): void {
+    const { session } = this.bridge;
+    for (const [id, view] of this.avatars) {
+      const p = session.getPlayer(id);
+      const want = p ? auraFor({ shown: view.isShown, activity: p.activity }, this.officeOpen) : null;
+      const have = this.auras.get(id);
+      if (have?.id === want) continue;
+      have?.loop.stop();
+      this.auras.delete(id);
+      if (want) {
+        const loop = this.player.loop(want, spotOn(want, view.feet), view.feet.y);
+        if (loop) this.auras.set(id, { id: want, loop });
+      }
+    }
+    for (const [id, a] of this.auras) {
+      if (!this.avatars.has(id)) {
+        a.loop.stop();
+        this.auras.delete(id);
+      }
+    }
+    const gathered =
+      this.officeOpen === true
+        ? this.groupViews
+            .filter(
+              (g) =>
+                g.family === 'meeting' &&
+                g.members.every((m) => m.shown && this.meetingSeats.has(`${m.x},${m.y}`)),
+            )
+            .map((g) => g.id)
+        : [];
+    const centre = this.meetingCentre;
+    if (centre) {
+      for (const _fresh of this.gatherings.update(gathered)) {
+        this.player.play('aura/party-cast', centre);
+      }
+      if (gathered.length > 0 && !this.meetingRing) {
+        // The ring takes over as the party circle is wiped away (about 1.2 s in).
+        const ring = this.player.loop('aura/rune-ring', centre);
+        this.meetingRing = ring;
+      } else if (gathered.length === 0 && this.meetingRing) {
+        this.meetingRing.stop();
+        this.meetingRing = null;
+      }
+    }
+  }
+
+  private stopAuras(): void {
+    for (const a of this.auras.values()) a.loop.stop();
+    this.auras.clear();
+    this.meetingRing?.stop();
+    this.meetingRing = null;
   }
 
   private groupDraws(): GroupDraw[] {
@@ -888,6 +995,11 @@ export class WorldScene extends Phaser.Scene {
     if (this.dirty) this.refresh();
 
     for (const v of this.avatars.values()) v.update(now);
+    for (const [id, a] of this.auras) {
+      const v = this.avatars.get(id);
+      if (v) a.loop.move(spotOn(a.id, v.feet), v.feet.y);
+    }
+    this.player.update(now);
     this.layoutOverlays(now);
 
     const myView = this.avatars.get(this.bridge.me.userId);
@@ -895,9 +1007,23 @@ export class WorldScene extends Phaser.Scene {
       v.setOwnerFeet(myView?.isShown ? myView.feet.x : null);
     const tabVisible = typeof document === 'undefined' || document.visibilityState === 'visible';
     for (const v of this.pets.values()) v.update(now, tabVisible);
+    this.popMyBubble();
 
     for (const plate of this.plates) plate.update();
     this.groups.update(this.officeOpen === false ? [] : this.groupDraws());
+  }
+
+  /** My own pet's new bubble pops in with a little burst (owner-only, like the bubble itself). */
+  private popMyBubble(): void {
+    for (const v of this.petViewsOf(this.bridge.me.userId)) {
+      const b = v.activeBubble;
+      if (!b) continue;
+      if (b.bubbleId !== this.myBubbleId) {
+        this.myBubbleId = b.bubbleId;
+        this.player.play('town/bubble-pop', { x: v.feet.x, y: v.feet.y - 30 });
+      }
+      return;
+    }
   }
 
   /** Floating tags never stack on top of each other (logic/tags.ts: alternate under the feet, then up). */
@@ -954,8 +1080,15 @@ export class WorldScene extends Phaser.Scene {
         const plate = this.plateByDesk.get(deskId);
         return plate ? { kind: plate.kind, lines: plate.textLines, online: plate.online } : null;
       },
-      /** Waves and paper planes drawn on this screen so far. */
+      /** Waves, paper planes and spells drawn on this screen so far. */
       fxDrawn: () => ({ ...this.fxDrawn }),
+      /** Every pixelfx strip this screen started, by effect id (spells, auras, arrivals…). */
+      fxStrips: () => ({ ...this.player.drawn }),
+      /** Effect objects drawn on the world camera that the overlay camera does not ignore (should be 0). */
+      unregisteredObjects: () =>
+        this.children.list.filter(
+          (o) => !(o.cameraFilter & this.mainCam.id) && !(o.cameraFilter & this.overlayCam.id),
+        ).length,
       /** Screen rectangles of the visible desk plates (CSS px inside the canvas). */
       plateRects: () => {
         const k = overlayScale(this.zoom);
@@ -1010,5 +1143,6 @@ export class WorldScene extends Phaser.Scene {
     for (const p of this.plates.splice(0)) p.destroy();
     this.plateByDesk.clear();
     this.groups?.destroy();
+    this.player?.destroy();
   }
 }
