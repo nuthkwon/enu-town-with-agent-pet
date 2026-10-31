@@ -5,7 +5,7 @@ import { expect, test, type Browser, type BrowserContext, type Page } from '@pla
 import { BASE_URL, ROOT, devEmail } from '../env';
 import { devLogin, userIdOf } from '../support/auth';
 import { connectClaude, mcpClient, structured } from '../support/claude';
-import { railRow, setMyStatus, wakeSound } from '../support/town';
+import { fxStrips, railRow, setMyStatus, sfxPlayed, wakeSound } from '../support/town';
 import { listenForSounds, muxAudio, type Tap } from './audio';
 import { Captions, VIDEO } from './captions';
 import { glideClick, glideTo, hideCard, installOverlay, showCard, typeInto } from './overlay';
@@ -244,11 +244,17 @@ test('ENU Den demo: the wizard office', async ({ browser }) => {
     /* -------------------------------------------------------------- 5. combo */
     cc.say('하이파이브를 10초 안에 돌려주면 콤보! 그 순간의 연출일 뿐, 세거나 남기지 않아요.');
     await focusOn(people.pal.id);
+    // 직원07 has the spellbook on 직원13 open already, so the high-five goes straight back.
+    const book = await myMenuOn(CAST.pal.name);
+    const back = book.getByRole('menuitem', { name: '하이파이브' });
+    await glideTo(page, back);
     await castFrom(people.pal, me, '하이파이브');
-    await pause(2200);
-    await castMine(CAST.pal.name, '하이파이브');
+    await expect.poll(() => sfxPlayed(page), { timeout: 10_000 }).toContain('hit.highfive');
+    await pause(900);
+    await glideClick(page, back);
     mark();
-    await pause(5000);
+    await expect.poll(() => sfxPlayed(page), { timeout: 8_000 }).toContain('spell.combo');
+    await pause(4500);
 
     /* -------------------------------------------------------------- 6. a shield */
     cc.say('집중 중인 직원04에게 칭찬 번개를 쓰면 결계에 튕겨요. 직원04에게는 알림도 소리도 가지 않아요.');
@@ -266,7 +272,10 @@ test('ENU Den demo: the wizard office', async ({ browser }) => {
     await pause(1600);
     await castFrom(people.pal, people.dev, '응원 파이어볼');
     mark();
-    await pause(6500);
+    await expect
+      .poll(async () => (await fxStrips(page))['spell/raid-pillar'] ?? 0, { timeout: 10_000 })
+      .toBeGreaterThan(0);
+    await pause(5500);
 
     /* -------------------------------------------------------------- 8. potion and fireworks */
     cc.say('힐링 포션은 포물선을 그리며 날아가고, 축하 폭죽은 하늘에서 터져요.');
